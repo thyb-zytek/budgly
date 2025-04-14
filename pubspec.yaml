@@ -28,5 +28,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/fonts/saira/
+
+  fonts:
+    - family: Saira
+      fonts:
+        - asset: assets/fonts/saira/Saira-VariableFont_wdth,wght.ttf
+        - asset: assets/fonts/saira/Saira-Italic-VariableFont_wdth,wght.ttf
+          style: italic
+
 flutter_intl:
   enabled: true
