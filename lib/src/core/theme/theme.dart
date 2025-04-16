@@ -10,12 +10,12 @@ class MaterialTheme {
       brightness: Brightness.light,
       primary: Color(0xff0057DA),
       // primary
-      onPrimary: Color(0xff101011),
+      onPrimary: Color(0xFFE5E9EF),
       inversePrimary: Color(0xff80b6f8),
       // Text Color on primary
-      secondary: Color(0xffA062BD),
+      secondary: Color(0xff9836d3),
       // Secondary Color
-      onSecondary: Color(0xff101011),
+      onSecondary: Color(0xFFE5E9EF),
       // Text Color on secondary
       tertiary: Color(0xff40BCD8),
       // tertiary
@@ -60,7 +60,7 @@ class MaterialTheme {
       // Text on primary
       inversePrimary: Color(0xff0057DA),
       // Original primary, used as inverse
-      secondary: Color(0xffD1A6E6),
+      secondary: Color(0xffC07BEE),
       // Lightened secondary for dark background
       onSecondary: Color(0xff0F1011),
       tertiary: Color(0xff8DE6F5),
