@@ -3,7 +3,27 @@ import "package:flutter/material.dart";
 class MaterialTheme {
   const MaterialTheme();
 
-  static TextTheme textTheme = TextTheme();
+  static TextTheme textTheme = TextTheme(
+    displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w900),
+    displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w800),
+    displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w700),
+
+    headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+    headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+    headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+
+    titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+    titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+
+    bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+    bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+    bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+
+    labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+    labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+  );
 
   static ColorScheme lightScheme() {
     return const ColorScheme(
@@ -101,7 +121,7 @@ class MaterialTheme {
     useMaterial3: true,
     brightness: colorScheme.brightness,
     colorScheme: colorScheme,
-    fontFamily: "TitilliumWeb",
+    fontFamily: "Saira",
     scaffoldBackgroundColor: colorScheme.surface,
     canvasColor: colorScheme.surface,
     textTheme: textTheme,
