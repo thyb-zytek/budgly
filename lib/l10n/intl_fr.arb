@@ -1,3 +1,6 @@
 {
-  "@@locale": "fr"
+  "@@locale": "fr",
+  "appTitle": "Budgly",
+  "overviewLink": "Budget",
+  "settingsLink": "Paramètres"
 }

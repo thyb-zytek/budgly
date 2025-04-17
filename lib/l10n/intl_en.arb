@@ -1,3 +1,6 @@
 {
-  "@@locale": "en"
+  "@@locale": "en",
+  "appTitle": "Budgly",
+  "overviewLink": "Overview",
+  "settingsLink": "Settings"
 }
