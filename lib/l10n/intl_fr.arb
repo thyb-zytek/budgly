@@ -1,6 +1,9 @@
 {
   "@@locale": "fr",
   "appTitle": "Budgly",
+  "noOptionsAvailable": "Aucune options disponible",
   "overviewLink": "Budget",
-  "settingsLink": "Paramètres"
+  "settingsLink": "Paramètres",
+  "invalidCurrency": "La valeur doit être un montant valide.",
+  "invalidDate": "La date doit être valide."
 }

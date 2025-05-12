@@ -2,5 +2,8 @@
   "@@locale": "en",
   "appTitle": "Budgly",
   "overviewLink": "Overview",
-  "settingsLink": "Settings"
+  "settingsLink": "Settings",
+  "noOptionsAvailable": "No options available",
+  "invalidCurrency": "Invalid currency amount.",
+  "invalidDate": "Invalid date."
 }
