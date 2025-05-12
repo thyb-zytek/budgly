@@ -1,6 +1,6 @@
 import 'package:app/src/pages/overview/view.dart';
 import 'package:app/src/pages/settings/view.dart';
-import 'package:app/src/shared/bottom_navbar/bottom_navbar.dart';
+import 'package:app/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

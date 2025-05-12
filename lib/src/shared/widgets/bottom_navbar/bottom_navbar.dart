@@ -15,12 +15,23 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     AppLocalizations tr = AppLocalizations.of(context)!;
+    ThemeData theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(child: widget.child),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: widget.child.currentIndex,
+        selectedItemColor: theme.colorScheme.primary,
+        iconSize: 22,
+        selectedFontSize:
+            theme.textTheme.labelLarge?.fontSize != null
+                ? theme.textTheme.labelLarge!.fontSize!
+                : 16,
+        unselectedFontSize:
+            theme.textTheme.labelLarge?.fontSize != null
+                ? theme.textTheme.labelLarge!.fontSize!
+                : 16,
         onTap: (index) {
           widget.child.goBranch(
             index,
@@ -40,6 +51,5 @@ class _BottomNavBarState extends State<BottomNavBar> {
         ],
       ),
     );
-    ;
   }
 }
