@@ -4,25 +4,25 @@ class MaterialTheme {
   const MaterialTheme();
 
   static TextTheme textTheme = TextTheme(
-    displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w900),
-    displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w800),
+    displayLarge: TextStyle(fontSize: 50, fontWeight: FontWeight.w900),
+    displayMedium: TextStyle(fontSize: 40, fontWeight: FontWeight.w800),
     displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w700),
 
-    headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
-    headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-    headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+    headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+    headlineMedium: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+    headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
 
     titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-    titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-    titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+    titleMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+    titleSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
 
-    bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-    bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-    bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+    bodyLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+    bodyMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+    bodySmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
 
-    labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-    labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-    labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+    labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    labelMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+    labelSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
   );
 
   static ColorScheme lightScheme() {
@@ -131,8 +131,8 @@ class MaterialTheme {
   static const success = ExtendedColor(
     seed: Color(0xff5ECA57),
     value: Color(0xff5ECA57),
-    light: ColorFamily(color: Color(0xff5ECA57), onColor: Color(0xff101011)),
-    dark: ColorFamily(color: Color(0xff85F08A), onColor: Color(0xff101011)),
+    light: ColorFamily(color: Color(0xff5ECA57), onColor: Color(0xFFE5E9EF)),
+    dark: ColorFamily(color: Color(0xff85F08A), onColor: Color(0xFFE5E9EF)),
   );
 
   List<ExtendedColor> get extendedColors => [success];
