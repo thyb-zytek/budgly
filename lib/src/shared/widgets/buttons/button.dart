@@ -38,7 +38,7 @@ class BudglyButton extends StatelessWidget {
               : null,
       label: Text(
         text,
-        style: theme.textTheme.titleSmall?.copyWith(
+        style: theme.textTheme.titleMedium?.copyWith(
           color: buttonColors.textColor,
         ),
       ),

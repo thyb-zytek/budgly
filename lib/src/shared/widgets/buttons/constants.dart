@@ -1,7 +1,16 @@
 import 'package:app/src/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 
-enum ButtonType { primary, secondary, tertiary, success, error, neutral, iconDefault }
+enum ButtonType {
+  primary,
+  secondary,
+  tertiary,
+  success,
+  error,
+  neutral,
+  neutralVariant,
+  iconDefault,
+}
 
 class TypedButtonStyle {
   ButtonType type;
@@ -45,7 +54,12 @@ class TypedButtonStyle {
         break;
       case ButtonType.neutral:
         _backgroundColor = theme.colorScheme.outline;
-        _textColor = theme.colorScheme.onSurface;
+        _textColor = theme.colorScheme.onInverseSurface;
+        _iconColor = theme.colorScheme.outlineVariant;
+        break;
+      case ButtonType.neutralVariant:
+        _backgroundColor = theme.colorScheme.outlineVariant;
+        _textColor = theme.colorScheme.onInverseSurface;
         _iconColor = theme.colorScheme.outlineVariant;
         break;
       case ButtonType.iconDefault:
