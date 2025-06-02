@@ -54,6 +54,8 @@ class MaterialTheme {
       onSurface: Color(0xff101011),
       // Default Text Color
       onSurfaceVariant: Color(0xff626972),
+      // Text Color on surface variant
+      onInverseSurface:  Color(0xFFE5E9EF),
       // Softer hint text color
       surfaceTint: Color(0xff1e1e35),
       // Harmonized elevation/shadow color
