@@ -80,6 +80,19 @@ class _TextInputState extends State<TextInput> {
     });
   }
 
+  Iterable<String> getAutofillHints() {
+    switch (widget.type) {
+      case InputType.Email:
+        return [AutofillHints.email];
+      case InputType.Username:
+        return [AutofillHints.newUsername, AutofillHints.username];
+      case InputType.Password:
+        return [AutofillHints.password];
+      default:
+        return [];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ThemeData theme = Theme.of(context);
@@ -89,6 +102,7 @@ class _TextInputState extends State<TextInput> {
       padding: EdgeInsets.only(bottom: 8, left: 4, right: 4),
       child: FocusScope(
         child: TextFormField(
+          autofillHints: getAutofillHints(),
           focusNode: _focusNode,
           onTapOutside: (e) => _focusNode.unfocus(),
           onChanged: (v) {
@@ -132,6 +146,7 @@ class _TextInputState extends State<TextInput> {
           },
           style: theme.textTheme.bodyLarge,
           autovalidateMode: AutovalidateMode.disabled,
+          obscureText: widget.type == InputType.Password,
           decoration: InputDecoration(
             labelText: widget.labelText,
             hintText: widget.hintText,
