@@ -47,6 +47,8 @@ class SignUpForm extends StatelessWidget {
                   type: InputType.Username,
                   controller: emailController,
                   labelText: tr.email,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   hotValidating: (v) {
                     String? result = validateEmail(v);
                     if (result == "emailRequired") {
@@ -62,6 +64,8 @@ class SignUpForm extends StatelessWidget {
                   controller: passwordController,
                   labelText: tr.password,
                   type: InputType.Password,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   hotValidating: (v) {
                     String? result = validatePassword(v);
                     if (result == "passwordRequired") {
@@ -77,6 +81,8 @@ class SignUpForm extends StatelessWidget {
                   controller: password2Controller,
                   labelText: tr.confirmPassword,
                   type: InputType.Password,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => onSubmitForm(),
                   hotValidating: (v) {
                     String? result = validateConfirmPassword(v);
                     if (result == "confirmPasswordRequired") {

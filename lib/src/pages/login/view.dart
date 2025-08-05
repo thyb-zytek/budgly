@@ -80,11 +80,18 @@ class _LoginPageState extends State<LoginPage>
     ThemeData theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(toolbarHeight: 300, flexibleSpace: LoginAppbar()),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(
+          MediaQuery.of(context).viewInsets.bottom > 0
+              ? kToolbarHeight
+              : MediaQuery.of(context).size.height / 3,
+        ),
+        child: AppBar(toolbarHeight: 0, flexibleSpace: LoginAppbar()),
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 16,
@@ -93,7 +100,13 @@ class _LoginPageState extends State<LoginPage>
               animation: Listenable.merge([_viewModel]),
               builder: (context, child) {
                 if (_viewModel.state.isLoading) {
-                  return Center(child: CircularProgressIndicator());
+                  return Column(
+                    spacing: 16,
+                    children: [
+                      Text(AppLocalizations.of(context)!.connecting, style: theme.textTheme.titleMedium),
+                      const CircularProgressIndicator(),
+                    ],
+                  );
                 }
                 return Column(
                   children: [
@@ -146,10 +159,7 @@ class _LoginPageState extends State<LoginPage>
                                 formType: AuthForm.signUp,
                               ),
                             ),
-                        onSubmitForm:
-                            () => _onEvent(
-                              AuthEventParams(type: AuthEvent.signIn),
-                            ),
+                        onSubmitForm: () => _onEvent(AuthEventParams(type: AuthEvent.signIn)),
                         onResetPassword:
                             () => _onEvent(
                               AuthEventParams(
@@ -181,29 +191,39 @@ class _LoginPageState extends State<LoginPage>
                             _viewModel.emailController.text,
                         onResendPressed:
                             () => _onEvent(
-                              AuthEventParams(type: AuthEvent.resendEmailVerification),
+                              AuthEventParams(
+                                type: AuthEvent.resendEmailVerification,
+                              ),
                             ),
                         onSignInPressed:
                             () => _onEvent(
                               AuthEventParams(type: AuthEvent.signOut),
                             ),
-                        onReload:
-                            () => _onEvent(
-                              AuthEventParams(type: AuthEvent.reloadUser),
-                            ),
+                        onReload: () {
+                          _onEvent(AuthEventParams(type: AuthEvent.reloadUser));
+                        },
                       ),
                     },
+                    ([
+                          AuthForm.signUp,
+                          AuthForm.signIn,
+                          AuthForm.resetPassword,
+                        ].contains(_viewModel.state.formType))
+                        ? Padding(
+                          padding: EdgeInsets.all(
+                            24,
+                          ).add(EdgeInsets.only(bottom: 16)),
+                          child: GoogleSignInButton(
+                            onPressed:
+                                () => _onEvent(
+                                  AuthEventParams(type: AuthEvent.googleSignIn),
+                                ),
+                          ),
+                        )
+                        : const SizedBox.shrink(),
                   ],
                 );
               },
-            ),
-            Padding(
-              padding: EdgeInsets.all(24).add(EdgeInsets.only(bottom: 100)),
-              child: GoogleSignInButton(
-                onPressed:
-                    () =>
-                        _onEvent(AuthEventParams(type: AuthEvent.googleSignIn)),
-              ),
             ),
           ],
         ),

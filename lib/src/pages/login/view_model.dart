@@ -71,7 +71,6 @@ class LoginViewModel with ChangeNotifier {
           ![
             AuthEvent.resendEmailVerification,
             AuthEvent.reloadUser,
-            AuthEvent.googleSignIn,
           ].any((e) => e == event.type),
       errorCode: null,
       errorMessage: null,
