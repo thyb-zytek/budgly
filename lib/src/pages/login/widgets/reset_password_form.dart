@@ -44,6 +44,8 @@ class ResetPasswordForm extends StatelessWidget {
                   type: InputType.Username,
                   controller: emailController,
                   labelText: tr.email,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => onSubmitForm(),
                   hotValidating: (v) {
                     String? result = validateEmail(v);
                     if (result == "emailRequired") {

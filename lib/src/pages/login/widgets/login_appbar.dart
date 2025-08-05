@@ -19,7 +19,7 @@ class LoginAppbar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.max,
           children: [
-            Image.asset('assets/images/logo.png', width: 135),
+            Image.asset('assets/images/logo.png', width: 125),
             Padding(
               padding: EdgeInsets.only(bottom: 24),
               child: Text(

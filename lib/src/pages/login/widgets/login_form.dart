@@ -72,6 +72,8 @@ class LoginForm extends StatelessWidget {
                   type: InputType.Username,
                   controller: emailController,
                   labelText: tr.email,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   hotValidating: (v) {
                     String? result = validateEmail(v);
                     if (result == "emailRequired") {
@@ -87,6 +89,8 @@ class LoginForm extends StatelessWidget {
                   controller: passwordController,
                   labelText: tr.password,
                   type: InputType.Password,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => onSubmitForm(),
                   hotValidating: (v) {
                     String? result = validatePassword(v);
                     if (result == "passwordRequired") {

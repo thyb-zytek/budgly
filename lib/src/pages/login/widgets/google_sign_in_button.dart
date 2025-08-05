@@ -15,7 +15,7 @@ class GoogleSignInButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: onPressed,
       style: FilledButton.styleFrom(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.surfaceContainer,
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),

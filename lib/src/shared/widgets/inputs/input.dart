@@ -18,6 +18,8 @@ class TextInput extends StatefulWidget {
   final FocusNode? focusNode;
 
   final InputType type;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onFieldSubmitted;
 
   const TextInput({
     super.key,
@@ -29,6 +31,8 @@ class TextInput extends StatefulWidget {
     this.errorText,
     this.focusNode,
     this.type = InputType.Default,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -39,6 +43,7 @@ class _TextInputState extends State<TextInput> {
   bool focused = false;
   bool error = false;
   bool erasable = false;
+  bool _obscurePassword = true;
   late FocusNode _focusNode;
 
   @override
@@ -104,6 +109,8 @@ class _TextInputState extends State<TextInput> {
         child: TextFormField(
           autofillHints: getAutofillHints(),
           focusNode: _focusNode,
+          textInputAction: widget.textInputAction,
+          onFieldSubmitted: widget.onFieldSubmitted,
           onTapOutside: (e) => _focusNode.unfocus(),
           onChanged: (v) {
             if (v.isEmpty) {
@@ -146,7 +153,7 @@ class _TextInputState extends State<TextInput> {
           },
           style: theme.textTheme.bodyLarge,
           autovalidateMode: AutovalidateMode.disabled,
-          obscureText: widget.type == InputType.Password,
+          obscureText: widget.type == InputType.Password && _obscurePassword,
           decoration: InputDecoration(
             labelText: widget.labelText,
             hintText: widget.hintText,
@@ -165,51 +172,86 @@ class _TextInputState extends State<TextInput> {
                       child: Icon(Icons.calendar_today),
                     )
                     : null,
-            suffixIcon:
-                erasable
-                    ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.type == InputType.Currency)
-                          Padding(
-                            padding: EdgeInsets.only(top: 16),
-                            child: Text(
-                              NumberFormat.simpleCurrency(locale: Platform.localeName).currencySymbol,
-                              style: theme.textTheme.bodyLarge?.merge(
-                                TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: theme.colorScheme.outlineVariant,
-                                ),
-                              ),
-                            ),
-                          ),
-                        IconButton(
-                          onPressed: () {
-                            setState(() => erasable = false);
-                            widget.controller.clear();
-                          },
-                          icon: Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    )
-                    : widget.type == InputType.Currency
-                    ? Padding(
-                      padding: EdgeInsets.only(top: 16),
-                      child: Text(
-                        NumberFormat.simpleCurrency(locale: Platform.localeName).currencySymbol,
-                        textAlign: TextAlign.right,
-                        style: theme.textTheme.bodyLarge?.merge(
-                          TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: theme.colorScheme.outlineVariant,
-                          ),
-                        ),
-                      ),
-                    )
-                    : null,
+            suffixIcon: _buildSuffixIcon(theme),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSuffixIcon(ThemeData theme) {
+    final List<Widget> suffixIcons = [];
+
+    if (widget.type == InputType.Currency) {
+      suffixIcons.add(
+        Padding(
+          padding: EdgeInsets.only(top: 16),
+          child: Text(
+            NumberFormat.simpleCurrency(locale: Platform.localeName).currencySymbol,
+            style: theme.textTheme.bodyLarge?.merge(
+              TextStyle(
+                fontWeight: FontWeight.w900,
+                color: theme.colorScheme.outlineVariant,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (widget.type == InputType.Password) {
+      final List<Widget> passwordIcons = [
+        IconButton(
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ];
+
+      if (erasable) {
+        passwordIcons.add(
+          IconButton(
+            onPressed: () {
+              setState(() => erasable = false);
+              widget.controller.clear();
+            },
+            icon: Icon(Icons.close_rounded),
+          ),
+        );
+      }
+
+      suffixIcons.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: passwordIcons,
+        ),
+      );
+    } else if (erasable) {
+      suffixIcons.add(
+        IconButton(
+          onPressed: () {
+            setState(() => erasable = false);
+            widget.controller.clear();
+          },
+          icon: Icon(Icons.close_rounded),
+        ),
+      );
+    }
+
+    if (suffixIcons.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: suffixIcons,
     );
   }
 }
