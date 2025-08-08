@@ -29,5 +29,16 @@
   "emailAlreadyInUse": "Cette adresse mail est déjà utilisée par un autre compte.",
   "wrongPassword": "Mot de passe incorrect.",
   "invalidCredentials": "Identifiants incorrect.",
-  "userNotFound": "Utilisateur introuvable."
+  "userNotFound": "Utilisateur introuvable.",
+  "accounts": "Comptes",
+  "categories": "Categories",
+  "preferences": "Préférences",
+  "theme": "Thème",
+  "appearance": "Apparence",
+  "light": "Clair",
+  "dark": "Sombre",
+  "system": "Système",
+  "connecting": "Connexion en cours...",
+  "newAccount": "Nouveau compte",
+  "newCategory": "Nouvelle catégorie"
 }

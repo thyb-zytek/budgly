@@ -29,5 +29,16 @@
   "emailAlreadyInUse": "Email already in use.",
   "wrongPassword": "Incorrect password.",
   "invalidCredentials": "Invalid credentials.",
-  "userNotFound": "User not found."
+  "userNotFound": "User not found.",
+  "accounts": "Accounts",
+  "categories": "Categories",
+  "preferences": "Preferences",
+  "theme": "Theme",
+  "appearance": "Appearance",
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System",
+  "connecting": "Connecting...",
+  "newAccount": "New account",
+  "newCategory": "New category"
 }
