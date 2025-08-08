@@ -50,9 +50,10 @@ class NavigationHelper {
             routes: [
               GoRoute(
                 path: overviewPath,
-                pageBuilder: (context, state) {
-                  return getPage(child: const OverviewPage(), state: state);
-                },
+                pageBuilder: (context, state) => getPage(
+                    child: OverviewPage(),
+                    state: state,
+                  ),
               ),
             ],
           ),
