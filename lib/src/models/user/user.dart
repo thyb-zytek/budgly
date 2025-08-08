@@ -1,28 +1,84 @@
+import 'package:app/src/models/account/account.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:flutter/material.dart';
+
+import 'user_profile.dart';
 
 class User {
   final String id;
-  final String email;
-  final String name;
+  final String? email;
   final bool emailVerified;
-
-  final String? photoURL;
+  final Uri? avatarUrl;
+  final UserProfile? profile;
 
   User({
     required this.id,
-    required this.email,
-    required this.name,
+    this.email,
     this.emailVerified = false,
-    this.photoURL = null,
+    this.avatarUrl,
+    this.profile,
   });
 
-  factory User.fromFirebaseUser(firebase.User user) {
+  bool get hasProfile => profile != null;
+
+  bool get isAuthenticated => id.isNotEmpty;
+
+  factory User.fromFirebaseUser(
+    firebase.User firebaseUser, {
+    UserProfile? profile,
+  }) {
     return User(
-      id: user.uid,
-      email: user.email!,
-      name: user.displayName ?? '',
-      emailVerified: user.emailVerified,
-      photoURL: user.photoURL,
+      id: firebaseUser.uid,
+      email: firebaseUser.email,
+      emailVerified: firebaseUser.emailVerified,
+      avatarUrl:
+          firebaseUser.photoURL != null
+              ? Uri.parse(firebaseUser.photoURL!)
+              : null,
+      profile: profile,
+    );
+  }
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      email: json['email'] as String?,
+      emailVerified: json['email_verified'] as bool? ?? false,
+      avatarUrl:
+          json['avatar_url'] != null
+              ? Uri.parse(json['avatar_url'] as String)
+              : null,
+      profile:
+          json['profile'] != null
+              ? UserProfile.fromJson(json['profile'] as Map<String, dynamic>)
+              : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'email_verified': emailVerified,
+      'avatar_url': avatarUrl?.toString(),
+      'profile': profile?.toJson(),
+    };
+  }
+
+  User copyWith({
+    String? id,
+    String? email,
+    bool? emailVerified,
+    Uri? avatarUrl,
+    Color? color,
+    List<Account>? accounts,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      emailVerified: emailVerified ?? this.emailVerified,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      profile: profile?.copyWith(color: color, accounts: accounts),
     );
   }
 }

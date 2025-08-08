@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "630784587693-6cb22412cchntb8ol9gc41rlrttp9qcq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fr.budgly",
+            "certificate_hash": "0a6e7e85d6671421b60342ac9fad83182c0e403a"
+          }
+        },
+        {
           "client_id": "630784587693-vvhh8tq961a6r1ui0vc9fgbsbmeq8n8m.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "630784587693-vvhh8tq961a6r1ui0vc9fgbsbmeq8n8m.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "630784587693-dc97hm79kvvnt1eshvvrdkgeeum76kfn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "fr.budgly"
+              }
             }
           ]
         }
