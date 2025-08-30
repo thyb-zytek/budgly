@@ -83,149 +83,151 @@ class _LoginPageState extends State<LoginPage>
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(
           MediaQuery.of(context).viewInsets.bottom > 0
-              ? kToolbarHeight
+              ? MediaQuery.of(context).size.height / 6.15
               : MediaQuery.of(context).size.height / 3,
         ),
         child: AppBar(toolbarHeight: 0, flexibleSpace: LoginAppbar()),
       ),
+      extendBody: true,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 16,
-          children: [
-            AnimatedBuilder(
-              animation: Listenable.merge([_viewModel]),
-              builder: (context, child) {
-                if (_viewModel.state.isLoading) {
-                  return Column(
-                    spacing: 16,
-                    children: [
-                      Text(AppLocalizations.of(context)!.connecting, style: theme.textTheme.titleMedium),
-                      const CircularProgressIndicator(),
-                    ],
-                  );
-                }
-                return Column(
-                  children: [
-                    if (_viewModel.state.errorCode != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Text(
-                          _translateErrorMessage() ??
-                              _viewModel.state.errorMessage ??
-                              "An error occurred",
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.error,
-                            fontWeight: FontWeight.bold,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_viewModel]),
+          builder: (context, child) {
+            if (_viewModel.state.isLoading) {
+              return Center(child: Column(
+                spacing: 16,
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.connecting,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const CircularProgressIndicator(),
+                ],
+              ));
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_viewModel.state.errorCode != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      _translateErrorMessage() ??
+                          _viewModel.state.errorMessage ??
+                          "An error occurred",
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                switch (_viewModel.state.formType) {
+                  AuthForm.signUp => SignUpForm(
+                    formKey: _viewModel.formKey,
+                    emailController: _viewModel.emailController,
+                    passwordController: _viewModel.passwordController,
+                    password2Controller: _viewModel.password2Controller,
+                    validateEmail: _viewModel.validateEmail,
+                    validatePassword: _viewModel.validatePassword,
+                    validateConfirmPassword: _viewModel.validateConfirmPassword,
+                    onSignInPressed:
+                        () => _onEvent(
+                          AuthEventParams(
+                            type: AuthEvent.changeFormType,
+                            formType: AuthForm.signIn,
                           ),
                         ),
-                      ),
-                    switch (_viewModel.state.formType) {
-                      AuthForm.signUp => SignUpForm(
-                        formKey: _viewModel.formKey,
-                        emailController: _viewModel.emailController,
-                        passwordController: _viewModel.passwordController,
-                        password2Controller: _viewModel.password2Controller,
-                        validateEmail: _viewModel.validateEmail,
-                        validatePassword: _viewModel.validatePassword,
-                        validateConfirmPassword:
-                            _viewModel.validateConfirmPassword,
-                        onSignInPressed:
-                            () => _onEvent(
-                              AuthEventParams(
-                                type: AuthEvent.changeFormType,
-                                formType: AuthForm.signIn,
-                              ),
-                            ),
-                        onSubmitForm:
-                            () => _onEvent(
-                              AuthEventParams(type: AuthEvent.signUp),
-                            ),
-                      ),
-                      AuthForm.signIn => LoginForm(
-                        formKey: _viewModel.formKey,
-                        emailController: _viewModel.emailController,
-                        passwordController: _viewModel.passwordController,
-                        validateEmail: _viewModel.validateEmail,
-                        validatePassword: _viewModel.validatePassword,
-                        onSignUpPressed:
-                            () => _onEvent(
-                              AuthEventParams(
-                                type: AuthEvent.changeFormType,
-                                formType: AuthForm.signUp,
-                              ),
-                            ),
-                        onSubmitForm: () => _onEvent(AuthEventParams(type: AuthEvent.signIn)),
-                        onResetPassword:
-                            () => _onEvent(
-                              AuthEventParams(
-                                type: AuthEvent.changeFormType,
-                                formType: AuthForm.resetPassword,
-                                keepEmail: true,
-                              ),
-                            ),
-                      ),
-                      AuthForm.resetPassword => ResetPasswordForm(
-                        formKey: _viewModel.formKey,
-                        emailController: _viewModel.emailController,
-                        validateEmail: _viewModel.validateEmail,
-                        onSubmitForm:
-                            () => _onEvent(
-                              AuthEventParams(type: AuthEvent.resetPassword),
-                            ),
-                        onSignInPressed:
-                            () => _onEvent(
-                              AuthEventParams(
-                                type: AuthEvent.changeFormType,
-                                formType: AuthForm.signIn,
-                              ),
-                            ),
-                      ),
-                      AuthForm.verifyEmail => VerifyEmail(
-                        email:
-                            _viewModel.state.currentUser?.email ??
-                            _viewModel.emailController.text,
-                        onResendPressed:
-                            () => _onEvent(
-                              AuthEventParams(
-                                type: AuthEvent.resendEmailVerification,
-                              ),
-                            ),
-                        onSignInPressed:
-                            () => _onEvent(
-                              AuthEventParams(type: AuthEvent.signOut),
-                            ),
-                        onReload: () {
-                          _onEvent(AuthEventParams(type: AuthEvent.reloadUser));
-                        },
-                      ),
-                    },
-                    ([
-                          AuthForm.signUp,
-                          AuthForm.signIn,
-                          AuthForm.resetPassword,
-                        ].contains(_viewModel.state.formType))
-                        ? Padding(
-                          padding: EdgeInsets.all(
-                            24,
-                          ).add(EdgeInsets.only(bottom: 16)),
-                          child: GoogleSignInButton(
-                            onPressed:
-                                () => _onEvent(
-                                  AuthEventParams(type: AuthEvent.googleSignIn),
-                                ),
+                    onSubmitForm:
+                        () => _onEvent(AuthEventParams(type: AuthEvent.signUp)),
+                  ),
+                  AuthForm.signIn => LoginForm(
+                    formKey: _viewModel.formKey,
+                    emailController: _viewModel.emailController,
+                    passwordController: _viewModel.passwordController,
+                    validateEmail: _viewModel.validateEmail,
+                    validatePassword: _viewModel.validatePassword,
+                    onSignUpPressed:
+                        () => _onEvent(
+                          AuthEventParams(
+                            type: AuthEvent.changeFormType,
+                            formType: AuthForm.signUp,
                           ),
-                        )
-                        : const SizedBox.shrink(),
-                  ],
-                );
-              },
-            ),
-          ],
+                        ),
+                    onSubmitForm:
+                        () => _onEvent(AuthEventParams(type: AuthEvent.signIn)),
+                    onResetPassword:
+                        () => _onEvent(
+                          AuthEventParams(
+                            type: AuthEvent.changeFormType,
+                            formType: AuthForm.resetPassword,
+                            keepEmail: true,
+                          ),
+                        ),
+                  ),
+                  AuthForm.resetPassword => ResetPasswordForm(
+                    formKey: _viewModel.formKey,
+                    emailController: _viewModel.emailController,
+                    validateEmail: _viewModel.validateEmail,
+                    onSubmitForm:
+                        () => _onEvent(
+                          AuthEventParams(type: AuthEvent.resetPassword),
+                        ),
+                    onSignInPressed:
+                        () => _onEvent(
+                          AuthEventParams(
+                            type: AuthEvent.changeFormType,
+                            formType: AuthForm.signIn,
+                          ),
+                        ),
+                  ),
+                  AuthForm.verifyEmail => VerifyEmail(
+                    email:
+                        _viewModel.state.currentUser?.email ??
+                        _viewModel.emailController.text,
+                    onResendPressed:
+                        () => _onEvent(
+                          AuthEventParams(
+                            type: AuthEvent.resendEmailVerification,
+                          ),
+                        ),
+                    onSignInPressed:
+                        () =>
+                            _onEvent(AuthEventParams(type: AuthEvent.signOut)),
+                    onReload: () {
+                      _onEvent(AuthEventParams(type: AuthEvent.reloadUser));
+                    },
+                  ),
+                },
+                ([
+                      AuthForm.signUp,
+                      AuthForm.signIn,
+                      AuthForm.resetPassword,
+                    ].contains(_viewModel.state.formType))
+                    ? Padding(
+                      padding: EdgeInsets.all(MediaQuery.of(context).viewInsets.bottom > 0 ? 24 : 16).add(
+                        EdgeInsets.only(
+                          bottom:
+                              MediaQuery.of(context).viewInsets.bottom > 0
+                                  ? 8
+                                  : 0,
+                        ),
+                      ),
+                      child: GoogleSignInButton(
+                        onPressed:
+                            () => _onEvent(
+                              AuthEventParams(type: AuthEvent.googleSignIn),
+                            ),
+                      ),
+                    )
+                    : const SizedBox.shrink(),
+              ],
+            );
+          },
         ),
       ),
     );
