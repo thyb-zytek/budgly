@@ -35,6 +35,7 @@ class SignUpForm extends StatelessWidget {
     ThemeData theme = Theme.of(context);
 
     return Column(
+      mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AutofillGroup(
@@ -115,7 +116,7 @@ class SignUpForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: 24),
+          padding: EdgeInsets.only(top: MediaQuery.of(context).viewInsets.bottom > 0 ? 24 : 8),
           child: BudglyButton(text: tr.signUp, onPressed: onSubmitForm),
         ),
       ],
