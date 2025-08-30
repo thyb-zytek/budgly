@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:app/src/core/exceptions/auth_exceptions.dart';
 import 'package:app/src/models/user/user.dart';
 import 'package:app/src/models/user/user_profile.dart';
+import 'package:app/src/services/preferences_service.dart';
 import 'package:app/src/services/supabase_service.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -15,25 +18,33 @@ class AuthService {
 
   User? _currentUser;
 
-  User? get currentUser => _currentUser;
+  User? get currentUser {
+    if ((_auth.currentUser != null && _auth.currentUser != _currentUser) ||
+        (_currentUser != null && !_currentUser!.hasProfile)) {
+      _supabaseService.getOrCreateProfile(_auth.currentUser!).then((profile) {
+        _currentUser = User.fromFirebaseUser(
+          _auth.currentUser!,
+          profile: profile,
+        );
+      });
+    }
+    return _currentUser;
+  }
 
   Future<User?> reloadCurrentUser() async {
     try {
       final fb.User? user = _auth.currentUser;
       if (user != null) {
         await user.reload();
-        UserProfile? profile = await _supabaseService.getUserProfile(user.uid);
-        if (profile == null) {
-          profile = UserProfile(
-            id: user.uid,
-            email: user.email!,
-            fullName: user.displayName ?? user.email!.split('@').first,
-          );
-          profile = await _supabaseService.createProfile(user.uid, profile.toJson());
-        }
+        UserProfile profile = await _supabaseService.getOrCreateProfile(user);
 
-        return User.fromFirebaseUser(user, profile: profile);
+        await PreferencesService().setThemeModeFromString(profile.themeMode);
+
+        final userObj = User.fromFirebaseUser(user, profile: profile);
+        _currentUser = userObj;
+        return userObj;
       } else {
+        _currentUser = null;
         return null;
       }
     } on fb.FirebaseAuthException catch (e) {
@@ -60,42 +71,15 @@ class AuthService {
 
       await userCredential.user!.sendEmailVerification();
 
-      UserProfile? profile = await _supabaseService.getUserProfile(
-        userCredential.user!.uid,
+      UserProfile profile = await _supabaseService.getOrCreateProfile(
+        userCredential.user!,
       );
-
-      if (profile == null) {
-        profile = UserProfile(
-          id: userCredential.user!.uid,
-          email: userCredential.user!.email ?? email,
-          fullName:
-              userCredential.user!.displayName ??
-              userCredential.user!.email?.split('@').first ??
-              email.split('@').first,
-        );
-
-        profile = await _supabaseService.createProfile(
-          userCredential.user!.uid,
-          profile.toJson(),
-        );
-      }
-
       final user = User.fromFirebaseUser(
         userCredential.user!,
         profile: profile,
       );
-
-      print(
-        'Utilisateur créé avec succès. Firebase UID: ${userCredential.user!.uid}, Supabase UUID: ${profile.id}',
-      );
-
       _currentUser = user;
       return user;
-    } on fb.FirebaseAuthException catch (e) {
-      throw AuthenticationException(
-        code: e.code,
-        message: e.message ?? 'An error occurred during sign up',
-      );
     } catch (e) {
       throw AuthenticationException(
         code: 'sign-up-failed',
@@ -117,27 +101,23 @@ class AuthService {
           message: 'No user found for that email and password',
         );
       }
-      final userId = userCredential.user!.uid;
+      UserProfile profile = await _supabaseService.getOrCreateProfile(
+        userCredential.user!,
+      );
 
-      UserProfile? profile = await _supabaseService.getUserProfile(userId);
+      await Future.wait([
+        PreferencesService().setThemeModeFromString(profile.themeMode),
+        PreferencesService().setLocale(Locale(profile.language)),
+        PreferencesService().setCurrency(profile.currency),
+      ]);
 
-      if (profile == null) {
-        profile = await _supabaseService.createProfile(
-          userCredential.user!.uid,
-          UserProfile(
-            id: userCredential.user!.uid,
-            email: userCredential.user!.email!,
-            fullName:
-                userCredential.user!.displayName ??
-                userCredential.user!.email!.split('@').first,
-          ).toJson(),
-        );
-      }
       final user = User.fromFirebaseUser(
         userCredential.user!,
         profile: profile,
       );
+
       _currentUser = user;
+
       return user;
     } on fb.FirebaseAuthException catch (e) {
       throw AuthenticationException(
@@ -180,39 +160,30 @@ class AuthService {
   Future<User> signInWithGoogle() async {
     try {
       await _googleSignIn.signOut();
-      
+
       GoogleSignInAccount? googleUser;
       googleUser = await _googleSignIn.attemptLightweightAuthentication();
-      
       if (googleUser == null) {
-        throw AuthenticationException(
-          code: 'google-signin-cancelled',
-          message: 'Google Sign In was cancelled',
-        );
+        googleUser = await _googleSignIn.authenticate();
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final credential = fb.GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
 
-      UserProfile? profile = await _supabaseService.getUserProfile(
-        userCredential.user!.uid,
+      UserProfile profile = await _supabaseService.getOrCreateProfile(
+        userCredential.user!,
       );
 
-      if (profile == null) {
-        profile = await _supabaseService.createProfile(
-          userCredential.user!.uid,
-          UserProfile(
-            id: userCredential.user!.uid,
-            email: userCredential.user!.email!,
-            fullName: googleUser.displayName ??
-                userCredential.user!.email!.split('@').first,
-          ).toJson(),
-        );
-      }
+      await Future.wait([
+        PreferencesService().setThemeModeFromString(profile.themeMode),
+        PreferencesService().setLocale(Locale(profile.language)),
+        PreferencesService().setCurrency(profile.currency),
+      ]);
 
       final user = User.fromFirebaseUser(
         userCredential.user!,
