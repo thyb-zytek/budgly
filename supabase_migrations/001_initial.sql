@@ -42,32 +42,32 @@ CREATE INDEX idx_categories_account_id ON public.categories(account_id);
 -- User Profile RLS
 CREATE POLICY "Users can insert their own profile" 
   ON user_profiles FOR INSERT 
-  WITH CHECK (user_id = (auth.jwt() ->> 'user_id')::text);
+  WITH CHECK (user_id = (auth.jwt() ->> 'sub')::text);
 
 CREATE POLICY "Users can view their own profile" 
   ON user_profiles FOR SELECT 
-  USING (user_id = (auth.jwt() ->> 'user_id')::text);
+  USING (user_id = (auth.jwt() ->> 'sub')::text);
 
 CREATE POLICY "Users can update their own profile" 
   ON user_profiles FOR UPDATE 
-  USING (user_id = (auth.jwt() ->> 'user_id')::text);
+  USING (user_id = (auth.jwt() ->> 'sub')::text);
 
 -- Accounts RLS
 CREATE POLICY "Users can view their own accounts" 
   ON accounts FOR SELECT 
-  USING (user_id = (auth.jwt() ->> 'user_id')::text);
+  USING (user_id = (auth.jwt() ->> 'sub')::text);
 
 CREATE POLICY "Users can insert their own accounts" 
   ON accounts FOR INSERT 
-  WITH CHECK (user_id = (auth.jwt() ->> 'user_id')::text);
+  WITH CHECK (user_id = (auth.jwt() ->> 'sub')::text);
 
 CREATE POLICY "Users can update their own accounts" 
   ON accounts FOR UPDATE 
-  USING (user_id = (auth.jwt() ->> 'user_id')::text);
+  USING (user_id = (auth.jwt() ->> 'sub')::text);
 
 CREATE POLICY "Users can delete their own accounts" 
   ON accounts FOR DELETE 
-  USING (user_id = (auth.jwt() ->> 'user_id')::text);
+  USING (user_id = (auth.jwt() ->> 'sub')::text);
 
 -- Categories RLS
 CREATE POLICY "Users can view categories from their accounts" 
@@ -75,7 +75,7 @@ CREATE POLICY "Users can view categories from their accounts"
   USING (EXISTS (
     SELECT 1 FROM accounts 
     WHERE accounts.id = categories.account_id 
-    AND accounts.user_id = (auth.jwt() ->> 'user_id')::text
+    AND accounts.user_id = (auth.jwt() ->> 'sub')::text
   ));
 
 CREATE POLICY "Users can insert categories in their accounts" 
@@ -83,7 +83,7 @@ CREATE POLICY "Users can insert categories in their accounts"
   WITH CHECK (EXISTS (
     SELECT 1 FROM accounts 
     WHERE accounts.id = categories.account_id 
-    AND accounts.user_id = (auth.jwt() ->> 'user_id')::text
+    AND accounts.user_id = (auth.jwt() ->> 'sub')::text
   ));
 
 CREATE POLICY "Users can update categories in their accounts" 
@@ -91,7 +91,7 @@ CREATE POLICY "Users can update categories in their accounts"
   USING (EXISTS (
     SELECT 1 FROM accounts 
     WHERE accounts.id = categories.account_id 
-    AND accounts.user_id = (auth.jwt() ->> 'user_id')::text
+    AND accounts.user_id = (auth.jwt() ->> 'sub')::text
   ));
 
 CREATE POLICY "Users can delete categories from their accounts" 
@@ -99,29 +99,8 @@ CREATE POLICY "Users can delete categories from their accounts"
   USING (EXISTS (
     SELECT 1 FROM accounts 
     WHERE accounts.id = categories.account_id 
-    AND accounts.user_id = (auth.jwt() ->> 'user_id')::text
+    AND accounts.user_id = (auth.jwt() ->> 'sub')::text
   ));
-
--- Mettre à jour la fonction de création de profil
-CREATE OR REPLACE FUNCTION public.handle_new_user() 
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.user_profiles (user_id, email, full_name, color)
-  VALUES (
-    NEW.uid,
-    NEW.email, 
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-    lpad(to_hex(floor(random() * 16777215)::int), 6, '0')
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create a trigger to handle new user signups
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Fonction utilitaire pour mettre à jour le champ updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
