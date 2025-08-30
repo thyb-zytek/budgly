@@ -8,6 +8,7 @@ class DropDown<T> extends StatefulWidget {
   final List<T> options;
   final void Function(T option) onSelect;
   final Widget Function(T option) optionBuilder;
+  final bool dense;
 
   const DropDown({
     super.key,
@@ -15,6 +16,7 @@ class DropDown<T> extends StatefulWidget {
     required this.options,
     required this.optionBuilder,
     this.initialValue,
+    this.dense = false,
   });
 
   @override
@@ -152,14 +154,48 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
         onTapOutside: (_) {
           if (_isDropdownOpen) _closeDropdown();
         },
+        onTapInside: (_) {
+          if (!_isDropdownOpen) {
+            _openDropdown();
+          } else {
+            _closeDropdown();
+          }
+        },
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _selectedOption != null
-                ? widget.optionBuilder(_selectedOption!)
+                ? Padding(
+                    padding:
+                        widget.dense
+                            ? const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            )
+                            : const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                    child: DefaultTextStyle(
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      child: widget.optionBuilder(_selectedOption!),
+                    ),
+                  )
                 : Padding(
-                  padding: EdgeInsets.all(8).add(EdgeInsets.only(top: 4)),
+                  padding:
+                      widget.dense
+                          ? const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          )
+                          : const EdgeInsets.all(
+                            8,
+                          ).add(EdgeInsets.only(top: 4)),
                   child: Text(
                     tr!.noOptionsAvailable,
                     style: Theme.of(
