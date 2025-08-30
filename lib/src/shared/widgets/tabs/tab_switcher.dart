@@ -21,7 +21,7 @@ class TabSwitcher extends StatelessWidget {
     ThemeData theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(50.0),
         color: backgroundColor ?? theme.colorScheme.outline.withAlpha(50),
@@ -43,7 +43,7 @@ class TabSwitcher extends StatelessWidget {
                         : Colors.transparent,
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: DefaultTextStyle(
                   style: TextStyle(
                     color:
