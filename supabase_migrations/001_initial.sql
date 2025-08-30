@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   color TEXT NOT NULL,
   theme_mode TEXT DEFAULT 'system' CHECK (theme_mode IN ('light', 'dark', 'system')),
   currency TEXT DEFAULT 'EUR',
-  language TEXT DEFAULT 'fr-FR',
+  language TEXT DEFAULT 'fr',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

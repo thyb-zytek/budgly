@@ -25,7 +25,7 @@ class UserProfile {
     Color? color,
     this.themeMode = 'system',
     this.currency = 'EUR',
-    this.language = 'fr-FR',
+    this.language = 'fr',
     List<Account>? accounts,
     DateTime? createdAt,
     DateTime? updatedAt,
