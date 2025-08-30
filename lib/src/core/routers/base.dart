@@ -2,7 +2,8 @@ import 'package:app/src/pages/login/view.dart';
 import 'package:app/src/pages/overview/view.dart';
 import 'package:app/src/pages/settings/view.dart';
 import 'package:app/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:app/src/models/user/user.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,10 +51,11 @@ class NavigationHelper {
             routes: [
               GoRoute(
                 path: overviewPath,
-                pageBuilder: (context, state) => getPage(
-                    child: OverviewPage(),
-                    state: state,
-                  ),
+                pageBuilder:
+                    (context, state) => getPage(
+                      child: OverviewPage(user: state.extra as User?),
+                      state: state,
+                    ),
               ),
             ],
           ),
@@ -86,14 +88,17 @@ class NavigationHelper {
       navigatorKey: parentNavigatorKey,
       initialLocation: overviewPath,
       routes: routes,
-      redirect: (BuildContext context, GoRouterState state) async {
-        final bool loggedIn =
-            FirebaseAuth.instance.currentUser != null
-                ? FirebaseAuth.instance.currentUser!.emailVerified
-                : false;
-        final bool loggingIn = state.matchedLocation == loginPath;
-        if (!loggedIn) return loginPath;
-        if (loggingIn) return overviewPath;
+      redirect: (BuildContext context, GoRouterState state) {
+        final user = firebase.FirebaseAuth.instance.currentUser;
+
+        if (state.matchedLocation == loginPath && user != null) {
+          return overviewPath;
+        }
+
+        if (user == null && state.matchedLocation != loginPath) {
+          return loginPath;
+        }
+
         return null;
       },
     );
