@@ -40,5 +40,7 @@
   "system": "System",
   "connecting": "Connecting...",
   "newAccount": "New account",
-  "newCategory": "New category"
+  "newCategory": "New category",
+  "locale": "Locale",
+  "currency": "Currency"
 }

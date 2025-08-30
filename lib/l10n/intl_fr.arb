@@ -40,5 +40,7 @@
   "system": "Système",
   "connecting": "Connexion en cours...",
   "newAccount": "Nouveau compte",
-  "newCategory": "Nouvelle catégorie"
+  "newCategory": "Nouvelle catégorie",
+  "locale": "Langue",
+  "currency": "Devise"
 }
