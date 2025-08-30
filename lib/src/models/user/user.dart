@@ -1,6 +1,4 @@
-import 'package:app/src/models/account/account.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
-import 'package:flutter/material.dart';
 
 import 'user_profile.dart';
 
@@ -70,15 +68,14 @@ class User {
     String? email,
     bool? emailVerified,
     Uri? avatarUrl,
-    Color? color,
-    List<Account>? accounts,
+    UserProfile? profile,
   }) {
     return User(
       id: id ?? this.id,
       email: email ?? this.email,
       emailVerified: emailVerified ?? this.emailVerified,
       avatarUrl: avatarUrl ?? this.avatarUrl,
-      profile: profile?.copyWith(color: color, accounts: accounts),
+      profile: profile ?? this.profile,
     );
   }
 }

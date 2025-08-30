@@ -4,6 +4,7 @@ import 'package:app/src/pages/login/models/auth_event.dart';
 import 'package:app/src/pages/login/models/auth_state.dart';
 import 'package:app/src/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/auth_error.dart';
 
@@ -13,22 +14,48 @@ class LoginViewModel with ChangeNotifier {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _password2Controller = TextEditingController();
-  final VoidCallback? onAuthenticated;
+  final Function(User)? onAuthenticated;
+  static const String _formTypeKey = 'LoginDefaultFormType';
 
   AuthState _state = AuthState();
 
-  LoginViewModel({VoidCallback? onAuthenticated})
-    : onAuthenticated = onAuthenticated {
-    if (_authService.currentUser != null &&
-        !_authService.currentUser!.emailVerified) {
-      _setState(
-        currentUser: _authService.currentUser,
-        formType: AuthForm.verifyEmail,
-        isLoading: false,
-      );
-    } else {
-      _setState(formType: AuthForm.signUp, isLoading: false);
+  LoginViewModel({this.onAuthenticated}) {
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final currentUser = _authService.currentUser;
+
+    if (currentUser != null) {
+      if (!currentUser.emailVerified) {
+        _setState(
+          currentUser: currentUser,
+          formType: AuthForm.verifyEmail,
+          isLoading: false,
+        );
+        return;
+      }
+      return;
     }
+
+    final savedFormType = await _loadFormType();
+    _setState(formType: savedFormType, isLoading: false);
+  }
+
+  Future<AuthForm> _loadFormType() async {
+    final prefs = await SharedPreferences.getInstance();
+    final formTypeString = prefs.getString(_formTypeKey);
+    return formTypeString != null
+        ? AuthForm.values.firstWhere(
+          (e) => e.toString() == formTypeString,
+          orElse: () => AuthForm.signIn,
+        )
+        : AuthForm.signIn;
+  }
+
+  Future<void> _saveFormType(AuthForm formType) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_formTypeKey, formType.toString());
   }
 
   AuthState get state => _state;
@@ -200,6 +227,7 @@ class LoginViewModel with ChangeNotifier {
         break;
       case AuthForm.verifyEmail:
         _clearForm(keepEmail: true);
+        _saveFormType(AuthForm.signIn);
         _setState(formType: AuthForm.signIn);
         break;
     }
