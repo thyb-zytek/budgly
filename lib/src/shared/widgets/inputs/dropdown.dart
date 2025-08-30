@@ -34,7 +34,10 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
 
   @override
   void initState() {
-    _selectedOption = widget.options.isNotEmpty ? widget.options.first : null;
+    _selectedOption =
+        widget.options.isNotEmpty
+            ? widget.initialValue ?? widget.options.first
+            : null;
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
@@ -107,23 +110,45 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
                                 maxWidth: constraints.biggest.width,
                                 maxHeight: constraints.biggest.height * 0.5,
                               ),
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(8, 8, 24, 8),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  spacing: 4,
-                                  children:
-                                      widget.options
-                                          .map(
-                                            (option) => InkWell(
-                                              onTap: () => _onOptionTap(option),
-                                              child: widget.optionBuilder(
-                                                option,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 4,
+                                children:
+                                    widget.options
+                                        .map(
+                                          (option) => InkWell(
+                                            onTap: () => _onOptionTap(option),
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                              child: DefaultTextStyle(
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodyMedium!.copyWith(
+                                                  fontWeight:
+                                                      option == _selectedOption
+                                                          ? FontWeight.normal
+                                                          : FontWeight.bold,
+                                                  color:
+                                                      option == _selectedOption
+                                                          ? Theme.of(context)
+                                                              .colorScheme
+                                                              .outlineVariant
+                                                          : Theme.of(context)
+                                                              .colorScheme
+                                                              .onSurface,
+                                                ),
+                                                child: widget.optionBuilder(
+                                                  option,
+                                                ),
                                               ),
                                             ),
-                                          )
-                                          .toList(),
-                                ),
+                                          ),
+                                        )
+                                        .toList(),
                               ),
                             ),
                           ),
