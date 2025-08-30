@@ -1,122 +1,56 @@
 import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/shared/widgets/tabs/tab_switcher.dart';
+import 'package:app/src/pages/settings/widgets/currency_form.dart';
+import 'package:app/src/pages/settings/widgets/locale_form.dart';
+import 'package:app/src/pages/settings/widgets/theme_form.dart';
 import 'package:flutter/material.dart';
 
-class PreferencesForm extends StatefulWidget {
+class PreferencesForm extends StatelessWidget {
   final ThemeMode currentThemeMode;
-  final void Function(ThemeMode?) changeTheme;
+  final Locale currentLocale;
+  final void Function(ThemeMode) changeTheme;
+  final void Function(Locale) changeLocale;
 
   const PreferencesForm({
     super.key,
     required this.changeTheme,
     required this.currentThemeMode,
+    required this.changeLocale,
+    required this.currentLocale,
   });
 
   @override
-  State<PreferencesForm> createState() => _PreferencesFormState();
-}
-
-class _PreferencesFormState extends State<PreferencesForm> {
-  late int _selectedIndex;
-
-  initState() {
-    super.initState();
-    _selectedIndex = ThemeMode.values.indexOf(widget.currentThemeMode);
-  }
-
-  IconData _getIcon(ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.light => Icons.light_mode_rounded,
-      ThemeMode.dark => Icons.dark_mode_rounded,
-      ThemeMode.system => Icons.phone_android_rounded,
-    };
-  }
-
-  String _getThemeName(ThemeMode mode) {
-    AppLocalizations tr = AppLocalizations.of(context)!;
-
-    return switch (mode) {
-      ThemeMode.light => tr.light,
-      ThemeMode.dark => tr.dark,
-      ThemeMode.system => tr.system,
-    };
-  }
-
-  @override
   Widget build(BuildContext context) {
-    AppLocalizations tr = AppLocalizations.of(context)!;
-    ThemeData theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
       child: Column(
-        mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.max,
         children: [
-          Padding(padding: EdgeInsets.only(bottom: 24), child: Text(
-            tr.preferences,
-            style: theme.textTheme.headlineLarge,
-          )),
           Padding(
-            padding: EdgeInsets.only(left: 16, top: 8, bottom: 4),
+            padding: const EdgeInsets.only(bottom: 28, left: 16),
             child: Text(
               tr.appearance,
-              style: theme.textTheme.headlineSmall!.copyWith(
+              textAlign: TextAlign.start,
+              style: theme.textTheme.headlineLarge!.copyWith(
                 decoration: TextDecoration.underline,
                 decorationThickness: 1.2,
-                decorationColor: theme.colorScheme.outlineVariant
+                decorationColor: theme.colorScheme.outlineVariant,
               ),
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                child: Text(tr.theme, style: theme.textTheme.titleSmall),
-              ),
-              TabSwitcher(
-                backgroundColor: theme.colorScheme.surfaceContainer,
-                spaceBetween: 2,
-                selectedIndex: _selectedIndex,
-                onTabSelected: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                    widget.changeTheme(ThemeMode.values[index]);
-                  });
-                },
-                tabs:
-                    ThemeMode.values
-                        .map(
-                          (e) => Row(
-                            spacing: 4,
-                            children: [
-                              Icon(
-                                _getIcon(e),
-                                size: 20,
-                                color:
-                                    _selectedIndex ==
-                                            ThemeMode.values.indexOf(e)
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.onSurfaceVariant,
-                              ),
-                              Text(
-                                _getThemeName(e),
-                                style: TextStyle(
-                                  fontSize: theme.textTheme.bodySmall!.fontSize,
-                                  fontFamily:
-                                      theme.textTheme.bodySmall!.fontFamily,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        .toList(),
-              ),
-            ],
+          ThemeForm(
+            currentThemeMode: currentThemeMode,
+            onThemeChanged: changeTheme,
           ),
+          LocaleForm(
+            currentLocale: currentLocale,
+            onLocaleChanged: changeLocale,
+          ),
+          CurrencyForm(),
         ],
       ),
     );
