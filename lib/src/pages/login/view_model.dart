@@ -92,7 +92,7 @@ class LoginViewModel with ChangeNotifier {
         .then((user) {
           if (user != null && user.emailVerified) {
             _setState(isLoading: true, currentUser: user);
-            onAuthenticated?.call();
+            onAuthenticated?.call(user);
           }
           _setState(
             currentUser: user,
@@ -174,7 +174,7 @@ class LoginViewModel with ChangeNotifier {
             )
             .then((user) {
               if (user.emailVerified) {
-                onAuthenticated?.call();
+                onAuthenticated?.call(user);
               } else {
                 _setState(
                   isLoading: false,
@@ -207,10 +207,26 @@ class LoginViewModel with ChangeNotifier {
 
   Future<void> _handleGoogleSignIn() async {
     try {
-      _authService.signInWithGoogle().then((user) {
-        onAuthenticated?.call();
-      });
-    } on Exception catch (e) {
+      _authService
+          .signInWithGoogle()
+          .then((user) {
+            onAuthenticated?.call(user);
+          })
+          .catchError((error) {
+            _setState(
+              isLoading: false,
+              formType: AuthForm.signUp,
+              errorCode:
+                  error is AuthenticationException
+                      ? error.code
+                      : 'unknownError',
+              errorMessage:
+                  error is AuthenticationException
+                      ? error.message
+                      : error.toString(),
+            );
+          });
+    } catch (e) {
       final error = AuthError('googleSignInError', e.toString());
       _setState(
         errorCode: error.code,

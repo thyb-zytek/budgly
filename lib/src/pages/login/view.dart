@@ -22,9 +22,9 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   late LoginViewModel _viewModel = LoginViewModel(
-    onAuthenticated: () {
+    onAuthenticated: (user) {
       if (mounted) {
-        context.go(NavigationHelper.overviewPath);
+        context.go(NavigationHelper.overviewPath, extra: user);
       }
     },
   );
