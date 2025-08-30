@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app/src/services/preferences_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,21 @@ Future<void> main() async {
       },
     ),
   ]);
+
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await user.reload();
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+      if (refreshedUser == null || !refreshedUser.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+      }
+    }
+  } catch (e) {
+    await FirebaseAuth.instance.signOut();
+  }
+
+  await PreferencesService.init();
 
   NavigationHelper.instance;
 
