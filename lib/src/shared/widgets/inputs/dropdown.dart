@@ -230,15 +230,10 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
                 ),
             widget.options.length > 1
                 ? BudglyIconButton(
+                  smallIcon: widget.dense,
                   icon: Icons.arrow_drop_down_rounded,
                   type: ButtonType.iconDefault,
-                  onPressed: () {
-                    if (!_isDropdownOpen) {
-                      _openDropdown();
-                    } else {
-                      _closeDropdown();
-                    }
-                  },
+                  onPressed: () {},
                 )
                 : Container(),
           ],
