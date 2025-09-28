@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app/src/services/auth_service.dart';
-import 'package:app/src/services/supabase_service.dart';
+import 'package:app/src/services/auth.dart';
+import 'package:app/src/services/supabase.dart';
 
 class PreferencesService with ChangeNotifier {
   static final PreferencesService _instance = PreferencesService._internal();

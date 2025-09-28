@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:app/src/models/user/user_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
@@ -86,7 +88,10 @@ class SupabaseService {
     Map<String, dynamic> updates,
   ) async {
     try {
-      await _supabase.from('user_profiles').update(updates).eq('user_id', userId);
+      await _supabase
+          .from('user_profiles')
+          .update(updates)
+          .eq('user_id', userId);
       return true;
     } catch (e) {
       return false;
@@ -94,6 +99,43 @@ class SupabaseService {
   }
 
   // Account Operations
+  Future<List<Account>> listAccountsWithSignedUrls(
+    String userId,
+    String bucketId,
+    String Function(Account account) getObjectKey,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('accounts')
+          .select()
+          .eq('user_id', userId);
+
+      final futures = (response as List<dynamic>).map((json) async {
+        final account = Account.fromJson(json as Map<String, dynamic>);
+
+        if (account.picture != null && account.id != null) {
+          try {
+            final objectKey = getObjectKey(account);
+            final pictureUrl = await getSignedUrl(
+              bucketId: bucketId,
+              filePath: objectKey,
+            );
+            return account.copyWith(pictureUrl: pictureUrl);
+          } catch (e) {
+            return account;
+          }
+        }
+
+        return account;
+      });
+
+      return await Future.wait(futures);
+    } catch (e) {
+      print('Error getting user accounts: $e');
+      return [];
+    }
+  }
+
   Future<List<Account>> getUserAccounts(String userId) async {
     try {
       final response = await _supabase
@@ -125,16 +167,18 @@ class SupabaseService {
     }
   }
 
-  Future<bool> updateAccount(Account account) async {
+  Future<Account?> updateAccount(Account account) async {
     try {
-      await _supabase
+      final response = await _supabase
           .from('accounts')
           .update(account.toJson())
-          .eq('id', account.id);
-      return true;
+          .eq('id', account.id!)
+          .select()
+          .single();
+      return Account.fromJson(response);
     } catch (e) {
       print('Error updating account: $e');
-      return false;
+      return null;
     }
   }
 
@@ -200,6 +244,66 @@ class SupabaseService {
     } catch (e) {
       print('Error deleting category: $e');
       return false;
+    }
+  }
+
+  // File Operations
+  Future<String?> uploadFile({
+    required String bucketId,
+    required String filePath,
+    required String userId,
+    String? prefix,
+    String? fileName,
+  }) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception("File at $filePath does not exist");
+      }
+
+      final fileExtension = file.path.split('.').last;
+      final name =
+          fileName != null && fileName.contains('.')
+              ? fileName
+              : '${fileName ?? 'avatar'}.$fileExtension';
+
+      final objectName = "$userId/${prefix != null ? '$prefix/' : ''}$name";
+
+      await _supabase.storage.from(bucketId).upload(objectName, file);
+      return name;
+    } catch (e) {
+      print('Error during file upload: $e');
+      rethrow;
+    }
+  }
+
+  Future<String> getSignedUrl({
+    required String bucketId,
+    required String filePath,
+    int validityInSeconds = 3600,
+  }) async {
+    try {
+      final response = await _supabase.storage
+          .from(bucketId)
+          .createSignedUrl(filePath, validityInSeconds);
+
+      return response;
+    } catch (e) {
+      print('Error generating signed URL: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteFile({
+    required String bucketId,
+    required String filePath,
+  }) async {
+    try {
+      await _supabase.storage.from(bucketId).remove([filePath]);
+      return true;
+    } catch (e) {
+      print('Error deleting file: $e');
+      rethrow;
     }
   }
 }
