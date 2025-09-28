@@ -23,7 +23,10 @@ dependencies:
   google_sign_in: ^7.1.1
   shared_preferences: ^2.5.3
   supabase_flutter: ^2.4.2
-  flutter_dotenv: ^5.2.1
+  flutter_dotenv: ^6.0.0
+  file_picker: ^10.3.2
+  image_cropper: ^9.1.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
