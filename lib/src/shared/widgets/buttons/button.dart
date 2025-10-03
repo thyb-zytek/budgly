@@ -6,6 +6,7 @@ class BudglyButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final ButtonType? type;
   final IconData? leadingIcon;
+  final bool? dense;
 
   const BudglyButton({
     super.key,
@@ -13,6 +14,7 @@ class BudglyButton extends StatelessWidget {
     this.onPressed,
     required this.text,
     this.leadingIcon,
+    this.dense = false,
   });
 
   @override
@@ -26,9 +28,9 @@ class BudglyButton extends StatelessWidget {
     return FilledButton.icon(
       style: FilledButton.styleFrom(
         backgroundColor: buttonColors.backgroundColor,
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        iconSize: 24,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.symmetric(vertical: dense! ? 8 : 16, horizontal: dense! ? 16 : 24),
+        iconSize: dense! ? 20 : 24,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(dense! ? 8 : 10)),
       ),
       onPressed: onPressed,
       iconAlignment: IconAlignment.start,
@@ -38,7 +40,9 @@ class BudglyButton extends StatelessWidget {
               : null,
       label: Text(
         text,
-        style: theme.textTheme.titleMedium?.copyWith(
+        style: dense! ? theme.textTheme.bodyLarge?.copyWith(
+          color: buttonColors.textColor,
+        ) : theme.textTheme.titleMedium?.copyWith(
           color: buttonColors.textColor,
         ),
       ),
