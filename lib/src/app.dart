@@ -1,7 +1,7 @@
 import 'package:app/l10n/app_localizations.dart';
 import 'package:app/src/core/routers/base.dart';
 import 'package:app/src/core/theme/theme.dart';
-import 'package:app/src/services/preferences_service.dart';
+import 'package:app/src/services/preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
