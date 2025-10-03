@@ -1,5 +1,5 @@
+import 'package:app/src/core/extensions/color.dart';
 import 'package:flutter/material.dart';
-import 'package:app/src/shared/extensions/color.dart';
 
 @immutable
 class Account {
