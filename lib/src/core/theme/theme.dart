@@ -44,6 +44,8 @@ class MaterialTheme {
       error: Color(0xffE84343),
       // Error Color
       onError: Color(0xff101011),
+      errorContainer: Color(0xffE84343),
+      onErrorContainer: Color(0xFFE5E9EF),
       // Text Color on error
       surface: Color(0xFFE5E9EF),
       inverseSurface: Color(0xff0F1011),
@@ -55,7 +57,7 @@ class MaterialTheme {
       // Default Text Color
       onSurfaceVariant: Color(0xff626972),
       // Text Color on surface variant
-      onInverseSurface:  Color(0xFFE5E9EF),
+      onInverseSurface: Color(0xFFE5E9EF),
       // Softer hint text color
       surfaceTint: Color(0xff1e1e35),
       // Harmonized elevation/shadow color
@@ -91,6 +93,8 @@ class MaterialTheme {
       error: Color(0xffFF6B6B),
       // Brightened error for visibility
       onError: Color(0xff0F1011),
+      errorContainer: Color(0xffFF6B6B),
+      onErrorContainer: Color(0xff0F1011),
       surface: Color(0xff101113),
       // Main background
       inverseSurface: Color(0xFFF4F8FF),
