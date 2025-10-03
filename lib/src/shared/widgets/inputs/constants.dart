@@ -1,1 +1,1 @@
-enum InputType { Default, Password, Email, Currency, Calendar, Username }
+enum InputType { Default, Password, Email, Currency, Calendar, Username, Url }
