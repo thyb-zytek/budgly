@@ -26,7 +26,7 @@ class BudglyIconButton extends StatelessWidget {
     );
 
     return IconButton(
-      icon: Icon(icon, size: smallIcon! ? 28 : 42),
+      icon: Icon(icon, size: smallIcon! ? 32 : 42),
       onPressed: onPressed,
       alignment: Alignment.center,
       color: filled! ? buttonColors.textColor : buttonColors.iconColor,
