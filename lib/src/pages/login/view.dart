@@ -209,21 +209,19 @@ class _LoginPageState extends State<LoginPage>
                       AuthForm.resetPassword,
                     ].contains(_viewModel.state.formType))
                     ? Padding(
-                      padding: EdgeInsets.all(MediaQuery.of(context).viewInsets.bottom > 0 ? 24 : 16).add(
-                        EdgeInsets.only(
-                          bottom:
-                              MediaQuery.of(context).viewInsets.bottom > 0
-                                  ? 8
-                                  : 0,
+                        padding: const EdgeInsets.all(16.0).add(
+                          EdgeInsets.only(
+                            bottom: MediaQuery.of(context).viewInsets.bottom > 0
+                                ? MediaQuery.of(context).viewInsets.bottom + 8
+                                : 0,
+                          ),
                         ),
-                      ),
-                      child: GoogleSignInButton(
-                        onPressed:
-                            () => _onEvent(
-                              AuthEventParams(type: AuthEvent.googleSignIn),
-                            ),
-                      ),
-                    )
+                        child: GoogleSignInButton(
+                          onPressed: () => _onEvent(
+                            AuthEventParams(type: AuthEvent.googleSignIn),
+                          ),
+                        ),
+                      )
                     : const SizedBox.shrink(),
               ],
             );
