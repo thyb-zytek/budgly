@@ -25,6 +25,13 @@
   "googleSignIn": "Sign in with Google",
   "askEmailForResetPassword": "Please provide an email address for receiving a password reset link.",
   "verifyEmailMessage": "A verification email has been sent to {email}. Please click the link in the email to verify your account.",
+  "@verifyEmailMessage": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "resendVerificationEmail": "Resend verification email",
   "emailAlreadyInUse": "Email already in use.",
   "wrongPassword": "Incorrect password.",
@@ -42,5 +49,31 @@
   "newAccount": "New account",
   "newCategory": "New category",
   "locale": "Locale",
-  "currency": "Currency"
+  "currency": "Currency",
+  "accountName": "Account name",
+  "accountNameRequired": "Name is required.",
+  "validate": "Validate",
+  "cancel": "Cancel",
+  "commonError": "Error",
+  "cropImage": "Adjust image",
+  "pickImage": "Pick image",
+  "picture": "Picture",
+  "color": "Color",
+  "accountCreateFailed": "Account creation failed.",
+  "confirmDeleteAccount": "Delete account: {accountName}",
+  "@confirmDeleteAccount": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteAccountMessage": "The account [{accountName}] will be deleted permanently, are you sure you want to delete this account?",
+  "@confirmDeleteAccountMessage": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      }
+    }
+  }
 }

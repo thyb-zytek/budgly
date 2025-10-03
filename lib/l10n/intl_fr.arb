@@ -25,6 +25,13 @@
   "googleSignIn": "Se connecter avec Google",
   "askEmailForResetPassword": "Veuillez fournir votre adresse mail, pour recevoir un lien de réinitialisation du mot de passe.",
   "verifyEmailMessage": "Un email de vérification a été envoyé à {email}. Veuillez cliquer sur le lien dans l'email pour vérifier votre compte.",
+  "@verifyEmailMessage": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "resendVerificationEmail": "Renvoyer l'email de vérification",
   "emailAlreadyInUse": "Cette adresse mail est déjà utilisée par un autre compte.",
   "wrongPassword": "Mot de passe incorrect.",
@@ -42,5 +49,31 @@
   "newAccount": "Nouveau compte",
   "newCategory": "Nouvelle catégorie",
   "locale": "Langue",
-  "currency": "Devise"
+  "currency": "Devise",
+  "accountName": "Nom du compte",
+  "accountNameRequired": "Le nom est obligatoire.",
+  "validate": "Valider",
+  "cancel": "Annuler",
+  "commonError": "Erreur",
+  "cropImage": "Ajuster l'image",
+  "pickImage": "Sélectionner une image",
+  "picture": "Image",
+  "color": "Couleur",
+  "accountCreateFailed": "Création du compte échouée.",
+  "confirmDeleteAccount": "Supprimer le compte : {accountName}",
+  "@confirmDeleteAccount": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteAccountMessage": "La suppression du compte [{accountName}] est définitive, êtes-vous sûr de vouloir supprimer ce compte ?",
+  "@confirmDeleteAccountMessage": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      }
+    }
+  }
 }
