@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 CREATE TABLE IF NOT EXISTS public.accounts (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id TEXT REFERENCES user_profiles(user_id) ON DELETE CASCADE NOT NULL,
-  full_name TEXT NOT NULL,
+  name TEXT NOT NULL,
   picture TEXT,
   color TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -123,8 +123,3 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_categories_updated_at
 BEFORE UPDATE ON public.categories
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Enable Row Level Security
-ALTER TABLE IF EXISTS public.user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.categories ENABLE ROW LEVEL SECURITY;
