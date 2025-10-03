@@ -2,7 +2,7 @@ import 'package:app/src/core/exceptions/auth_exceptions.dart';
 import 'package:app/src/models/user/user.dart';
 import 'package:app/src/pages/login/models/auth_event.dart';
 import 'package:app/src/pages/login/models/auth_state.dart';
-import 'package:app/src/services/auth_service.dart';
+import 'package:app/src/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
