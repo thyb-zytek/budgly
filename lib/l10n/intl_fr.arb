@@ -68,7 +68,7 @@
       }
     }
   },
-  "confirmDeleteAccountMessage": "La suppression du compte [{accountName}] est définitive, êtes-vous sûr de vouloir supprimer ce compte ?",
+  "confirmDeleteAccountMessage": "La suppression du compte [{accountName}] est définitive et tout ce qui lié sera perdu, êtes-vous sûr de vouloir supprimer ce compte ?",
   "@confirmDeleteAccountMessage": {
     "placeholders": {
       "accountName": {

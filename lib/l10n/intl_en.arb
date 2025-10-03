@@ -68,7 +68,7 @@
       }
     }
   },
-  "confirmDeleteAccountMessage": "The account [{accountName}] will be deleted permanently, are you sure you want to delete this account?",
+  "confirmDeleteAccountMessage": "The account [{accountName}] will be deleted permanently and all related data will be lost, are you sure you want to delete this account?",
   "@confirmDeleteAccountMessage": {
     "placeholders": {
       "accountName": {
