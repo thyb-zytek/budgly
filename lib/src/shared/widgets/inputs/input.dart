@@ -20,6 +20,7 @@ class TextInput extends StatefulWidget {
   final InputType type;
   final TextInputAction? textInputAction;
   final void Function(String)? onFieldSubmitted;
+  final void Function(String)? onChange;
 
   const TextInput({
     super.key,
@@ -33,6 +34,7 @@ class TextInput extends StatefulWidget {
     this.type = InputType.Default,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.onChange,
   });
 
   @override
@@ -98,6 +100,21 @@ class _TextInputState extends State<TextInput> {
     }
   }
 
+  TextInputType getTextInputType() {
+    switch (widget.type) {
+      case InputType.Email:
+        return TextInputType.emailAddress;
+      case InputType.Username:
+        return TextInputType.name;
+      case InputType.Password:
+        return TextInputType.visiblePassword;
+      case InputType.Url:
+        return TextInputType.url;
+      default:
+        return TextInputType.text;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ThemeData theme = Theme.of(context);
@@ -109,10 +126,14 @@ class _TextInputState extends State<TextInput> {
         child: TextFormField(
           autofillHints: getAutofillHints(),
           focusNode: _focusNode,
+          keyboardType: getTextInputType(),
           textInputAction: widget.textInputAction,
           onFieldSubmitted: widget.onFieldSubmitted,
           onTapOutside: (e) => _focusNode.unfocus(),
           onChanged: (v) {
+            if (widget.onChange != null) {
+              widget.onChange!(v);
+            }
             if (v.isEmpty) {
               setState(() => erasable = false);
             } else {
