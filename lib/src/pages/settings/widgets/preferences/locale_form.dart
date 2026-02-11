@@ -48,7 +48,7 @@ class LocaleForm extends StatelessWidget {
                 options: AppLocalizations.supportedLocales,
                 onSelect: onLocaleChanged,
                 optionBuilder:
-                    (option) => Padding(
+                    (option, _) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       child: Text(option.languageCode.toUpperCase()),
                     ),
