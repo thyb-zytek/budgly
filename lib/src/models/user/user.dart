@@ -2,11 +2,14 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase;
 
 import 'user_profile.dart';
 
+enum AuthProvider { google, email }
+
 class User {
   final String id;
   final String? email;
   final bool emailVerified;
   final Uri? avatarUrl;
+  final AuthProvider provider;
   final UserProfile? profile;
 
   User({
@@ -14,12 +17,15 @@ class User {
     this.email,
     this.emailVerified = false,
     this.avatarUrl,
+    this.provider = AuthProvider.email,
     this.profile,
   });
 
   bool get hasProfile => profile != null;
 
   bool get isAuthenticated => id.isNotEmpty;
+
+  bool get isGoogleUser => provider == AuthProvider.google;
 
   factory User.fromFirebaseUser(
     firebase.User firebaseUser, {
@@ -33,6 +39,10 @@ class User {
           firebaseUser.photoURL != null
               ? Uri.parse(firebaseUser.photoURL!)
               : null,
+      provider:
+          firebaseUser.providerData.first.providerId == 'google.com'
+              ? AuthProvider.google
+              : AuthProvider.email,
       profile: profile,
     );
   }
@@ -78,4 +88,12 @@ class User {
       profile: profile ?? this.profile,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is User && other.id == id && other.email == email;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ email.hashCode;
 }
