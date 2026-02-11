@@ -36,7 +36,9 @@ class Avatar extends StatelessWidget {
             picture == null ? null : isLocalPicture ? FileImage(File(picture!)) : NetworkImage(picture!),
         child: Text(
           initial,
-          style: theme.textTheme.titleLarge!.copyWith(
+          style: size < 100 ? theme.textTheme.titleLarge!.copyWith(
+            color: theme.colorScheme.onPrimary,
+          ) : theme.textTheme.displayMedium!.copyWith(
             color: theme.colorScheme.onPrimary,
           ),
         ),

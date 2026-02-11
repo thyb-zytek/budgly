@@ -39,10 +39,11 @@ class AccountFormCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      color: theme.colorScheme.surfaceContainerHigh,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4).copyWith(right: 8),
         child: Form(
@@ -84,7 +85,7 @@ class AccountFormCard extends StatelessWidget {
                   hotValidating:
                       (v) =>
                           v == null || v.isEmpty
-                              ? tr.accountNameRequired
+                              ? tr.nameRequired
                               : null,
                   textInputAction: TextInputAction.done,
                 ),
