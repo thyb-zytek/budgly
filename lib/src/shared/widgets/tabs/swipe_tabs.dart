@@ -8,7 +8,7 @@ class SwipeTabs extends StatefulWidget {
   final ValueChanged<int>? onIndexChanged;
 
   const SwipeTabs({
-    Key? key,
+    super.key,
     this.initialIndex = 0,
     required this.children,
     required this.tabs,
@@ -16,8 +16,7 @@ class SwipeTabs extends StatefulWidget {
   }) : assert(
          children.length == tabs.length,
          'Children and tabs must have the same length',
-       ),
-       super(key: key);
+       );
 
   @override
   State<SwipeTabs> createState() => _SwipeTabsState();

@@ -2,7 +2,7 @@ import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class LoginAppbar extends StatelessWidget {
-  const LoginAppbar({Key? key}) : super(key: key);
+  const LoginAppbar({super.key});
 
   @override
   Widget build(BuildContext context) {
