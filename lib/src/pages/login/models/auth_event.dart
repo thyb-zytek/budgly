@@ -31,8 +31,9 @@ class AuthEventParams {
           AuthEvent.signUp,
           AuthEvent.resetPassword,
         ].any((e) => e == type) &&
-        submitForm != null)
+        submitForm != null) {
       submitForm();
+    }
     if (type == AuthEvent.googleSignIn && googleSignIn != null) googleSignIn();
     if (type == AuthEvent.signOut && signOut != null) signOut();
     if (type == AuthEvent.reloadUser && reload != null) reload();
