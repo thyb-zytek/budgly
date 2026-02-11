@@ -68,6 +68,7 @@ class LoginViewModel with ChangeNotifier {
 
   TextEditingController get password2Controller => _password2Controller;
 
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();

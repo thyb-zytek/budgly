@@ -5,20 +5,15 @@ class SnackBarMessage extends SnackBar {
   final String message;
   final SnackBarType type;
 
-  SnackBarMessage({
-    Key? key,
-    required this.message,
-    required this.type,
-    Duration duration = const Duration(seconds: 5),
-  }) : super(
-         key: key,
-         content: _SnackBarMessageContent(message: message, type: type),
-         behavior: SnackBarBehavior.floating,
-         backgroundColor: Colors.transparent,
-         elevation: 0,
-        //  duration: duration,
-         showCloseIcon: true,
-       );
+  SnackBarMessage({super.key, required this.message, required this.type})
+    : super(
+        content: _SnackBarMessageContent(message: message, type: type),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        duration: const Duration(seconds: 3),
+        elevation: 0,
+        showCloseIcon: true,
+      );
 }
 
 class _SnackBarMessageContent extends StatelessWidget {
@@ -45,9 +40,7 @@ class _SnackBarMessageContent extends StatelessWidget {
       case SnackBarType.error:
         return Theme.of(context).colorScheme.onErrorContainer;
       case SnackBarType.success:
-        return Theme.of(context).brightness == Brightness.light
-            ? MaterialTheme.success.light.color
-            : MaterialTheme.success.dark.color;
+        return Theme.of(context).colorScheme.onPrimary;
       case SnackBarType.info:
         return Theme.of(context).colorScheme.onTertiaryContainer;
     }
