@@ -8,9 +8,7 @@ import 'package:image_cropper/image_cropper.dart';
 
 class ImageService {
   static Future<String?> _pickImageFromGallery() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-    );
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
 
     if (result != null && result.files.single.path != null) {
       return result.files.single.path!;
@@ -19,7 +17,9 @@ class ImageService {
   }
 
   static Future<String?> _cropToCircle(
-      BuildContext context, String path) async {
+    BuildContext context,
+    String path,
+  ) async {
     final croppedFile = await ImageCropper().cropImage(
       sourcePath: path,
       aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
