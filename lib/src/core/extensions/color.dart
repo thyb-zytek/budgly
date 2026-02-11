@@ -10,6 +10,6 @@ extension HexColor on Color {
   }
 
   String toHex({bool leadingHashSign = true, bool includeAlpha = true}) {
-   return this.toHexString();
+   return toHexString();
   }
 }
