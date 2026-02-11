@@ -45,7 +45,7 @@ class SignUpForm extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextInput(
-                  type: InputType.Username,
+                  type: InputType.username,
                   controller: emailController,
                   labelText: tr.email,
                   textInputAction: TextInputAction.next,
@@ -64,7 +64,7 @@ class SignUpForm extends StatelessWidget {
                 TextInput(
                   controller: passwordController,
                   labelText: tr.password,
-                  type: InputType.Password,
+                  type: InputType.password,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                   hotValidating: (v) {
@@ -81,7 +81,7 @@ class SignUpForm extends StatelessWidget {
                 TextInput(
                   controller: password2Controller,
                   labelText: tr.confirmPassword,
-                  type: InputType.Password,
+                  type: InputType.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
                   hotValidating: (v) {

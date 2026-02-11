@@ -69,7 +69,7 @@ class LoginForm extends StatelessWidget {
                     ),
                   ),
                 TextInput(
-                  type: InputType.Username,
+                  type: InputType.username,
                   controller: emailController,
                   labelText: tr.email,
                   textInputAction: TextInputAction.next,
@@ -88,7 +88,7 @@ class LoginForm extends StatelessWidget {
                 TextInput(
                   controller: passwordController,
                   labelText: tr.password,
-                  type: InputType.Password,
+                  type: InputType.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
                   hotValidating: (v) {

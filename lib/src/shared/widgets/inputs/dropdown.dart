@@ -7,7 +7,7 @@ class DropDown<T> extends StatefulWidget {
   final T? initialValue;
   final List<T> options;
   final void Function(T option) onSelect;
-  final Widget Function(T option) optionBuilder;
+  final Widget Function(T option, bool isSelected) optionBuilder;
   final bool dense;
 
   const DropDown({
@@ -89,7 +89,7 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
               showWhenUnlinked: false,
               targetAnchor: Alignment.centerRight,
               followerAnchor: Alignment.topRight,
-              offset: const Offset(-24, 16),
+              offset: const Offset(-8, 16),
               child: LayoutBuilder(
                 builder:
                     (context, constraints) => Row(
@@ -136,13 +136,13 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
                                                       option == _selectedOption
                                                           ? Theme.of(context)
                                                               .colorScheme
-                                                              .outlineVariant
+                                                              .primary
                                                           : Theme.of(context)
                                                               .colorScheme
                                                               .onSurface,
                                                 ),
                                                 child: widget.optionBuilder(
-                                                  option,
+                                                  option, option == _selectedOption,
                                                 ),
                                               ),
                                             ),
@@ -208,7 +208,7 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
                         fontWeight: FontWeight.w500,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      child: widget.optionBuilder(_selectedOption!),
+                      child: widget.optionBuilder(_selectedOption as T, false),
                     ),
                   )
                 : Padding(
