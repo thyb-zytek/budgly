@@ -75,7 +75,7 @@ class PreferencesService with ChangeNotifier {
   
   Future<void> setThemeMode(ThemeMode mode) async {
     if (_themeMode == mode) return;
-    if (_prefs == null) _prefs = await SharedPreferences.getInstance();
+    _prefs ??= await SharedPreferences.getInstance();
     
     _themeMode = mode;
     await _prefs!.setInt(_themeKey, mode.index);
@@ -98,7 +98,7 @@ class PreferencesService with ChangeNotifier {
 
   Future<void> setLocale(Locale newLocale) async {
     if (_locale.languageCode == newLocale.languageCode) return;
-    if (_prefs == null) _prefs = await SharedPreferences.getInstance();
+    _prefs ??= await SharedPreferences.getInstance();
     
     _locale = newLocale;
     await _prefs!.setString(_localeKey, newLocale.languageCode);
@@ -113,7 +113,7 @@ class PreferencesService with ChangeNotifier {
   
   Future<void> setCurrency(String newCurrency) async {
     if (_currency == newCurrency) return;
-    if (_prefs == null) _prefs = await SharedPreferences.getInstance();
+    _prefs ??= await SharedPreferences.getInstance();
     
     _currency = newCurrency;
     await _prefs!.setString(_currencyKey, newCurrency);
@@ -137,9 +137,5 @@ class PreferencesService with ChangeNotifier {
       }
     }
   }
-  
-  @override
-  void dispose() {
-    super.dispose();
-  }
+
 }
