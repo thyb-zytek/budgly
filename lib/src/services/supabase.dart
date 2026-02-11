@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:app/src/models/user/user_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
@@ -169,12 +170,13 @@ class SupabaseService {
 
   Future<Account?> updateAccount(Account account) async {
     try {
-      final response = await _supabase
-          .from('accounts')
-          .update(account.toJson())
-          .eq('id', account.id!)
-          .select()
-          .single();
+      final response =
+          await _supabase
+              .from('accounts')
+              .update(account.toJson())
+              .eq('id', account.id!)
+              .select()
+              .single();
       return Account.fromJson(response);
     } catch (e) {
       print('Error updating account: $e');
@@ -197,7 +199,7 @@ class SupabaseService {
     try {
       final response = await _supabase
           .from('categories')
-          .select()
+          .select('*, account:accounts(*)')
           .eq('account_id', accountId);
 
       return (response as List<dynamic>)
@@ -215,7 +217,7 @@ class SupabaseService {
           await _supabase
               .from('categories')
               .insert(category.toJson())
-              .select()
+              .select('*, account:accounts(*)')
               .single();
       return Category.fromJson(response);
     } catch (e) {
@@ -229,7 +231,7 @@ class SupabaseService {
       await _supabase
           .from('categories')
           .update(category.toJson())
-          .eq('id', category.id);
+          .eq('id', category.id!);
       return true;
     } catch (e) {
       print('Error updating category: $e');
