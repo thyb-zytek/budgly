@@ -7,10 +7,10 @@ class LocaleForm extends StatelessWidget {
   final ValueChanged<Locale> onLocaleChanged;
 
   const LocaleForm({
+    super.key,
     required this.currentLocale,
     required this.onLocaleChanged,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

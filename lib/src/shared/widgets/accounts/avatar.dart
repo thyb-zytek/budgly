@@ -11,14 +11,14 @@ class Avatar extends StatelessWidget {
   final Color? backgroundColor;
 
   const Avatar({
-    Key? key,
+    super.key,
     required this.initial,
     this.picture,
     this.isLocalPicture = false,
     this.size = 45,
     this.onTap,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

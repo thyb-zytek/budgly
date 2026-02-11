@@ -35,7 +35,6 @@ class TypedButtonStyle {
             theme.brightness == Brightness.light
                 ? MaterialTheme.success.light.color
                 : MaterialTheme.success.dark.color;
-        ;
         break;
       case ButtonType.error:
         _backgroundColor = theme.colorScheme.error;

@@ -7,10 +7,10 @@ class ThemeForm extends StatelessWidget {
   final ValueChanged<ThemeMode> onThemeChanged;
 
   const ThemeForm({
+    super.key,
     required this.currentThemeMode,
     required this.onThemeChanged,
-    Key? key,
-  }) : super(key: key);
+  });
 
   IconData _getIcon(ThemeMode mode) {
     return switch (mode) {
