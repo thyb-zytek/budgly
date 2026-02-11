@@ -2,7 +2,6 @@ include: package:flutter_lints/flutter.yaml
 
 linter:
   rules:
-    rules:
     prefer_const_constructors: false
     prefer_final_fields: false
     use_key_in_widget_constructors: false
