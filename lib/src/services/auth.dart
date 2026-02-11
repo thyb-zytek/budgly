@@ -32,6 +32,49 @@ class AuthService {
     return _currentUser;
   }
 
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    try {
+      final fb.User? firebaseUser = _auth.currentUser;
+      if (firebaseUser == null) {
+        throw const AuthenticationException(
+          code: 'no-user',
+          message: 'No user is currently signed in',
+        );
+      }
+
+      if (firebaseUser.providerData.any(
+        (provider) => provider.providerId == 'google.com',
+      )) {
+        throw const AuthenticationException(
+          code: 'google-user',
+          message: 'Cannot change password for Google users',
+        );
+      }
+      await firebaseUser.reauthenticateWithCredential(
+        fb.EmailAuthProvider.credential(
+          email: firebaseUser.email!,
+          password: oldPassword,
+        ),
+      );
+      await firebaseUser.updatePassword(newPassword);
+      await firebaseUser.reload();
+      _currentUser = User.fromFirebaseUser(firebaseUser);
+    } on fb.FirebaseAuthException catch (e) {
+      String message = "An error occurred while changing password";
+
+      if (e.code == 'requires-recent-login') {
+        message = e.message!;
+      }
+
+      throw AuthenticationException(code: e.code, message: message);
+    } catch (e) {
+      throw AuthenticationException(
+        code: 'password-change-failed',
+        message: 'Failed to change password: $e',
+      );
+    }
+  }
+
   Future<User?> reloadCurrentUser() async {
     try {
       final fb.User? user = _auth.currentUser;
