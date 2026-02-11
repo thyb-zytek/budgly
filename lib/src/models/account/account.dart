@@ -60,4 +60,9 @@ class Account {
     if (identical(this, other)) return true;
     return other is Account && other.id == id;
   }
+
+  @override
+  int get hashCode {
+    return id.hashCode;
+  }
 }

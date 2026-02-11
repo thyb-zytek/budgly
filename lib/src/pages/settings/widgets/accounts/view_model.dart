@@ -11,6 +11,7 @@ class AccountsViewModel extends ChangeNotifier {
   final AccountsService _accountsService = AccountsService.instance;
 
   final List<Account> _accounts = [];
+  bool _hasAccountsLoaded = false;
   Account? _editingAccount;
 
   final TextEditingController _nameController = TextEditingController();
@@ -22,6 +23,7 @@ class AccountsViewModel extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   List<Account> get accounts => List.unmodifiable(_accounts);
+  bool get hasAccountsLoaded => _hasAccountsLoaded;
 
   Account? get editingAccount => _editingAccount;
 
@@ -73,14 +75,18 @@ class AccountsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadAccounts() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> loadAccounts({bool needLoading = true}) async {
+    if (needLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     _accounts.clear();
     _accounts.addAll(await _accountsService.listAccountsWithSignedUrls());
+    _accounts.sort((a, b) => a.name.compareTo(b.name));
 
     _isLoading = false;
+    _hasAccountsLoaded = true;
     notifyListeners();
   }
 
