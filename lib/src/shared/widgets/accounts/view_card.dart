@@ -6,14 +6,16 @@ import 'package:flutter/material.dart';
 
 class AccountViewCard extends StatelessWidget {
   final Account account;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final Color? color;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const AccountViewCard({
     super.key,
     required this.account,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
+    this.color,
   });
 
   @override
@@ -22,15 +24,21 @@ class AccountViewCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      color: color ?? Theme.of(context).colorScheme.surfaceContainerHigh,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(right: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ).copyWith(right: 8),
         child: Row(
           spacing: 16,
           children: [
             Avatar(
               initial: account.name[0].toUpperCase(),
-              picture: account.pictureUrl?.isNotEmpty == true ? account.pictureUrl : null,
+              picture:
+                  account.pictureUrl?.isNotEmpty == true
+                      ? account.pictureUrl
+                      : null,
               isLocalPicture: account.pictureUrl == null,
               backgroundColor: account.color,
               size: 52,
@@ -38,24 +46,27 @@ class AccountViewCard extends StatelessWidget {
             Expanded(
               child: Text(account.name, style: theme.textTheme.titleLarge),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                BudglyIconButton(
-                  icon: Icons.edit_rounded,
-                  type: ButtonType.primary,
-                  smallIcon: true,
-                  onPressed: onEdit,
-                ),
-                BudglyIconButton(
-                  icon: Icons.delete_rounded,
-                  type: ButtonType.error,
-                  smallIcon: true,
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
+            if (onEdit != null || onDelete != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (onEdit != null)
+                    BudglyIconButton(
+                      icon: Icons.edit_rounded,
+                      type: ButtonType.primary,
+                      smallIcon: true,
+                      onPressed: onEdit,
+                    ),
+                  if (onDelete != null)
+                    BudglyIconButton(
+                      icon: Icons.delete_rounded,
+                      type: ButtonType.error,
+                      smallIcon: true,
+                      onPressed: onDelete,
+                    ),
+                ],
+              ),
           ],
         ),
       ),
