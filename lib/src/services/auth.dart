@@ -19,7 +19,8 @@ class AuthService {
   User? _currentUser;
 
   User? get currentUser {
-    if ((_auth.currentUser != null && _auth.currentUser != _currentUser) ||
+    if ((_auth.currentUser != null &&
+            _auth.currentUser!.uid != _currentUser?.id) ||
         (_currentUser != null && !_currentUser!.hasProfile)) {
       _supabaseService.getOrCreateProfile(_auth.currentUser!).then((profile) {
         _currentUser = User.fromFirebaseUser(
@@ -163,12 +164,9 @@ class AuthService {
 
       GoogleSignInAccount? googleUser;
       googleUser = await _googleSignIn.attemptLightweightAuthentication();
-      if (googleUser == null) {
-        googleUser = await _googleSignIn.authenticate();
-      }
+      googleUser ??= await _googleSignIn.authenticate();
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final credential = fb.GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
       );
@@ -222,7 +220,18 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
-    await _googleSignIn.signOut();
+    try {
+      if (_currentUser != null) {
+        if (_currentUser!.isGoogleUser) {
+          await _googleSignIn.signOut();
+        }
+        await _auth.signOut();
+      }
+      _currentUser = null;
+    } catch (e) {
+      _currentUser = null;
+      await _auth.signOut();
+      await _googleSignIn.signOut();
+    }
   }
 }
