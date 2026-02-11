@@ -41,7 +41,7 @@ class ResetPasswordForm extends StatelessWidget {
                   style: theme.textTheme.bodyMedium,
                 ),
                 TextInput(
-                  type: InputType.Username,
+                  type: InputType.username,
                   controller: emailController,
                   labelText: tr.email,
                   textInputAction: TextInputAction.done,

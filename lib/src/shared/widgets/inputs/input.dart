@@ -31,7 +31,7 @@ class TextInput extends StatefulWidget {
     this.helperText,
     this.errorText,
     this.focusNode,
-    this.type = InputType.Default,
+    this.type = InputType.global,
     this.textInputAction,
     this.onFieldSubmitted,
     this.onChange,
@@ -71,7 +71,7 @@ class _TextInputState extends State<TextInput> {
     super.dispose();
   }
 
-  void displayCalendar(BuildContext context) {
+  void displayCalendar() {
     showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -89,11 +89,11 @@ class _TextInputState extends State<TextInput> {
 
   Iterable<String> getAutofillHints() {
     switch (widget.type) {
-      case InputType.Email:
+      case InputType.email:
         return [AutofillHints.email];
-      case InputType.Username:
+      case InputType.username:
         return [AutofillHints.newUsername, AutofillHints.username];
-      case InputType.Password:
+      case InputType.password:
         return [AutofillHints.password];
       default:
         return [];
@@ -102,13 +102,13 @@ class _TextInputState extends State<TextInput> {
 
   TextInputType getTextInputType() {
     switch (widget.type) {
-      case InputType.Email:
+      case InputType.email:
         return TextInputType.emailAddress;
-      case InputType.Username:
+      case InputType.username:
         return TextInputType.name;
-      case InputType.Password:
+      case InputType.password:
         return TextInputType.visiblePassword;
-      case InputType.Url:
+      case InputType.url:
         return TextInputType.url;
       default:
         return TextInputType.text;
@@ -141,8 +141,8 @@ class _TextInputState extends State<TextInput> {
             }
           },
           onTap:
-              widget.type == InputType.Calendar
-                  ? () => displayCalendar(context)
+              widget.type == InputType.calendar
+                  ? () => displayCalendar()
                   : null,
           controller: widget.controller,
           autocorrect: false,
@@ -152,14 +152,20 @@ class _TextInputState extends State<TextInput> {
               result = widget.hotValidating!(v);
             }
 
-            if (widget.type == InputType.Currency && v != null && v.isNotEmpty && result == null) {
+            if (widget.type == InputType.currency &&
+                v != null &&
+                v.isNotEmpty &&
+                result == null) {
               final match = RegExp(r'^-?\d*(?:[.,]\d+)?$').firstMatch(v);
               if (match == null) {
                 result = tr.invalidCurrency;
               }
             }
 
-            if (widget.type == InputType.Calendar && v != null && v.isNotEmpty && result == null) {
+            if (widget.type == InputType.calendar &&
+                v != null &&
+                v.isNotEmpty &&
+                result == null) {
               try {
                 DateFormat.yMMMd(Platform.localeName).parseStrict(v);
               } on FormatException {
@@ -174,7 +180,7 @@ class _TextInputState extends State<TextInput> {
           },
           style: theme.textTheme.bodyLarge,
           autovalidateMode: AutovalidateMode.disabled,
-          obscureText: widget.type == InputType.Password && _obscurePassword,
+          obscureText: widget.type == InputType.password && _obscurePassword,
           decoration: InputDecoration(
             labelText: widget.labelText,
             hintText: widget.hintText,
@@ -187,7 +193,7 @@ class _TextInputState extends State<TextInput> {
               minHeight: 0,
             ),
             prefixIcon:
-                widget.type == InputType.Calendar
+                widget.type == InputType.calendar
                     ? Padding(
                       padding: EdgeInsets.only(top: 16),
                       child: Icon(Icons.calendar_today),
@@ -203,12 +209,14 @@ class _TextInputState extends State<TextInput> {
   Widget _buildSuffixIcon(ThemeData theme) {
     final List<Widget> suffixIcons = [];
 
-    if (widget.type == InputType.Currency) {
+    if (widget.type == InputType.currency) {
       suffixIcons.add(
         Padding(
           padding: EdgeInsets.only(top: 16),
           child: Text(
-            NumberFormat.simpleCurrency(locale: Platform.localeName).currencySymbol,
+            NumberFormat.simpleCurrency(
+              locale: Platform.localeName,
+            ).currencySymbol,
             style: theme.textTheme.bodyLarge?.merge(
               TextStyle(
                 fontWeight: FontWeight.w900,
@@ -220,7 +228,7 @@ class _TextInputState extends State<TextInput> {
       );
     }
 
-    if (widget.type == InputType.Password) {
+    if (widget.type == InputType.password) {
       final List<Widget> passwordIcons = [
         IconButton(
           onPressed: () {
@@ -229,7 +237,9 @@ class _TextInputState extends State<TextInput> {
             });
           },
           icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            _obscurePassword
+                ? Icons.visibility_rounded
+                : Icons.visibility_off_rounded,
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
@@ -248,10 +258,7 @@ class _TextInputState extends State<TextInput> {
       }
 
       suffixIcons.add(
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: passwordIcons,
-        ),
+        Row(mainAxisSize: MainAxisSize.min, children: passwordIcons),
       );
     } else if (erasable) {
       suffixIcons.add(
