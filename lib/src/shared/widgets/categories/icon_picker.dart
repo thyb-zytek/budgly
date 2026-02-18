@@ -4,7 +4,6 @@ import 'package:app/src/shared/widgets/buttons/button.dart';
 import 'package:app/src/shared/widgets/buttons/constants.dart';
 import 'package:app/src/shared/widgets/categories/icon.dart';
 import 'package:app/src/shared/widgets/inputs/input.dart';
-import 'package:app/src/shared/widgets/inputs/search_input.dart';
 import 'package:app/src/shared/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
@@ -117,29 +116,6 @@ class _IconPickerState extends State<IconPicker> {
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                   ),
-                                  // child: SearchInput<cim.CategoryIcon>(
-                                  //   controller: _searchController,
-                                  //   labelText: tr.searchIcon,
-                                  //   options: widget.availableIcons,
-                                  //   renderOption:
-                                  //       (icon) => icon.labels[tr.localeName]!,
-                                  //   compareOption: (value, option) {
-                                  //     final label =
-                                  //         option.labels[tr.localeName];
-                                  //     return label?.toLowerCase().contains(
-                                  //           value.toLowerCase(),
-                                  //         ) ??
-                                  //         false;
-                                  //   },
-                                  //   onSelected: (icon) {
-                                  //     _searchController.text =
-                                  //         icon.labels[tr.localeName] ??
-                                  //         icon.iconName;
-                                  //     _filterIcons(tr.localeName);
-                                  //     setState(() => _icon = icon);
-                                  //     widget.onChangeIcon(icon);
-                                  //   },
-                                  // ),
                                   child: TextInput(
                                     controller: _searchController,
                                     labelText: tr.searchIcon,
