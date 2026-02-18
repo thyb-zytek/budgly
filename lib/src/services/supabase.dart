@@ -296,6 +296,30 @@ class SupabaseService {
     }
   }
 
+  Future<Uint8List> getFileContent({
+    required String bucketId,
+    required String filePath,
+  }) async {
+    try {
+      final response = await _supabase.storage
+          .from(bucketId)
+          .download(filePath);
+
+      return response;
+    } on sb.PostgrestException catch (e) {
+      if (e.code == '404') {
+        throw Exception(
+          'Fichier non trouvé: $filePath dans le bucket $bucketId',
+        );
+      }
+      rethrow;
+    } catch (e) {
+      throw Exception(
+        'Erreur lors de la récupération du fichier: ${e.toString()}',
+      );
+    }
+  }
+
   Future<bool> deleteFile({
     required String bucketId,
     required String filePath,
