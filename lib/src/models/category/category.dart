@@ -1,39 +1,58 @@
+import 'package:app/src/core/extensions/color.dart';
 import 'package:app/src/models/account/account.dart';
+import 'package:app/src/models/category/category_icon.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class Category {
-  final String id;
-  final String name;
-  final Color color;
-  final IconData? icon;
-  final Account account;
+  final String? id;
+  final String? name;
+  final Color? color;
+  final String? iconCode;
+  final CategoryIcon? icon;
+  final String accountId;
 
   Category({
-    required this.id,
-    required this.name,
-    required this.color,
+    this.id,
+    this.name,
+    this.color,
     this.icon,
-    required this.account,
+    this.iconCode,
+    required this.accountId,
   });
 
-  factory Category.fromJson(Map<String, dynamic> json) {
-    return Category(
-      id: json['id'],
-      name: json['name'],
-      color: Color(json['color']),
-      icon: IconData(int.parse(json['icon'])),
-      account: Account.fromJson(json['account'] as Map<String, dynamic>),
-    );
-  }
+  factory Category.fromJson(Map<String, dynamic> json) => Category(
+    id: json['id'],
+    name: json['name'],
+    color: HexColor.fromHex(json['color']),
+    iconCode: json["icon"],
+    accountId: json['account_id'],
+  );
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'name': name,
-      'color': color.toHexString(),
-      'icon': icon?.codePoint,
-      'account': account.toJson(),
+      'color': color?.toHex(),
+      'icon': '0x${icon!.iconCode.toRadixString(16)}',
+      'account_id': accountId,
     };
+  }
+
+  Category copyWith({
+    String? id,
+    String? name,
+    Color? color,
+    CategoryIcon? icon,
+    Account? account,
+  }) {
+    return Category(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
+      iconCode:
+          icon != null ? '0x${icon.iconCode.toRadixString(16)}' : iconCode,
+      accountId: account?.id ?? accountId,
+    );
   }
 }
