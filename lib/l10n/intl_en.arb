@@ -16,6 +16,7 @@
   "email": "Email",
   "emailRequired": "Please provide an email.",
   "emailInvalid": "Invalid email.",
+  "emailNotAvailable": "Email not available",
   "password": "Password",
   "confirmPassword": "Confirm password",
   "resetPassword": "Reset password",
@@ -37,7 +38,9 @@
   "wrongPassword": "Incorrect password.",
   "invalidCredentials": "Invalid credentials.",
   "userNotFound": "User not found.",
+  "notAvailable": "Not Available",
   "accounts": "Accounts",
+  "account": "Account",
   "categories": "Categories",
   "preferences": "Preferences",
   "theme": "Theme",
@@ -51,7 +54,7 @@
   "locale": "Locale",
   "currency": "Currency",
   "accountName": "Account name",
-  "accountNameRequired": "Name is required.",
+  "nameRequired": "Name is required.",
   "validate": "Validate",
   "cancel": "Cancel",
   "commonError": "Error",
@@ -75,5 +78,41 @@
         "type": "String"
       }
     }
-  }
+  },
+  "confirmDeleteCategory": "Delete category: {categoryName}",
+  "@confirmDeleteCategory": {
+    "placeholders": {
+      "categoryName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteCategoryMessage": "The category [{categoryName}] from [{accountName}] will be deleted permanently and all related data will be lost, are you sure you want to delete this category?",
+  "@confirmDeleteCategoryMessage": {
+    "placeholders": {
+      "categoryName": {
+        "type": "String"
+      },
+      "accountName": {
+        "type": "String"
+      }
+    }
+  },
+  "icon": "Icon",
+  "accountCategory": "Account category",
+  "noAccountFound": "No account found. Please add one to start.",
+  "categoryName": "Category name",
+  "noCategoryFound": "No category found.",
+  "searchIcon": "Search icon",
+  "user": "User",
+  "name": "Name",
+  "userCreatedOn": "Created on",
+  "nameChangedSuccessfully": "Name changed successfully",
+  "logout": "Logout",
+  "refreshProfile": "Refresh profile",
+  "changePassword": "Change password",
+  "editPassword": "Edit password",
+  "oldPassword": "Old password",
+  "passwordChangeFailed": "Changing password failed",
+  "passwordChangedSuccessfully": "Password changed successfully"
 }

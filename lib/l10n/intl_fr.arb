@@ -16,6 +16,7 @@
   "email": "Adresse mail",
   "emailRequired": "Veuillez fournir une adresse mail.",
   "emailInvalid": "L'adresse mail est invalide.",
+  "emailNotAvailable": "Email non disponible",
   "password": "Mot de passe",
   "confirmPassword": "Confirmer le mot de passe",
   "resetPassword": "Reinitialiser le mot de passe",
@@ -37,8 +38,10 @@
   "wrongPassword": "Mot de passe incorrect.",
   "invalidCredentials": "Identifiants incorrect.",
   "userNotFound": "Utilisateur introuvable.",
+  "notAvailable": "Non disponible",
   "accounts": "Comptes",
-  "categories": "Categories",
+  "account": "Compte",
+  "categories": "Catégories",
   "preferences": "Préférences",
   "theme": "Thème",
   "appearance": "Apparence",
@@ -51,7 +54,7 @@
   "locale": "Langue",
   "currency": "Devise",
   "accountName": "Nom du compte",
-  "accountNameRequired": "Le nom est obligatoire.",
+  "nameRequired": "Le nom est obligatoire.",
   "validate": "Valider",
   "cancel": "Annuler",
   "commonError": "Erreur",
@@ -75,5 +78,41 @@
         "type": "String"
       }
     }
-  }
+  },
+  "confirmDeleteCategory": "Supprimer la catégorie : {categoryName}",
+  "@confirmDeleteCategory": {
+    "placeholders": {
+      "categoryName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteCategoryMessage": "La suppression de la catégorie [{categoryName}] de [{accountName}] est définitive et tout ce qui lié sera perdu, êtes-vous sûr de vouloir supprimer cette catégorie ?",
+  "@confirmDeleteCategoryMessage": {
+    "placeholders": {
+      "categoryName": {
+        "type": "String"
+      },
+      "accountName": {
+        "type": "String"
+      }
+    }
+  },
+  "icon": "Icône",
+  "accountCategory": "Catégorie du compte",
+  "noAccountFound": "Aucun compte trouvé, ajoutez-en un pour commencer.",
+  "categoryName": "Nom de la catégorie",
+  "noCategoryFound": "Aucune catégorie trouvée.",
+  "searchIcon": "Rechercher une icône",
+  "user": "Utilisateur",
+  "name": "Nom",
+  "userCreatedOn": "Créé le",
+  "nameChangedSuccessfully": "Nom changé avec succès",
+  "logout": "Se déconnecter",
+  "refreshProfile": "Actualiser le profil",
+  "changePassword": "Changer le mot de passe",
+  "editPassword": "Modifier le mot de passe",
+  "oldPassword": "Ancien mot de passe",
+  "passwordChangeFailed": "Changement de mot de passe echoué",
+  "passwordChangedSuccessfully": "Mot de passe changé avec succès"
 }
