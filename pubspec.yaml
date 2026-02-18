@@ -39,6 +39,7 @@ flutter:
     - assets/images/
     - assets/fonts/saira/
     - assets/.env
+    - assets/icons/category_icons.json
 
   fonts:
     - family: Saira

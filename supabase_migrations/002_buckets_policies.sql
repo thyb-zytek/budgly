@@ -31,3 +31,17 @@ USING (
   bucket_id = 'accounts-pictures'
   AND (auth.jwt() ->> 'sub')::text = split_part(name, '/', 1)
 );
+
+-- Storage bucket policies for ConfigFiles
+-- Create the bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('config-files', 'ConfigFiles', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies for ConfigFiles bucket
+CREATE POLICY "Authenticated users can view config files"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'config-files'
+  AND auth.jwt() IS NOT NULL
+);
