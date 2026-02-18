@@ -13,7 +13,7 @@ class ColorDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
-    Color _selectedColor = color;
+    Color selectedColor = color;
 
     return AlertDialog(
       titlePadding: const EdgeInsets.all(0),
@@ -45,8 +45,8 @@ class ColorDialog extends StatelessWidget {
                       : 16,
             ),
             child: HueRingPicker(
-              pickerColor: _selectedColor,
-              onColorChanged: (color) => _selectedColor = color,
+              pickerColor: selectedColor,
+              onColorChanged: (color) => selectedColor = color,
               enableAlpha: false,
               displayThumbColor: true,
               pickerAreaBorderRadius: BorderRadius.circular(10),
@@ -69,7 +69,7 @@ class ColorDialog extends StatelessWidget {
                   type: ButtonType.success,
                   dense: true,
                   onPressed: () {
-                    onChange(_selectedColor);
+                    onChange(selectedColor);
                     Navigator.pop(context);
                   },
                 ),
