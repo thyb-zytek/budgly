@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AddFab extends StatelessWidget {
   final String heroTag;
   final Function() onPressed;
-  
+
   const AddFab({super.key, required this.heroTag, required this.onPressed});
 
   @override
@@ -15,7 +15,7 @@ class AddFab extends StatelessWidget {
       height: 64,
       child: FloatingActionButton(
         shape: const CircleBorder(),
-        heroTag: 'add_account',
+        heroTag: heroTag,
         elevation: 2,
         onPressed: onPressed,
         backgroundColor: theme.colorScheme.primary,

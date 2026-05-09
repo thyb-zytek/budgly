@@ -1,12 +1,13 @@
 import 'package:app/l10n/app_localizations.dart';
 import 'package:app/src/models/category/category.dart';
 import 'package:app/src/pages/settings/widgets/accounts/view_model.dart';
-import 'package:app/src/pages/settings/widgets/add_fab.dart';
 import 'package:app/src/pages/settings/widgets/categories/view_model.dart';
 import 'package:app/src/pages/settings/widgets/confirm_dialog.dart';
 import 'package:app/src/shared/widgets/accounts/selector.dart';
-import 'package:app/src/shared/widgets/categories/form_card.dart';
-import 'package:app/src/shared/widgets/categories/view_card.dart';
+import 'package:app/src/shared/widgets/buttons/add_fab.dart';
+import 'package:app/src/shared/widgets/categories/form.dart';
+import 'package:app/src/shared/widgets/categories/default.dart';
+import 'package:app/src/shared/widgets/common/card.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesTab extends StatefulWidget {
@@ -165,51 +166,70 @@ class _CategoriesTabState extends State<CategoriesTab>
                                     widget
                                         .categoriesViewModel
                                         .categories[index];
-                                if (category.id != null &&
-                                    category.id !=
-                                        widget
-                                            .categoriesViewModel
-                                            .editingCategory
-                                            ?.id) {
-                                  return CategoryViewCard(
-                                    category: category,
-                                    onEdit:
-                                        () =>
-                                            widget
-                                                .categoriesViewModel
-                                                .editingCategory = category,
-                                    onDelete: () => _confirmDelete(category),
-                                  );
-                                }
 
-                                return CategoryFormCard(
-                                  formKey: _formKey,
-                                  availableIcons:
-                                      widget.categoriesViewModel.availableIcons,
-                                  onChangeColor:
-                                      (color) =>
-                                          widget.categoriesViewModel.color =
-                                              color,
-                                  onChangeIcon:
-                                      (icon) => widget.categoriesViewModel
-                                          .setIcon(icon),
-                                  editingData:
-                                      widget.categoriesViewModel.editingData,
-                                  onSubmit:
-                                      () =>
-                                          category.id == null
-                                              ? widget.categoriesViewModel
-                                                  .createCategory(category)
-                                              : widget.categoriesViewModel
-                                                  .updateCategory(category),
-                                  onCancel:
-                                      () =>
-                                          category.id == null
-                                              ? widget.categoriesViewModel
-                                                  .removeCategory(category)
-                                              : widget
-                                                  .categoriesViewModel
-                                                  .editingCategory = null,
+                                return BudglyCard(
+                                  child:
+                                      (category.id != null &&
+                                              category.id !=
+                                                  widget
+                                                      .categoriesViewModel
+                                                      .editingCategory
+                                                      ?.id)
+                                          ? CategoryView(
+                                            category: category,
+                                            onEdit:
+                                                () =>
+                                                    widget
+                                                            .categoriesViewModel
+                                                            .editingCategory =
+                                                        category,
+                                            onDelete:
+                                                () => _confirmDelete(category),
+                                          )
+                                          : CategoryForm(
+                                            formKey: _formKey,
+                                            availableIcons:
+                                                widget
+                                                    .categoriesViewModel
+                                                    .availableIcons,
+                                            onChangeColor:
+                                                (color) =>
+                                                    widget
+                                                        .categoriesViewModel
+                                                        .color = color,
+                                            onChangeIcon:
+                                                (icon) => widget
+                                                    .categoriesViewModel
+                                                    .setIcon(icon),
+                                            editingData:
+                                                widget
+                                                    .categoriesViewModel
+                                                    .editingData,
+                                            onSubmit:
+                                                () =>
+                                                    category.id == null
+                                                        ? widget
+                                                            .categoriesViewModel
+                                                            .createCategory(
+                                                              category,
+                                                            )
+                                                        : widget
+                                                            .categoriesViewModel
+                                                            .updateCategory(
+                                                              category,
+                                                            ),
+                                            onCancel:
+                                                () =>
+                                                    category.id == null
+                                                        ? widget
+                                                            .categoriesViewModel
+                                                            .removeCategory(
+                                                              category,
+                                                            )
+                                                        : widget
+                                                            .categoriesViewModel
+                                                            .editingCategory = null,
+                                          ),
                                 );
                               },
                             )

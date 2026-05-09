@@ -15,41 +15,45 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: "assets/.env");
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseKey = dotenv.env['SUPABASE_KEY'];
+
+  if (supabaseUrl == null || supabaseKey == null) {
+    throw Exception('Missing Supabase environment variables');
+  }
 
   LicenseRegistry.addLicense(() async* {
     final license = await rootBundle.loadString('assets/fonts/saira/OFL.txt');
     yield LicenseEntryWithLineBreaks(['assets/fonts/saira/'], license);
   });
 
-  await Future.wait([
-    GoogleSignIn.instance.initialize(),
-    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
-    Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL']!,
-      anonKey: dotenv.env['SUPABASE_KEY']!,
-      authOptions: FlutterAuthClientOptions(detectSessionInUri: false),
-      accessToken: () async {
-        final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-        return token;
-      },
-    ),
-  ]);
+  await GoogleSignIn.instance.initialize();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  try {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseKey,
+    authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
+    accessToken: () async {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      return token;
+    },
+  );
+
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    try {
       await user.reload();
       final refreshedUser = FirebaseAuth.instance.currentUser;
       if (refreshedUser == null || !refreshedUser.emailVerified) {
         await FirebaseAuth.instance.signOut();
       }
+    } catch (e) {
+      await FirebaseAuth.instance.signOut();
     }
-  } catch (e) {
-    await FirebaseAuth.instance.signOut();
   }
 
   await PreferencesService.init();
-
   NavigationHelper.instance;
 
   runApp(const BudglyApp());

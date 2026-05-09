@@ -1,8 +1,10 @@
 import 'package:app/l10n/app_localizations.dart';
 import 'package:app/src/core/routers/base.dart';
 import 'package:app/src/core/theme/theme.dart';
+import 'package:app/src/pages/error/service_unavailable.dart';
 import 'package:app/src/services/category_icons.dart';
 import 'package:app/src/services/preferences.dart';
+import 'package:app/src/services/errors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -17,6 +19,7 @@ class _BudglyAppState extends State<BudglyApp> {
   final PreferencesService _preferencesService = PreferencesService();
   final CategoryIconsService _categoryIconsService =
       CategoryIconsService.instance;
+  final ErrorService _errorProvider = ErrorService.instance;
   late ThemeMode _currentThemeMode;
   late Locale _currentLocale;
 
@@ -48,22 +51,33 @@ class _BudglyAppState extends State<BudglyApp> {
   Widget build(BuildContext context) {
     final theme = MaterialTheme();
 
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-      restorationScopeId: 'budgly_app',
-      theme: theme.light(),
-      darkTheme: theme.dark(),
-      themeMode: _currentThemeMode,
-      locale: _currentLocale,
-      supportedLocales: const [Locale('en'), Locale('fr')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      routerConfig: NavigationHelper.router,
+    return ListenableBuilder(
+      listenable: _errorProvider,
+      builder: (context, child) {
+        return MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+          restorationScopeId: 'budgly_app',
+          theme: theme.light(),
+          darkTheme: theme.dark(),
+          themeMode: _currentThemeMode,
+          locale: _currentLocale,
+          supportedLocales: const [Locale('en'), Locale('fr')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          routerConfig: NavigationHelper.router,
+          builder: (context, routerChild) {
+            if (_errorProvider.hasError) {
+              return const ServiceUnavailableScreen();
+            }
+            return routerChild!;
+          },
+        );
+      },
     );
   }
 }

@@ -52,6 +52,7 @@ class _UserTabState extends State<UserTab> {
           }
         })
         .onError((error, stackTrace) {
+          if (!mounted) return;
           final exception = error as AuthenticationException;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBarMessage(

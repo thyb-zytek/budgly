@@ -93,7 +93,7 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
               child: LayoutBuilder(
                 builder:
                     (context, constraints) => Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisSize: MainAxisSize.max,
                       children: [
                         Material(
                           elevation: 8,
@@ -110,45 +110,51 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
                                 maxWidth: constraints.biggest.width,
                                 maxHeight: constraints.biggest.height * 0.5,
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                spacing: 4,
-                                children:
-                                    widget.options
-                                        .map(
-                                          (option) => InkWell(
-                                            onTap: () => _onOptionTap(option),
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
+                              child: Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  spacing: 4,
+                                  children:
+                                      widget.options
+                                          .map(
+                                            (option) => InkWell(
+                                              onTap: () => _onOptionTap(option),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                child: DefaultTextStyle(
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodyMedium!.copyWith(
+                                                    fontWeight:
+                                                        option ==
+                                                                _selectedOption
+                                                            ? FontWeight.normal
+                                                            : FontWeight.bold,
+                                                    color:
+                                                        option ==
+                                                                _selectedOption
+                                                            ? Theme.of(context)
+                                                                .colorScheme
+                                                                .primary
+                                                            : Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurface,
                                                   ),
-                                              child: DefaultTextStyle(
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodyMedium!.copyWith(
-                                                  fontWeight:
-                                                      option == _selectedOption
-                                                          ? FontWeight.normal
-                                                          : FontWeight.bold,
-                                                  color:
-                                                      option == _selectedOption
-                                                          ? Theme.of(context)
-                                                              .colorScheme
-                                                              .primary
-                                                          : Theme.of(context)
-                                                              .colorScheme
-                                                              .onSurface,
-                                                ),
-                                                child: widget.optionBuilder(
-                                                  option, option == _selectedOption,
+                                                  child: widget.optionBuilder(
+                                                    option,
+                                                    option == _selectedOption,
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                        )
-                                        .toList(),
+                                          )
+                                          .toList(),
+                                ),
                               ),
                             ),
                           ),
@@ -193,24 +199,24 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
           children: [
             _selectedOption != null
                 ? Padding(
-                    padding:
-                        widget.dense
-                            ? const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 2,
-                            )
-                            : const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                    child: DefaultTextStyle(
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      child: widget.optionBuilder(_selectedOption as T, false),
+                  padding:
+                      widget.dense
+                          ? const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          )
+                          : const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                  child: DefaultTextStyle(
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                  )
+                    child: widget.optionBuilder(_selectedOption as T, false),
+                  ),
+                )
                 : Padding(
                   padding:
                       widget.dense

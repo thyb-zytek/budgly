@@ -3,7 +3,6 @@ import 'package:app/src/pages/overview/view.dart';
 import 'package:app/src/pages/settings/view.dart';
 import 'package:app/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
-import 'package:app/src/models/user/user.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,10 +51,8 @@ class NavigationHelper {
               GoRoute(
                 path: overviewPath,
                 pageBuilder:
-                    (context, state) => getPage(
-                      child: OverviewPage(user: state.extra as User?),
-                      state: state,
-                    ),
+                    (context, state) =>
+                        getPage(child: const OverviewPage(), state: state),
               ),
             ],
           ),

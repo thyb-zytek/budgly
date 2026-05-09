@@ -47,7 +47,7 @@ class ImageService {
 
   static Future<String?> pickAndCropImage(BuildContext context) async {
     final path = await _pickImageFromGallery();
-    if (path == null) return null;
+    if (path == null || !context.mounted) return null;
     return await _cropToCircle(context, path);
   }
 

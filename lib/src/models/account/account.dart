@@ -21,6 +21,8 @@ class Account {
     this.color,
   });
 
+  String get initial => name[0].toUpperCase();
+
   factory Account.fromJson(Map<String, dynamic> json) => Account(
     id: json['id'] as String?,
     userId: json['user_id'] as String?,
@@ -38,22 +40,23 @@ class Account {
   };
 
   Account copyWith({
-  String? id,
-  String? name,
-  Object? picture = _sentinel,
-  Object? pictureUrl = _sentinel,
-  Color? color,
-  String? userId,
-}) {
-  return Account(
-    id: id ?? this.id,
-    userId: userId ?? this.userId,
-    name: name ?? this.name,
-    picture: picture == _sentinel ? this.picture : picture as String?,
-    pictureUrl: pictureUrl == _sentinel ? this.pictureUrl : pictureUrl as String?,
-    color: color ?? this.color,
-  );
-}
+    String? id,
+    String? name,
+    Object? picture = _sentinel,
+    Object? pictureUrl = _sentinel,
+    Color? color,
+    String? userId,
+  }) {
+    return Account(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      picture: picture == _sentinel ? this.picture : picture as String?,
+      pictureUrl:
+          pictureUrl == _sentinel ? this.pictureUrl : pictureUrl as String?,
+      color: color ?? this.color,
+    );
+  }
 
   @override
   bool operator ==(Object other) {

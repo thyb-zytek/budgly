@@ -78,6 +78,7 @@ class _TextInputState extends State<TextInput> {
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     ).then((date) {
+      if (!mounted) return;
       if (date != null) {
         widget.controller.text = DateFormat.yMMMd(
           AppLocalizations.of(context)?.localeName,

@@ -61,7 +61,7 @@ class _LoginPageState extends State<LoginPage>
   }
 
   String? _translateErrorMessage() {
-    AppLocalizations tr = AppLocalizations.of(context)!;
+    final tr = AppLocalizations.of(context)!;
 
     switch (_viewModel.state.errorCode) {
       case 'invalid-credential':
@@ -95,18 +95,20 @@ class _LoginPageState extends State<LoginPage>
           animation: Listenable.merge([_viewModel]),
           builder: (context, child) {
             if (_viewModel.state.isLoading) {
-              return Center(child: Column(
-                spacing: 16,
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.connecting,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const CircularProgressIndicator(),
-                ],
-              ));
+              return Center(
+                child: Column(
+                  spacing: 16,
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.connecting,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
             }
             return Column(
               mainAxisSize: MainAxisSize.max,
@@ -209,19 +211,21 @@ class _LoginPageState extends State<LoginPage>
                       AuthForm.resetPassword,
                     ].contains(_viewModel.state.formType))
                     ? Padding(
-                        padding: const EdgeInsets.all(16.0).add(
-                          EdgeInsets.only(
-                            bottom: MediaQuery.of(context).viewInsets.bottom > 0
-                                ? MediaQuery.of(context).viewInsets.bottom + 8
-                                : 0,
-                          ),
+                      padding: const EdgeInsets.all(16.0).add(
+                        EdgeInsets.only(
+                          bottom:
+                              MediaQuery.of(context).viewInsets.bottom > 0
+                                  ? MediaQuery.of(context).viewInsets.bottom + 8
+                                  : 0,
                         ),
-                        child: GoogleSignInButton(
-                          onPressed: () => _onEvent(
-                            AuthEventParams(type: AuthEvent.googleSignIn),
-                          ),
-                        ),
-                      )
+                      ),
+                      child: GoogleSignInButton(
+                        onPressed:
+                            () => _onEvent(
+                              AuthEventParams(type: AuthEvent.googleSignIn),
+                            ),
+                      ),
+                    )
                     : const SizedBox.shrink(),
               ],
             );
