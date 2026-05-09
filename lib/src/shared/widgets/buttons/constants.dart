@@ -10,6 +10,7 @@ enum ButtonType {
   neutral,
   neutralVariant,
   iconDefault,
+  iconOnPrimary,
 }
 
 class TypedButtonStyle {
@@ -63,6 +64,9 @@ class TypedButtonStyle {
         break;
       case ButtonType.iconDefault:
         _iconColor = theme.colorScheme.outline;
+        break;
+      case ButtonType.iconOnPrimary:
+        _iconColor = theme.colorScheme.onPrimaryContainer;
         break;
       default:
         _backgroundColor = theme.colorScheme.primary;

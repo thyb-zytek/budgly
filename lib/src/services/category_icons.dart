@@ -133,4 +133,15 @@ class CategoryIconsService {
     await invalidateCache();
     await getIcons();
   }
+
+  CategoryIcon? getIconByCode(String iconCode) {
+    if (iconCode.isEmpty) return null;
+    if (_icons.isEmpty) getIcons();
+
+    try {
+      return _icons.firstWhere((icon) => icon.iconCode == int.parse(iconCode));
+    } catch (e) {
+      return null;
+    }
+  }
 }

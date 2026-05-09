@@ -105,36 +105,31 @@ class SupabaseService {
     String bucketId,
     String Function(Account account) getObjectKey,
   ) async {
-    try {
-      final response = await _supabase
-          .from('accounts')
-          .select()
-          .eq('user_id', userId);
+    final response = await _supabase
+        .from('accounts')
+        .select()
+        .eq('user_id', userId);
 
-      final futures = (response as List<dynamic>).map((json) async {
-        final account = Account.fromJson(json as Map<String, dynamic>);
+    final futures = (response as List<dynamic>).map((json) async {
+      final account = Account.fromJson(json as Map<String, dynamic>);
 
-        if (account.picture != null && account.id != null) {
-          try {
-            final objectKey = getObjectKey(account);
-            final pictureUrl = await getSignedUrl(
-              bucketId: bucketId,
-              filePath: objectKey,
-            );
-            return account.copyWith(pictureUrl: pictureUrl);
-          } catch (e) {
-            return account;
-          }
+      if (account.picture != null && account.id != null) {
+        try {
+          final objectKey = getObjectKey(account);
+          final pictureUrl = await getSignedUrl(
+            bucketId: bucketId,
+            filePath: objectKey,
+          );
+          return account.copyWith(pictureUrl: pictureUrl);
+        } catch (e) {
+          return account;
         }
+      }
 
-        return account;
-      });
+      return account;
+    });
 
-      return await Future.wait(futures);
-    } catch (e) {
-      print('Error getting user accounts: $e');
-      return [];
-    }
+    return await Future.wait(futures);
   }
 
   Future<List<Account>> getUserAccounts(String userId) async {

@@ -114,5 +114,8 @@
   "editPassword": "Edit password",
   "oldPassword": "Old password",
   "passwordChangeFailed": "Changing password failed",
-  "passwordChangedSuccessfully": "Password changed successfully"
+  "passwordChangedSuccessfully": "Password changed successfully",
+  "serviceUnavailableTitle": "Service temporarily unavailable",
+  "serviceUnavailableMessage": "We’re having trouble connecting you to our services right now. This could be due to an unstable internet connection or temporary maintenance.",
+  "reloadApp": "Reload"
 }

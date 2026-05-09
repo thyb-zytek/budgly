@@ -9,6 +9,7 @@ dependencies:
   file_picker: ^10.3.2
   firebase_auth: ^6.0.0
   firebase_core: ^4.0.0
+  fl_chart: ^1.2.0
   flutter:
     sdk: flutter
   flutter_colorpicker: ^1.1.0
@@ -22,9 +23,10 @@ dependencies:
   go_router: ^16.1.0
   google_sign_in: ^7.1.1
   image_cropper: ^11.0.0
-  intl: any
+  intl: ^0.20.2
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
+  sliver_tools: ^0.2.12
   supabase_flutter: ^2.4.2
 
 dev_dependencies:

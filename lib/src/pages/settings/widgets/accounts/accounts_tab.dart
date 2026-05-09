@@ -1,10 +1,11 @@
 import 'package:app/l10n/app_localizations.dart';
 import 'package:app/src/models/account/account.dart';
 import 'package:app/src/pages/settings/widgets/accounts/view_model.dart';
-import 'package:app/src/pages/settings/widgets/add_fab.dart';
 import 'package:app/src/pages/settings/widgets/confirm_dialog.dart';
-import 'package:app/src/shared/widgets/accounts/form_card.dart';
-import 'package:app/src/shared/widgets/accounts/view_card.dart';
+import 'package:app/src/shared/widgets/accounts/default.dart';
+import 'package:app/src/shared/widgets/accounts/form.dart';
+import 'package:app/src/shared/widgets/buttons/add_fab.dart';
+import 'package:app/src/shared/widgets/common/card.dart';
 import 'package:flutter/material.dart';
 
 class AccountsTab extends StatefulWidget {
@@ -62,8 +63,8 @@ class _AccountsTabState extends State<AccountsTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    AppLocalizations tr = AppLocalizations.of(context)!;
-    ThemeData theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return AnimatedBuilder(
       animation: widget.accountsViewModel,
@@ -95,58 +96,73 @@ class _AccountsTabState extends State<AccountsTab>
                               itemBuilder: (context, index) {
                                 final account =
                                     widget.accountsViewModel.accounts[index];
-                                if (account.id != null &&
-                                    account.id !=
-                                        widget
-                                            .accountsViewModel
-                                            .editingAccount
-                                            ?.id) {
-                                  return AccountViewCard(
-                                    account: account,
-                                    onEdit:
-                                        () =>
-                                            widget
-                                                .accountsViewModel
-                                                .editingAccount = account,
-                                    onDelete: () => _confirmDelete(account),
-                                  );
-                                }
-
-                                return AccountFormCard(
-                                  formKey: _formKey,
-                                  editingData:
-                                      widget.accountsViewModel.editingData,
-                                  pickImage:
-                                      () => widget.accountsViewModel.pickImage(
-                                        context,
-                                      ),
-                                  onChangeColor:
-                                      (color) =>
-                                          widget.accountsViewModel.color =
-                                              color,
-                                  onChangePicture:
-                                      (picture) =>
-                                          widget.accountsViewModel.picture =
-                                              picture,
-                                  onSubmit:
-                                      () =>
-                                          account.id == null
-                                              ? widget.accountsViewModel
-                                                  .createAccount(account)
-                                              : widget.accountsViewModel
-                                                  .updateAccount(account),
-                                  onCancel:
-                                      () =>
-                                          account.id == null
-                                              ? widget.accountsViewModel
-                                                  .removeAccount(account)
-                                              : widget
-                                                  .accountsViewModel
-                                                  .editingAccount = null,
-                                  onRemovePicture:
-                                      () =>
-                                          widget.accountsViewModel
-                                              .removePicture(),
+                                return BudglyCard(
+                                  child:
+                                      (account.id != null &&
+                                              account.id !=
+                                                  widget
+                                                      .accountsViewModel
+                                                      .editingAccount
+                                                      ?.id)
+                                          ? AccountView(
+                                            account: account,
+                                            onEdit:
+                                                () =>
+                                                    widget
+                                                            .accountsViewModel
+                                                            .editingAccount =
+                                                        account,
+                                            onDelete:
+                                                () => _confirmDelete(account),
+                                          )
+                                          : AccountForm(
+                                            formKey: _formKey,
+                                            editingData:
+                                                widget
+                                                    .accountsViewModel
+                                                    .editingData,
+                                            pickImage:
+                                                () => widget.accountsViewModel
+                                                    .pickImage(context),
+                                            onChangeColor:
+                                                (color) =>
+                                                    widget
+                                                        .accountsViewModel
+                                                        .color = color,
+                                            onChangePicture:
+                                                (picture) =>
+                                                    widget
+                                                        .accountsViewModel
+                                                        .picture = picture,
+                                            onSubmit:
+                                                () =>
+                                                    account.id == null
+                                                        ? widget
+                                                            .accountsViewModel
+                                                            .createAccount(
+                                                              account,
+                                                            )
+                                                        : widget
+                                                            .accountsViewModel
+                                                            .updateAccount(
+                                                              account,
+                                                            ),
+                                            onCancel:
+                                                () =>
+                                                    account.id == null
+                                                        ? widget
+                                                            .accountsViewModel
+                                                            .removeAccount(
+                                                              account,
+                                                            )
+                                                        : widget
+                                                            .accountsViewModel
+                                                            .editingAccount = null,
+                                            onRemovePicture:
+                                                () =>
+                                                    widget.accountsViewModel
+                                                        .removePicture(),
+                                          ),
                                 );
                               },
                             )
