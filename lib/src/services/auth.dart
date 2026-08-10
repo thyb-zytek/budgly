@@ -1,36 +1,22 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:app/src/core/exceptions/auth_exceptions.dart';
-import 'package:app/src/models/user/user.dart';
-import 'package:app/src/models/user/user_profile.dart';
-import 'package:app/src/services/preferences.dart';
-import 'package:app/src/services/supabase.dart';
+import 'package:budgly/src/core/exceptions/auth_exceptions.dart';
+import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/src/models/user/user_profile.dart';
+import 'preferences.dart';
+import 'supabase/user_profile_supabase.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart' show GoogleSignIn, GoogleSignInAccount, GoogleSignInAuthentication, GoogleSignInException, GoogleSignInExceptionCode;
 
 class AuthService {
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  final SupabaseService _supabaseService = SupabaseService();
+  final UserProfileSupabase _userProfileSupabase = UserProfileSupabase();
 
   User? _currentUser;
 
-  User? get currentUser {
-    if ((_auth.currentUser != null &&
-            _auth.currentUser!.uid != _currentUser?.id) ||
-        (_currentUser != null && !_currentUser!.hasProfile)) {
-      _supabaseService.getOrCreateProfile(_auth.currentUser!).then((profile) {
-        _currentUser = User.fromFirebaseUser(
-          _auth.currentUser!,
-          profile: profile,
-        );
-      });
-    }
-    return _currentUser;
-  }
+  User? get currentUser => _currentUser;
 
   Future<void> changePassword(String oldPassword, String newPassword) async {
     try {
@@ -58,7 +44,8 @@ class AuthService {
       );
       await firebaseUser.updatePassword(newPassword);
       await firebaseUser.reload();
-      _currentUser = User.fromFirebaseUser(firebaseUser);
+      UserProfile profile = await _userProfileSupabase.getOrCreateProfile(firebaseUser);
+      _currentUser = User.fromFirebaseUser(firebaseUser, profile: profile);
     } on fb.FirebaseAuthException catch (e) {
       String message = "An error occurred while changing password";
 
@@ -75,12 +62,31 @@ class AuthService {
     }
   }
 
+  Future<void> onChangeName(String name) async {
+    final fb.User? firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) {
+      throw const AuthenticationException(
+        code: 'no-user',
+        message: 'No user is currently signed in',
+      );
+    }
+    
+    final changed = await _userProfileSupabase.updateProfile(
+      firebaseUser.uid,
+      {"full_name": name},
+    );
+    
+    if (changed) {
+      await reloadCurrentUser();
+    }
+  }
+
   Future<User?> reloadCurrentUser() async {
     try {
       final fb.User? user = _auth.currentUser;
       if (user != null) {
         await user.reload();
-        UserProfile profile = await _supabaseService.getOrCreateProfile(user);
+        UserProfile profile = await _userProfileSupabase.getOrCreateProfile(user);
 
         await PreferencesService().setThemeModeFromString(profile.themeMode);
 
@@ -95,6 +101,18 @@ class AuthService {
       throw AuthenticationException(
         code: e.code,
         message: e.message ?? "An error occurred",
+      );
+    } catch (e) {
+      // Handle Supabase JWT errors gracefully
+      if (e.toString().contains('JWT') || e.toString().contains('PGRST303')) {
+        // Try to get cached user if available
+        if (_currentUser != null) {
+          return _currentUser;
+        }
+      }
+      throw AuthenticationException(
+        code: 'reload-failed',
+        message: 'Failed to reload user: $e',
       );
     }
   }
@@ -115,7 +133,7 @@ class AuthService {
 
       await userCredential.user!.sendEmailVerification();
 
-      UserProfile profile = await _supabaseService.getOrCreateProfile(
+      UserProfile profile = await _userProfileSupabase.getOrCreateProfile(
         userCredential.user!,
       );
       final user = User.fromFirebaseUser(
@@ -125,6 +143,13 @@ class AuthService {
       _currentUser = user;
       return user;
     } catch (e) {
+      if (e is fb.FirebaseAuthException && e.code == 'email-already-in-use') {
+        // Email already in use, but we want to throw a specific error
+        throw AuthenticationException(
+          code: 'email-already-in-use',
+          message: 'Email already in use',
+        );
+      }
       throw AuthenticationException(
         code: 'sign-up-failed',
         message: 'Failed to sign up: $e',
@@ -145,7 +170,7 @@ class AuthService {
           message: 'No user found for that email and password',
         );
       }
-      UserProfile profile = await _supabaseService.getOrCreateProfile(
+      UserProfile profile = await _userProfileSupabase.getOrCreateProfile(
         userCredential.user!,
       );
 
@@ -203,20 +228,20 @@ class AuthService {
 
   Future<User> signInWithGoogle() async {
     try {
+      // Clear any existing Google sign-in state first
       await _googleSignIn.signOut();
-
-      GoogleSignInAccount? googleUser;
-      googleUser = await _googleSignIn.attemptLightweightAuthentication();
-      googleUser ??= await _googleSignIn.authenticate();
-
+      
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      
       final credential = fb.GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
 
-      UserProfile profile = await _supabaseService.getOrCreateProfile(
+      UserProfile profile = await _userProfileSupabase.getOrCreateProfile(
         userCredential.user!,
       );
 
@@ -234,20 +259,29 @@ class AuthService {
       _currentUser = user;
       return user;
     } on fb.FirebaseAuthException catch (e) {
-      throw AuthenticationException(
-        code: e.code,
-        message: e.message ?? 'An error occurred during Google Sign-In',
-      );
-    } on SocketException catch (e) {
-      throw AuthenticationException(
-        code: 'network-error',
-        message: 'Network error during Google Sign-In: ${e.message}',
-      );
-    } on PlatformException catch (e) {
-      if (e.code == 'sign_in_canceled') {
+      // Handle specific Firebase auth errors
+      if (e.code == 'account-exists-with-different-credential') {
         throw AuthenticationException(
-          code: 'google-signin-cancelled',
-          message: 'Google Sign In was cancelled',
+          code: 'account-exists-with-different-credential',
+          message: 'An account already exists with a different credential. Please sign in with the correct method.',
+        );
+      }
+      if (e.code == 'invalid-credential') {
+        throw AuthenticationException(
+          code: 'invalid-credential',
+          message: 'The credential is invalid or has expired.',
+        );
+      }
+      if (e.code == 'user-disabled') {
+        throw AuthenticationException(
+          code: 'user-disabled',
+          message: 'This user account has been disabled.',
+        );
+      }
+      if (e.code == 'invalid-email') {
+        throw AuthenticationException(
+          code: 'invalid-email',
+          message: 'The email address is badly formatted.',
         );
       }
       throw AuthenticationException(
@@ -255,8 +289,14 @@ class AuthService {
         message: e.message ?? 'An error occurred during Google Sign-In',
       );
     } catch (e) {
+      if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
+        throw AuthenticationException(
+          code: 'canceled',
+          message: 'Google Sign-In was canceled.',
+        );
+      }
       throw AuthenticationException(
-        code: 'google-signin-failed',
+        code: 'google-sign-in-failed',
         message: 'Failed to sign in with Google: $e',
       );
     }
@@ -264,17 +304,14 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      if (_currentUser != null) {
-        if (_currentUser!.isGoogleUser) {
-          await _googleSignIn.signOut();
-        }
-        await _auth.signOut();
-      }
+      await _googleSignIn.signOut();
+      await _auth.signOut();
       _currentUser = null;
     } catch (e) {
-      _currentUser = null;
-      await _auth.signOut();
-      await _googleSignIn.signOut();
+      throw AuthenticationException(
+        code: 'sign-out-failed',
+        message: 'Failed to sign out: $e',
+      );
     }
   }
 }

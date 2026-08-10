@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app/src/services/auth.dart';
-import 'package:app/src/services/supabase.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
+import 'package:budgly/src/core/logging/logger.dart';
+import 'package:budgly/src/services/auth.dart';
+import 'package:budgly/src/services/supabase/user_profile_supabase.dart';
 
 class PreferencesService with ChangeNotifier {
   static final PreferencesService _instance = PreferencesService._internal();
   factory PreferencesService() => _instance;
   
-  static const String _themeKey = 'theme_mode';
-  static const String _localeKey = 'app_locale';
-  static const String _currencyKey = 'app_currency';
+  static const String _themeKey = AppConstants.themeKey;
+  static const String _localeKey = AppConstants.localeKey;
+  static const String _currencyKey = AppConstants.currencyKey;
   
   final AuthService _authService = AuthService();
   static SharedPreferences? _prefs;
   
   ThemeMode _themeMode = ThemeMode.system;
-  Locale _locale = const Locale('fr');
-  String _currency = 'EUR';
+  Locale _locale = const Locale(AppConstants.defaultLocale);
+  String _currency = AppConstants.defaultCurrency;
 
-  static const List<String> supportedCurrencies = ['EUR', 'USD', 'GBP'];
+  static const List<String> supportedCurrencies = AppConstants.supportedCurrencies;
   
   ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
@@ -34,13 +36,15 @@ class PreferencesService with ChangeNotifier {
   }
   
   Future<void> _loadPreferences() async {
-    final themeIndex = _prefs!.getInt(_themeKey) ?? ThemeMode.system.index;
-    _themeMode = ThemeMode.values[themeIndex];
+    final themeIndex = _prefs!.getInt(_themeKey);
+    _themeMode = themeIndex != null 
+        ? ThemeMode.values[themeIndex.clamp(0, ThemeMode.values.length - 1)]
+        : ThemeMode.system;
     
-    final languageCode = _prefs!.getString(_localeKey) ?? 'fr';
+    final languageCode = _prefs!.getString(_localeKey) ?? AppConstants.defaultLocale;
     _locale = Locale(languageCode);
     
-    _currency = _prefs!.getString(_currencyKey) ?? 'EUR';
+    _currency = _prefs!.getString(_currencyKey) ?? AppConstants.defaultCurrency;
     
     await _syncWithServer();
     notifyListeners();
@@ -68,7 +72,7 @@ class PreferencesService with ChangeNotifier {
           }
         }
       } catch (e) {
-        print('Error syncing preferences with server: $e');
+        AppLogger.error('Error syncing preferences with server: $e', e);
       }
     }
   }
@@ -125,7 +129,7 @@ class PreferencesService with ChangeNotifier {
   Future<void> _updateServer() async {
     if (_authService.currentUser != null) {
       try {
-        await SupabaseService().updateProfile(_authService.currentUser!.id, {
+        await UserProfileSupabase().updateProfile(_authService.currentUser!.id, {
           'theme_mode': _themeMode.toString().split('.').last,
           'language': _locale.languageCode,
           'currency': _currency,
