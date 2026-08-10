@@ -24,7 +24,7 @@ class TabSwitcher extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(50.0),
-        color: backgroundColor ?? theme.colorScheme.outline.withAlpha(50),
+        color: backgroundColor ?? theme.colorScheme.outline.withAlpha(2000),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,

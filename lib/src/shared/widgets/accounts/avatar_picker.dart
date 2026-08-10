@@ -1,11 +1,11 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/services/image.dart';
-import 'package:app/src/shared/widgets/accounts/avatar.dart';
-import 'package:app/src/shared/widgets/buttons/button.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
-import 'package:app/src/shared/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/services/image.dart';
+import 'package:budgly/src/shared/widgets/avatar/avatar.dart';
+import 'package:budgly/src/shared/widgets/buttons/button.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/inputs/color_wheel.dart';
+import 'package:budgly/src/shared/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class AvatarPicker extends StatefulWidget {
   final Color color;
@@ -50,6 +50,7 @@ class _AvatarPickerState extends State<AvatarPicker> {
 
   void _pickImage() {
     ImageService.pickAndCropImage(context).then((path) {
+      if (path == null) return;
       setState(() {
         _picture = path;
         _hasPictureChanged = true;
@@ -66,135 +67,143 @@ class _AvatarPickerState extends State<AvatarPicker> {
     widget.onRemovePicture?.call();
   }
 
+  void _validate() {
+    if (_currentIndex == 0) {
+      if (_hasPictureChanged) {
+        widget.onChangePicture(_picture);
+      }
+    } else {
+      widget.onChangeColor(_selectedColor);
+    }
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    return AlertDialog(
-      titlePadding: const EdgeInsets.all(0),
-      contentPadding: const EdgeInsets.all(8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TabSwitcher(
-            selectedIndex: _currentIndex,
-            onTabSelected: (index) => setState(() => _currentIndex = index),
-            tabs: [Text(tr.picture), Text(tr.color)],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 24,
+      children: [
+        Text(
+          tr.avatarCustomization,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-          Stack(
-            alignment: Alignment.topRight,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 32,
-                  horizontal: 16,
-                ).copyWith(bottom: 16),
-                child: Avatar(
-                  initial: widget.initial.toUpperCase(),
-                  picture: _picture,
-                  isLocalPicture: _isLocalPicture,
-                  backgroundColor: _selectedColor,
-                  size: 120,
-                ),
-              ),
-              if (_picture != null && widget.onRemovePicture != null)
-                Positioned(
-                  top: 24,
-                  right: 8,
-                  child: Material(
-                    color: Colors.transparent,
-                    elevation: 1,
-                    shape: const CircleBorder(),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.error,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.colorScheme.onSurface.withAlpha(50),
-                            blurRadius: 48,
-                            offset: const Offset(2, 4),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 28),
-                        color: theme.colorScheme.onError,
-                        padding: EdgeInsets.zero, 
-                        onPressed: _removePicture,
-                      ),
-                    ),
-                  ),
-                )
-            ],
-          ),  
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-            child:
-                _currentIndex == 0
-                    ? Column(
-                      children: [
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              width: 2,
-                              color: theme.colorScheme.outlineVariant,
-                            ),
-                          ),
-                          onPressed: _pickImage,
-                          child: Text(
-                            tr.pickImage,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.outlineVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                    : HueRingPicker(
-                      pickerColor: _selectedColor,
-                      onColorChanged:
-                          (color) => setState(() => _selectedColor = color),
-                      enableAlpha: false,
-                      displayThumbColor: false,
-                      pickerAreaBorderRadius: BorderRadius.circular(10),
-                    ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              mainAxisSize: MainAxisSize.max,
+        ),
+        Avatar(
+          initial: widget.initial.toUpperCase(),
+          picture: _picture,
+          isLocalPicture: _isLocalPicture,
+          backgroundColor: _selectedColor,
+          size: 108,
+          showShadow: true,
+          canRemove: _picture != null && widget.onRemovePicture != null,
+          onRemove: _removePicture,
+        ),
+        TabSwitcher(
+          selectedIndex: _currentIndex,
+          onTabSelected: (index) => setState(() => _currentIndex = index),
+          tabs: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
               children: [
-                BudglyButton(
-                  text: tr.cancel,
-                  type: ButtonType.error,
-                  dense: true,
-                  onPressed: () => Navigator.pop(context),
+                Icon(
+                  Icons.image_rounded,
+                  size: 17,
+                  color: _currentIndex == 0
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
-                BudglyButton(
-                  text: tr.validate,
-                  type: ButtonType.success,
-                  dense: true,
-                  onPressed: () {
-                    if (_currentIndex == 0) {
-                      if (_hasPictureChanged) {
-                        widget.onChangePicture(_picture);
-                      }
-                    } else {
-                      widget.onChangeColor(_selectedColor);
-                    }
-                    Navigator.pop(context);
-                  },
+                Text(
+                  tr.picture,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: _currentIndex == 0
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: _currentIndex == 0
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
                 ),
               ],
             ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                Icon(
+                  Icons.palette_rounded,
+                  size: 17,
+                  color: _currentIndex == 1
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                Text(
+                  tr.color,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: _currentIndex == 1
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: _currentIndex == 1
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SizeTransition(sizeFactor: animation, child: child),
+            ),
+            child: _currentIndex == 0
+                ? SizedBox(
+                    width: double.infinity,
+                    child: BudglyButton(
+                      onPressed: _pickImage,
+                      leadingIcon: Icons.upload_rounded,
+                      type: ButtonType.outlined,
+                      text: tr.pickImage,
+                    ),
+                  )
+                : ColorWheel(
+                    key: const ValueKey('color'),
+                    color: _selectedColor,
+                    onChanged: (color) =>
+                        setState(() => _selectedColor = color),
+                  ),
           ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: Row(
+            spacing: 16,
+            children: [
+              Expanded(
+                child: BudglyButton(
+                  text: tr.cancel,
+                  type: ButtonType.error,
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              Expanded(
+                child: BudglyButton(text: tr.validate, onPressed: _validate),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

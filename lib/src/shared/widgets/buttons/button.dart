@@ -1,4 +1,4 @@
-import 'package:app/src/shared/widgets/buttons/constants.dart';
+import 'constants.dart';
 import 'package:flutter/material.dart';
 
 class BudglyButton extends StatelessWidget {
@@ -28,23 +28,30 @@ class BudglyButton extends StatelessWidget {
     return FilledButton.icon(
       style: FilledButton.styleFrom(
         backgroundColor: buttonColors.backgroundColor,
-        padding: EdgeInsets.symmetric(vertical: dense! ? 8 : 16, horizontal: dense! ? 16 : 24),
+        padding: EdgeInsets.symmetric(
+          vertical: dense! ? 8 : 16,
+          horizontal: dense! ? 16 : 24,
+        ),
         iconSize: dense! ? 20 : 24,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(dense! ? 8 : 10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(dense! ? 8 : 10),
+          side: type == ButtonType.outlined
+              ? BorderSide(color: buttonColors.textColor, width: 1)
+              : BorderSide.none,
+        ),
       ),
       onPressed: onPressed,
       iconAlignment: IconAlignment.start,
-      icon:
-          leadingIcon != null
-              ? Icon(leadingIcon, color: buttonColors.textColor)
-              : null,
+      icon: leadingIcon != null
+          ? Icon(leadingIcon, color: buttonColors.textColor)
+          : null,
       label: Text(
         text,
-        style: dense! ? theme.textTheme.bodyLarge?.copyWith(
-          color: buttonColors.textColor,
-        ) : theme.textTheme.titleMedium?.copyWith(
-          color: buttonColors.textColor,
-        ),
+        style: dense!
+            ? theme.textTheme.bodyLarge?.copyWith(color: buttonColors.textColor)
+            : theme.textTheme.titleMedium?.copyWith(
+                color: buttonColors.textColor,
+              ),
       ),
     );
   }

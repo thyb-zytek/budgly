@@ -1,4 +1,4 @@
-import 'package:app/src/core/theme/theme.dart';
+import 'package:budgly/src/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 class SnackBarMessage extends SnackBar {
