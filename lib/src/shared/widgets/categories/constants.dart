@@ -1,4 +1,4 @@
-import 'package:app/src/models/category/category_icon.dart';
+import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:flutter/material.dart';
 
 class CategoryEditingData {

@@ -1,7 +1,7 @@
-import 'package:app/src/models/category/category.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
-import 'package:app/src/shared/widgets/buttons/icon_button.dart';
-import 'package:app/src/shared/widgets/categories/icon.dart';
+import 'package:budgly/src/models/category/category.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/buttons/icon_button.dart';
+import 'package:budgly/src/shared/widgets/categories/icon.dart';
 import 'package:flutter/material.dart';
 
 class CategoryView extends StatelessWidget {

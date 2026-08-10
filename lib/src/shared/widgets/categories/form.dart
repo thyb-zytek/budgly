@@ -1,11 +1,9 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
-import 'package:app/src/shared/widgets/buttons/icon_button.dart';
-import 'package:app/src/shared/widgets/categories/constants.dart';
-import 'package:app/src/shared/widgets/categories/icon.dart';
-import 'package:app/src/shared/widgets/inputs/input.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/shared/widgets/categories/constants.dart';
+import 'package:budgly/src/shared/widgets/categories/icon.dart';
+import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
-import 'package:app/src/models/category/category_icon.dart' as cim;
+import 'package:budgly/src/models/category/category_icon.dart' as cim;
 
 class CategoryForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -39,45 +37,59 @@ class CategoryForm extends StatelessWidget {
 
     return Form(
       key: formKey,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 16,
         children: [
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: editingData.nameController,
-            builder: (context, value, child) {
-              return CategoryIcon(
-                availableIcons: availableIcons,
-                icon: editingData.icon,
-                color: editingData.color,
-                onChangeColor: onChangeColor,
-                onChangeIcon: onChangeIcon,
-              );
-            },
+          // Icon and input on same row
+          Row(
+            spacing: 12,
+            children: [
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: editingData.nameController,
+                builder: (context, value, child) {
+                  return CategoryIcon(
+                    availableIcons: availableIcons,
+                    icon: editingData.icon,
+                    color: editingData.color,
+                    onChangeColor: onChangeColor,
+                    onChangeIcon: onChangeIcon,
+                    size: 48,
+                  );
+                },
+              ),
+              Expanded(
+                child: TextInput(
+                  controller: editingData.nameController,
+                  labelText: tr.categoryName,
+                  onChange:
+                      (v) =>
+                          editingData.nameController.text =
+                              '${v[0].toUpperCase()}${v.substring(1)}',
+                  hotValidating:
+                      (v) => v == null || v.isEmpty ? tr.nameRequired : null,
+                  textInputAction: TextInputAction.done,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: TextInput(
-              controller: editingData.nameController,
-              labelText: tr.categoryName,
-              onChange:
-                  (v) =>
-                      editingData.nameController.text =
-                          '${v[0].toUpperCase()}${v.substring(1)}',
-              hotValidating:
-                  (v) => v == null || v.isEmpty ? tr.nameRequired : null,
-              textInputAction: TextInputAction.done,
-            ),
-          ),
-          BudglyIconButton(
-            icon: Icons.check_circle_rounded,
-            type: ButtonType.success,
-            onPressed: _onSubmit,
-            smallIcon: true,
-          ),
-          BudglyIconButton(
-            icon: Icons.cancel_rounded,
-            type: ButtonType.error,
-            onPressed: onCancel,
-            smallIcon: true,
+          // Action buttons
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onCancel,
+                  child: Text(tr.cancel),
+                ),
+              ),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _onSubmit,
+                  child: Text('Save'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
