@@ -1,7 +1,7 @@
-import 'package:app/firebase_options.dart';
-import 'package:app/src/app.dart';
-import 'package:app/src/core/routers/base.dart';
-import 'package:app/src/services/preferences.dart';
+import 'src/app.dart';
+import 'src/core/auth/auth_session.dart';
+import 'src/core/routers/base.dart';
+import 'src/services/preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -28,11 +28,11 @@ Future<void> main() async {
   });
 
   await GoogleSignIn.instance.initialize();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp();
 
   await Supabase.initialize(
     url: supabaseUrl,
-    anonKey: supabaseKey,
+    publishableKey: supabaseKey,
     authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
     accessToken: () async {
       final token = await FirebaseAuth.instance.currentUser?.getIdToken();
@@ -54,6 +54,7 @@ Future<void> main() async {
   }
 
   await PreferencesService.init();
+  AuthSessionNotifier.instance;
   NavigationHelper.instance;
 
   runApp(const BudglyApp());
