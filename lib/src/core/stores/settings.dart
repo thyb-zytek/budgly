@@ -11,7 +11,7 @@ class SettingsStore extends InheritedWidget {
     required this.accountsViewModel,
     required this.categoriesViewModel,
     required super.child,
-  }); 
+  });
 
   static SettingsStore? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<SettingsStore>();
