@@ -1,11 +1,11 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/models/account/account.dart';
-import 'package:app/src/pages/settings/widgets/accounts/view_model.dart';
-import 'package:app/src/pages/settings/widgets/confirm_dialog.dart';
-import 'package:app/src/shared/widgets/accounts/default.dart';
-import 'package:app/src/shared/widgets/accounts/form.dart';
-import 'package:app/src/shared/widgets/buttons/add_fab.dart';
-import 'package:app/src/shared/widgets/common/card.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/pages/settings/widgets/accounts/view_model.dart';
+import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
+import 'package:budgly/src/shared/widgets/accounts/default.dart';
+import 'package:budgly/src/shared/widgets/accounts/form.dart';
+import 'package:budgly/src/shared/widgets/buttons/add_fab.dart';
+import 'package:budgly/src/shared/widgets/common/card.dart';
 import 'package:flutter/material.dart';
 
 class AccountsTab extends StatefulWidget {
@@ -32,31 +32,32 @@ class _AccountsTabState extends State<AccountsTab>
   @override
   void didUpdateWidget(covariant AccountsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!oldWidget.accountsViewModel.hasAccountsLoaded &&
-        widget.accountsViewModel.hasAccountsLoaded) {
+    if (oldWidget.accountsViewModel != widget.accountsViewModel &&
+        !widget.accountsViewModel.hasAccountsLoaded) {
       widget.accountsViewModel.loadAccounts();
     }
   }
 
-  @override
-  void dispose() {
-    widget.accountsViewModel.dispose();
-    super.dispose();
-  }
-
   void _confirmDelete(Account account) {
-    showDialog(
+    final theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
+    showModalBottomSheet(
       context: context,
-      builder:
-          (context) => ConfirmDialog(
-            title: AppLocalizations.of(
-              context,
-            )!.confirmDeleteAccount(account.name),
-            content: AppLocalizations.of(
-              context,
-            )!.confirmDeleteAccountMessage(account.name),
-            onConfirm: () => widget.accountsViewModel.removeAccount(account),
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => ConfirmDelete(
+          title: tr.confirmDeleteAccount(account.name),
+          content: tr.confirmDeleteAccountMessage(
+            account.name
           ),
+          onConfirm: () async {
+            await widget.accountsViewModel.removeAccount(account);
+          },
+        ),
     );
   }
 
@@ -72,6 +73,8 @@ class _AccountsTabState extends State<AccountsTab>
         if (widget.accountsViewModel.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
+        final accounts = widget.accountsViewModel.accounts;
+        final editingAccountId = widget.accountsViewModel.editingAccount?.id;
 
         return Stack(
           children: [
@@ -89,21 +92,16 @@ class _AccountsTabState extends State<AccountsTab>
                   ),
                   Expanded(
                     child:
-                        widget.accountsViewModel.accounts.isNotEmpty
+                        accounts.isNotEmpty
                             ? ListView.builder(
-                              itemCount:
-                                  widget.accountsViewModel.accounts.length,
+                              itemCount: accounts.length,
                               itemBuilder: (context, index) {
-                                final account =
-                                    widget.accountsViewModel.accounts[index];
+                                final account = accounts[index];
                                 return BudglyCard(
+                                  key: ValueKey(account.id ?? identityHashCode(account)),
                                   child:
                                       (account.id != null &&
-                                              account.id !=
-                                                  widget
-                                                      .accountsViewModel
-                                                      .editingAccount
-                                                      ?.id)
+                                              account.id != editingAccountId)
                                           ? AccountView(
                                             account: account,
                                             onEdit:
@@ -157,7 +155,7 @@ class _AccountsTabState extends State<AccountsTab>
                                                             )
                                                         : widget
                                                             .accountsViewModel
-                                                            .editingAccount = null,
+                                                            .cancelEdit(),
                                             onRemovePicture:
                                                 () =>
                                                     widget.accountsViewModel
@@ -179,9 +177,16 @@ class _AccountsTabState extends State<AccountsTab>
             Positioned(
               bottom: 24,
               right: 24,
-              child: AddFab(
-                heroTag: 'add_account',
-                onPressed: widget.accountsViewModel.addAccount,
+              child: IgnorePointer(
+                ignoring: widget.accountsViewModel.isCreatingAccount,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: widget.accountsViewModel.isCreatingAccount ? 0.4 : 1,
+                  child: AddFab(
+                    heroTag: 'add_account',
+                    onPressed: widget.accountsViewModel.addAccount,
+                  ),
+                ),
               ),
             ),
           ],
