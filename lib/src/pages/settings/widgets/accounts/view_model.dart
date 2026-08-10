@@ -1,29 +1,31 @@
 import 'dart:io';
 import 'dart:math';
 
-import 'package:app/src/models/account/account.dart';
-import 'package:app/src/services/accounts.dart';
-import 'package:app/src/services/image.dart';
-import 'package:app/src/shared/widgets/accounts/constants.dart';
+import 'package:budgly/src/core/loading/progressive_loader.dart';
+import 'package:budgly/src/core/stores/accounts_store.dart';
+import 'package:budgly/src/core/view_models/base_view_model.dart';
+import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/services/accounts.dart';
+import 'package:budgly/src/services/image.dart';
+import 'package:budgly/src/shared/widgets/accounts/constants.dart';
 import 'package:flutter/material.dart';
 
-class AccountsViewModel extends ChangeNotifier {
+class AccountsViewModel extends BaseViewModel {
+  final AccountsStore _accountsStore = AccountsStore.instance;
   final AccountsService _accountsService = AccountsService.instance;
 
-  final List<Account> _accounts = [];
-  bool _hasAccountsLoaded = false;
+  final List<Account> _localAccounts = [];
   Account? _editingAccount;
 
   final TextEditingController _nameController = TextEditingController();
-  bool _isLoading = false;
 
   late Color _selectedColor;
   String? _picture;
   bool _isLocalPicture = true;
 
-  bool get isLoading => _isLoading;
-  List<Account> get accounts => List.unmodifiable(_accounts);
-  bool get hasAccountsLoaded => _hasAccountsLoaded;
+  List<Account> get accounts => [..._accountsStore.accounts, ..._localAccounts];
+  bool get hasAccountsLoaded => _accountsStore.hasLoaded;
+  bool get isCreatingAccount => _localAccounts.isNotEmpty;
 
   Account? get editingAccount => _editingAccount;
 
@@ -49,18 +51,24 @@ class AccountsViewModel extends ChangeNotifier {
       _isLocalPicture = _picture == null || !_picture!.startsWith('http');
     }
 
-    notifyListeners();
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   set color(Color color) {
     _selectedColor = color;
-    notifyListeners();
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   set picture(String? picture) {
     _picture = picture;
     _isLocalPicture = true;
-    notifyListeners();
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   @override
@@ -72,27 +80,48 @@ class AccountsViewModel extends ChangeNotifier {
   void removePicture() {
     _picture = null;
     _isLocalPicture = true;
-    notifyListeners();
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   Future<void> loadAccounts({bool needLoading = true}) async {
     if (needLoading) {
-      _isLoading = true;
-      notifyListeners();
+      setLoading(true);
     }
 
-    _accounts.clear();
-    _accounts.addAll(await _accountsService.listAccountsWithSignedUrls());
-    _accounts.sort((a, b) => a.name.compareTo(b.name));
+    await ProgressiveLoader.loadEssentialOnly(
+      essentialData: () async {
+        await _accountsStore.loadAccounts();
+      },
+      secondaryData: () async {
+        // Load signed URLs for accounts in background
+        for (final account in _accountsStore.accounts) {
+          if (account.picture != null && account.id != null) {
+            try {
+              await refreshPictureUrl(account);
+            } catch (e) {
+              // Continue even if one fails
+            }
+          }
+        }
+      },
+      onProgress: (progress) {
+        // Optional progress tracking
+      },
+    );
 
-    _isLoading = false;
-    _hasAccountsLoaded = true;
-    notifyListeners();
+    setLoading(false);
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   Future<void> addAccount() async {
-    _isLoading = true;
-    notifyListeners();
+    // Only one account can be created at a time.
+    if (_localAccounts.isNotEmpty) return;
+
+    setLoading(true);
 
     final account = Account(
       id: null,
@@ -107,22 +136,52 @@ class AccountsViewModel extends ChangeNotifier {
     _picture = null;
     _isLocalPicture = true;
 
-    _accounts.add(account);
+    _localAccounts.add(account);
 
-    _isLoading = false;
-    notifyListeners();
+    setLoading(false);
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   Future<void> removeAccount(Account account) async {
     if (account.id != null) {
+      // This is an existing account - actually delete it.
       if (account.picture != null) {
         await _accountsService.deletePicture(account.picture!, account.id!);
       }
       await _accountsService.deleteAccount(account.id!);
+
+      // _accountsStore.removeAccount() already updates the store's local
+      // state correctly and notifies its own listeners - do NOT follow it
+      // with _accountsStore.invalidateCache(): that would clear the store
+      // and require a full reload for something we already fixed locally.
+      // We only bust the service-level HTTP cache so a future full
+      // loadAccounts() doesn't return stale data.
+      _accountsStore.removeAccount(account.id!);
+      _accountsService.invalidateCache();
+    } else {
+      // This is a local temporary account - just remove from local list.
+      // Use identity comparison: Account's == likely compares by id, and
+      // every not-yet-saved account shares id == null, so a value-based
+      // match would wipe out every local account instead of just this one.
+      _localAccounts.removeWhere((a) => identical(a, account));
     }
-    _accounts.remove(account);
-    _accountsService.invalidateCache();
-    notifyListeners();
+    if (!isDisposed) {
+      notifyListeners();
+    }
+  }
+
+  void cancelEdit() {
+    // Cancel editing without deleting the account, and without touching
+    // any other account currently being created locally.
+    _editingAccount = null;
+    _nameController.clear();
+    _picture = null;
+    _isLocalPicture = true;
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   Future<String?> pickImage(BuildContext context) async {
@@ -138,12 +197,9 @@ class AccountsViewModel extends ChangeNotifier {
           account.picture!,
           account.id!,
         );
-        final index = _accounts.indexOf(account);
-        if (index != -1) {
-          _accounts[index] = account.copyWith(pictureUrl: pictureUrl);
-          _accountsService.invalidateCache();
-          notifyListeners();
-        }
+        final updatedAccount = account.copyWith(pictureUrl: pictureUrl);
+        _accountsStore.updateAccount(updatedAccount);
+        _accountsService.invalidateCache();
       } catch (e) {
         // Handle error silently
       }
@@ -151,8 +207,7 @@ class AccountsViewModel extends ChangeNotifier {
   }
 
   Future<void> createAccount(Account account) async {
-    _isLoading = true;
-    notifyListeners();
+    setLoading(true);
 
     String? fileName;
     File? persisted;
@@ -172,8 +227,7 @@ class AccountsViewModel extends ChangeNotifier {
       );
       createdAccount = await _accountsService.createAccount(newAccount);
     } catch (e) {
-      _isLoading = false;
-      notifyListeners();
+      setLoading(false);
       return;
     }
 
@@ -193,17 +247,17 @@ class AccountsViewModel extends ChangeNotifier {
       } catch (_) {}
     }
 
-    _accounts.remove(account);
-    _accounts.add(createdAccount!);
+    // Remove from local accounts and add to store. The store is already
+    // correct at this point - only the service-level cache needs busting.
+    _localAccounts.removeWhere((a) => identical(a, account));
+    _accountsStore.addAccount(createdAccount!);
     _editingAccount = null;
-    _isLoading = false;
+    setLoading(false);
     _accountsService.invalidateCache();
-    notifyListeners();
   }
 
   Future<void> updateAccount(Account account) async {
-    _isLoading = true;
-    notifyListeners();
+    setLoading(true);
 
     String? fileName = account.picture;
     File? persisted;
@@ -240,28 +294,24 @@ class AccountsViewModel extends ChangeNotifier {
         color: _selectedColor,
         picture: fileName,
       );
-      
+
       updatedAccount = await _accountsService.updateAccount(account);
-      
+
       if (pictureUrl != null) {
         updatedAccount = updatedAccount.copyWith(pictureUrl: pictureUrl);
-      } else if (account.pictureUrl != null && !_isLocalPicture) { 
+      } else if (account.pictureUrl != null && !_isLocalPicture) {
         updatedAccount = updatedAccount.copyWith(pictureUrl: account.pictureUrl);
       }
     } catch (e) {
-      _isLoading = false;
-      notifyListeners();
+      setLoading(false);
       return;
     }
 
-    final index = _accounts.indexWhere((a) => a.id == account.id);
-    if (index != -1) {
-      _accounts[index] = updatedAccount;
-    }
-
+    // The store is already correct via updateAccount() below - only the
+    // service-level cache needs busting.
+    _accountsStore.updateAccount(updatedAccount);
     _editingAccount = null;
-    _isLoading = false;
+    setLoading(false);
     _accountsService.invalidateCache();
-    notifyListeners();
   }
 }
