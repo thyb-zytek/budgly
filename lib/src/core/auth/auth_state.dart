@@ -1,4 +1,4 @@
-import 'package:app/src/models/user/user.dart';
+import 'package:budgly/src/models/user/user.dart';
 
 class AuthState {
   final AuthForm formType;
@@ -6,6 +6,7 @@ class AuthState {
   final String? errorMessage;
   final bool isLoading;
   final User? currentUser;
+  final bool isGoogleSignIn;
 
   AuthState({
     this.formType = AuthForm.signUp,
@@ -13,6 +14,7 @@ class AuthState {
     this.errorMessage,
     this.isLoading = false,
     this.currentUser,
+    this.isGoogleSignIn = false,
   });
 
   AuthState copyWith({
@@ -21,6 +23,7 @@ class AuthState {
     String? errorMessage,
     bool? isLoading,
     User? currentUser,
+    bool? isGoogleSignIn,
   }) {
     return AuthState(
       formType: formType ?? this.formType,
@@ -28,6 +31,7 @@ class AuthState {
       errorMessage: errorMessage,
       isLoading: isLoading ?? this.isLoading,
       currentUser: currentUser ?? this.currentUser,
+      isGoogleSignIn: isGoogleSignIn ?? this.isGoogleSignIn,
     );
   }
 }

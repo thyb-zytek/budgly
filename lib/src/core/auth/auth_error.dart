@@ -15,11 +15,13 @@ enum AuthErrorCode {
   signInError,
   resetPasswordError,
   googleSignInError,
+  googleSignCanceled,
   signOutError,
   userNotFound,
   invalidCredentials,
   unknownError,
-  emailAlreadyInUse, wrongPassword;
+  emailAlreadyInUse, 
+  wrongPassword;
 
   String get code {
     return toString().split('.').last;
