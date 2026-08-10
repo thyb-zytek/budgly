@@ -1,8 +1,7 @@
-import 'package:app/l10n/app_localizations.dart';
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class GoogleSignInButton extends StatelessWidget {
-
   final void Function()? onPressed;
 
   const GoogleSignInButton({super.key, this.onPressed});
@@ -12,13 +11,8 @@ class GoogleSignInButton extends StatelessWidget {
     ThemeData theme = Theme.of(context);
     AppLocalizations tr = AppLocalizations.of(context)!;
 
-    return ElevatedButton(
+    return OutlinedButton(
       onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: theme.colorScheme.surfaceContainer,
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.max,
         children: [

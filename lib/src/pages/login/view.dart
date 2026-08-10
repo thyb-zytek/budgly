@@ -1,14 +1,15 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/core/routers/base.dart';
-import 'package:app/src/pages/login/models/auth_event.dart';
-import 'package:app/src/pages/login/models/auth_state.dart';
-import 'package:app/src/pages/login/view_model.dart';
-import 'package:app/src/pages/login/widgets/google_sign_in_button.dart';
-import 'package:app/src/pages/login/widgets/login_appbar.dart';
-import 'package:app/src/pages/login/widgets/login_form.dart';
-import 'package:app/src/pages/login/widgets/reset_password_form.dart';
-import 'package:app/src/pages/login/widgets/signup_form.dart';
-import 'package:app/src/pages/login/widgets/verify_email.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/routers/base.dart';
+import 'package:budgly/src/core/stores/accounts_store.dart';
+import 'package:budgly/src/core/auth/auth_event.dart';
+import 'package:budgly/src/core/auth/auth_state.dart';
+import 'package:budgly/src/pages/login/view_model.dart';
+import 'package:budgly/src/pages/login/widgets/google_sign_in_button.dart';
+import 'package:budgly/src/pages/login/widgets/login_appbar.dart';
+import 'package:budgly/src/pages/login/widgets/login_form.dart';
+import 'package:budgly/src/pages/login/widgets/reset_password_form.dart';
+import 'package:budgly/src/pages/login/widgets/signup_form.dart';
+import 'package:budgly/src/pages/login/widgets/verify_email.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,31 +23,36 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   late LoginViewModel _viewModel = LoginViewModel(
-    onAuthenticated: (user) {
+    onAuthenticated: (user) async {
       if (mounted) {
-        context.go(NavigationHelper.overviewPath, extra: user);
+        final store = AccountsStore.instance;
+        try {
+          await store.loadAccounts();
+          
+          if (mounted) {
+            if (store.accounts.isNotEmpty) {
+              context.go(NavigationHelper.overviewPath, extra: user);
+            } else {
+              context.go(NavigationHelper.tutorialPath);
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            context.go(NavigationHelper.tutorialPath);
+          }
+        }
       }
     },
   );
 
   @override
   void initState() {
-    if (_viewModel.state.currentUser != null &&
-        !_viewModel.state.currentUser!.emailVerified) {
-      _viewModel.handleEvent(
-        AuthEventParams(
-          type: AuthEvent.changeFormType,
-          formType: AuthForm.verifyEmail,
-        ),
-      );
-    } else {
-      _viewModel.handleEvent(
-        AuthEventParams(
-          type: AuthEvent.changeFormType,
-          formType: AuthForm.signUp,
-        ),
-      );
-    }
+    _viewModel.handleEvent(
+      AuthEventParams(
+        type: AuthEvent.changeFormType,
+        formType: AuthForm.signUp,
+      ),
+    );
     super.initState();
   }
 
@@ -70,8 +76,10 @@ class _LoginPageState extends State<LoginPage>
         return tr.emailAlreadyInUse;
       case 'user-not-found':
         return tr.userNotFound;
-      default:
+      case 'canceled':
         return null;
+      default:
+        return _viewModel.state.errorMessage ?? tr.commonError;
     }
   }
 
@@ -90,11 +98,31 @@ class _LoginPageState extends State<LoginPage>
       ),
       extendBody: true,
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(top: 24),
         child: AnimatedBuilder(
           animation: Listenable.merge([_viewModel]),
           builder: (context, child) {
             if (_viewModel.state.isLoading) {
+              String loadingMessage;
+              if (_viewModel.state.isGoogleSignIn) {
+                loadingMessage = AppLocalizations.of(context)!.googleSigningIn;
+              } else {
+                switch (_viewModel.state.formType) {
+                  case AuthForm.signIn:
+                    loadingMessage = AppLocalizations.of(context)!.signingIn;
+                    break;
+                  case AuthForm.signUp:
+                    loadingMessage = AppLocalizations.of(context)!.signingUp;
+                    break;
+                  case AuthForm.resetPassword:
+                    loadingMessage = AppLocalizations.of(context)!.resettingPassword;
+                    break;
+                  case AuthForm.verifyEmail:
+                    loadingMessage = AppLocalizations.of(context)!.verifyingEmail;
+                    break;
+                }
+              }
+              
               return Center(
                 child: Column(
                   spacing: 16,
@@ -102,7 +130,7 @@ class _LoginPageState extends State<LoginPage>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      AppLocalizations.of(context)!.connecting,
+                      loadingMessage,
                       style: theme.textTheme.titleMedium,
                     ),
                     const CircularProgressIndicator(),
@@ -115,19 +143,17 @@ class _LoginPageState extends State<LoginPage>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_viewModel.state.errorCode != null)
-                  Padding(
+                  _translateErrorMessage() != null ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
-                      _translateErrorMessage() ??
-                          _viewModel.state.errorMessage ??
-                          "An error occurred",
+                      _translateErrorMessage()!,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.error,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  ) : const SizedBox.shrink(),
                 switch (_viewModel.state.formType) {
                   AuthForm.signUp => SignUpForm(
                     formKey: _viewModel.formKey,

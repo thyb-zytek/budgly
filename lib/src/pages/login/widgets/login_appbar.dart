@@ -1,4 +1,4 @@
-import 'package:app/l10n/app_localizations.dart';
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class LoginAppbar extends StatelessWidget {
@@ -19,9 +19,12 @@ class LoginAppbar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.max,
           children: [
-            Image.asset(
-              'assets/images/logo.png',
-              width: MediaQuery.of(context).viewInsets.bottom > 0 ? 100 : 125,
+            Padding(
+              padding: EdgeInsets.only(left: 16),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: MediaQuery.of(context).viewInsets.bottom > 0 ? 100 : 125,
+              ),
             ),
             Padding(
               padding: EdgeInsets.only(bottom: 24),
@@ -38,10 +41,10 @@ class LoginAppbar extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             tr.appDescription,
-            style:  MediaQuery.of(context).viewInsets.bottom > 0 ? theme.textTheme.bodyLarge!.copyWith(
-              color: theme.colorScheme.outline,
-            ): theme.textTheme.headlineSmall!.copyWith(
-              color: theme.colorScheme.outline,
+            style:  MediaQuery.of(context).viewInsets.bottom > 0 ? theme.textTheme.titleLarge!.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ): theme.textTheme.titleLarge!.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ),
