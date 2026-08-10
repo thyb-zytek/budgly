@@ -6,4 +6,7 @@ class AuthenticationException implements Exception {
     required this.message,
     required this.code,
   });
+
+  @override
+  String toString() => 'AuthenticationException: $code - $message';
 }
