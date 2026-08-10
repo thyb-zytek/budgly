@@ -1,4 +1,4 @@
-import 'package:app/src/core/theme/theme.dart';
+import 'package:budgly/src/core/theme/theme.dart';
 import 'package:flutter/material.dart';
 
 enum ButtonType {
@@ -9,6 +9,7 @@ enum ButtonType {
   error,
   neutral,
   neutralVariant,
+  outlined,
   iconDefault,
   iconOnPrimary,
 }
@@ -59,11 +60,16 @@ class TypedButtonStyle {
         break;
       case ButtonType.neutralVariant:
         _backgroundColor = theme.colorScheme.outlineVariant;
-        _textColor = theme.colorScheme.onInverseSurface;
+        _textColor = theme.colorScheme.onSurfaceVariant;
+        _iconColor = theme.colorScheme.outlineVariant;
+        break;
+      case ButtonType.outlined:
+        _backgroundColor = theme.colorScheme.surface;
+        _textColor = theme.colorScheme.onSurface;
         _iconColor = theme.colorScheme.outlineVariant;
         break;
       case ButtonType.iconDefault:
-        _iconColor = theme.colorScheme.outline;
+        _iconColor = theme.colorScheme.outlineVariant;
         break;
       case ButtonType.iconOnPrimary:
         _iconColor = theme.colorScheme.onPrimaryContainer;

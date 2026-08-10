@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:app/l10n/app_localizations.dart';
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'constants.dart';
+import 'package:budgly/src/shared/widgets/inputs/constants.dart';
 
 class TextInput extends StatefulWidget {
   final TextEditingController controller;
@@ -189,6 +189,37 @@ class _TextInputState extends State<TextInput> {
             errorText: widget.errorText,
             alignLabelWithHint: true,
             errorMaxLines: 3,
+            filled: false,
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: theme.colorScheme.outline,
+                width: 1,
+              ),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: theme.colorScheme.outline,
+                width: 1,
+              ),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: theme.colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: theme.colorScheme.error,
+                width: 1,
+              ),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: theme.colorScheme.error,
+                width: 2,
+              ),
+            ),
             prefixIconConstraints: const BoxConstraints(
               minWidth: 0,
               minHeight: 0,

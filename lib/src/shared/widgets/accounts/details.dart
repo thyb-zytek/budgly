@@ -1,7 +1,7 @@
-import 'package:app/src/models/account/account.dart';
-import 'package:app/src/models/category/category.dart';
-import 'package:app/src/shared/widgets/accounts/default.dart';
-import 'package:app/src/shared/widgets/inputs/dropdown.dart';
+import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/models/category/category.dart';
+import 'package:budgly/src/shared/widgets/accounts/default.dart';
+import 'package:budgly/src/shared/widgets/inputs/dropdown.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -116,7 +116,7 @@ class _AccountDetailsState extends State<AccountDetails>
           ),
           SizeTransition(
             sizeFactor: _fadeAnimation,
-            axisAlignment: -1.0,
+            alignment: Alignment.topCenter,
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: ScaleTransition(

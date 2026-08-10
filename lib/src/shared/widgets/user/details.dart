@@ -1,10 +1,10 @@
-import 'package:app/src/shared/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
-import 'package:app/src/models/user/user.dart';
-import 'package:app/l10n/app_localizations.dart';
+import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
-import 'package:app/src/shared/widgets/buttons/icon_button.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/buttons/icon_button.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
 
 class UserDetails extends StatefulWidget {
   final User user;

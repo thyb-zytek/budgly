@@ -1,7 +1,7 @@
-import 'package:app/src/models/account/account.dart';
-import 'package:app/src/shared/widgets/accounts/avatar.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
-import 'package:app/src/shared/widgets/buttons/icon_button.dart';
+import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/shared/widgets/avatar/avatar.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/buttons/icon_button.dart';
 import 'package:flutter/material.dart';
 
 class AccountView extends StatelessWidget {

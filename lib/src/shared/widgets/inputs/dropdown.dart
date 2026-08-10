@@ -1,6 +1,6 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
-import 'package:app/src/shared/widgets/buttons/icon_button.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/buttons/icon_button.dart';
 import 'package:flutter/material.dart';
 
 class DropDown<T> extends StatefulWidget {
@@ -103,7 +103,7 @@ class _DropDownState<T extends dynamic> extends State<DropDown<T>>
                           color: Theme.of(context).colorScheme.surfaceContainer,
                           child: SizeTransition(
                             sizeFactor: _expandAnimation,
-                            axisAlignment: 1.0,
+                            alignment: Alignment.topCenter,
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 minWidth: 10,

@@ -1,7 +1,7 @@
-import 'package:app/src/shared/widgets/accounts/default.dart';
-import 'package:app/src/shared/widgets/inputs/dropdown.dart';
+import 'package:budgly/src/shared/widgets/accounts/default.dart';
+import 'package:budgly/src/shared/widgets/inputs/dropdown.dart';
 import 'package:flutter/material.dart';
-import 'package:app/src/models/account/account.dart';
+import 'package:budgly/src/models/account/account.dart';
 
 class AccountSelector extends StatelessWidget {
   final List<Account> accounts;

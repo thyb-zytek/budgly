@@ -1,9 +1,9 @@
-import 'package:app/src/shared/widgets/buttons/button.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/buttons/button.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
 import 'package:flutter/material.dart';
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/shared/widgets/inputs/input.dart';
-import 'package:app/src/shared/widgets/inputs/constants.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/shared/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/widgets/inputs/constants.dart';
 
 class ChangePasswordForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;

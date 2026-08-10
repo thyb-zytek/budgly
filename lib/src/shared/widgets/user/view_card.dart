@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:app/src/models/user/user.dart';
-import 'package:app/l10n/app_localizations.dart';
+import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/l10n/app_localizations.dart';
 
 class UserCard extends StatelessWidget {
   final User user;
@@ -13,10 +13,11 @@ class UserCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerHigh,
+      color: theme.colorScheme.surfaceContainer,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
+          spacing: 16,
           children: [
             CircleAvatar(
               radius: 32,
@@ -35,7 +36,6 @@ class UserCard extends StatelessWidget {
                       )
                       : const Icon(Icons.person, size: 30),
             ),
-            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
