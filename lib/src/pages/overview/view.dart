@@ -1,11 +1,13 @@
-import 'package:app/src/pages/overview/view_model.dart';
-import 'package:app/src/pages/overview/widgets/date_selector.dart';
-import 'package:app/src/shared/widgets/accounts/details.dart';
-import 'package:app/src/shared/widgets/buttons/add_fab.dart';
-import 'package:app/src/shared/widgets/categories/default.dart';
-import 'package:app/src/shared/widgets/common/card.dart';
+import 'package:budgly/src/pages/overview/view_model.dart';
+import 'package:budgly/src/pages/overview/widgets/date_selector.dart';
+import 'package:budgly/src/shared/widgets/accounts/details.dart';
+import 'package:budgly/src/shared/widgets/buttons/add_fab.dart';
+import 'package:budgly/src/shared/widgets/categories/default.dart';
+import 'package:budgly/src/shared/widgets/common/card.dart';
+import 'package:budgly/src/core/routers/base.dart';
 import 'package:flutter/material.dart';
 import 'package:sliver_tools/sliver_tools.dart';
+import 'package:go_router/go_router.dart';
 
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
@@ -15,13 +17,20 @@ class OverviewPage extends StatefulWidget {
 }
 
 class _OverviewPageState extends State<OverviewPage> {
-  final OverviewViewModel _viewModel = OverviewViewModel();
+  late final OverviewViewModel _viewModel;
   final ScrollController _scrollController = ScrollController();
   bool _isHeaderExpanded = true;
 
   @override
   void initState() {
     super.initState();
+    _viewModel = OverviewViewModel(
+      onNoAccounts: () {
+        if (mounted) {
+          context.go(NavigationHelper.tutorialPath);
+        }
+      },
+    );
     _viewModel.loadUserAccounts();
     _scrollController.addListener(_onScroll);
   }
@@ -35,8 +44,8 @@ class _OverviewPageState extends State<OverviewPage> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _viewModel.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -79,9 +88,9 @@ class _OverviewPageState extends State<OverviewPage> {
                             selectedAccount: _viewModel.selectedAccount,
                             onChangeAccount: _viewModel.changeAccount,
                             accounts: _viewModel.accounts,
-                            incomes: 3100,
-                            outcomes: 2650,
-                            available: 350,
+                            incomes: _viewModel.incomeAmount,
+                            outcomes: _viewModel.outcomesAmount,
+                            available: _viewModel.availableAmount,
                             categories: _viewModel.categories,
                             isExpanded: _isHeaderExpanded,
                           ),
