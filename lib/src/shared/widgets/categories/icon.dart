@@ -1,5 +1,5 @@
-import 'package:app/src/models/category/category_icon.dart' as cim;
-import 'package:app/src/shared/widgets/categories/icon_picker.dart';
+import 'package:budgly/src/models/category/category_icon.dart' as cim;
+import 'package:budgly/src/shared/widgets/categories/icon_picker.dart';
 import 'package:flutter/material.dart';
 
 class CategoryIcon extends StatelessWidget {
@@ -14,7 +14,7 @@ class CategoryIcon extends StatelessWidget {
     super.key,
     required this.icon,
     required this.color,
-    this.size = 32,
+    this.size = 48,
     this.onChangeColor,
     this.onChangeIcon,
     this.availableIcons = const [],
@@ -28,30 +28,96 @@ class CategoryIcon extends StatelessWidget {
       onTap:
           () =>
               onChangeColor != null && onChangeIcon != null
-                  ? showDialog(
+                  ? showModalBottomSheet(
                     context: context,
-                    builder:
-                        (context) => IconPicker(
-                          color: color,
-                          availableIcons: availableIcons,
-                          icon: icon,
-                          onChangeColor: onChangeColor!,
-                          onChangeIcon: onChangeIcon!,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom,
                         ),
+                        child: DraggableScrollableSheet(
+                          initialChildSize: 0.5,
+                          minChildSize: 0.4,
+                          maxChildSize: 0.8,
+                          expand: false,
+                          builder: (context, scrollController) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 10,
+                                    offset: Offset(0, -5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Handle for dragging
+                                  Container(
+                                    margin: EdgeInsets.symmetric(vertical: 12),
+                                    width: 40,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.outlineVariant,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  // Title
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                    child: Text(
+                                      'Choose Icon',
+                                      style: Theme.of(context).textTheme.titleLarge,
+                                    ),
+                                  ),
+                                  // Icon picker content
+                                  Expanded(
+                                    child: SingleChildScrollView(
+                                      controller: scrollController,
+                                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                      child: IconPicker(
+                                        color: color,
+                                        availableIcons: availableIcons,
+                                        icon: icon,
+                                        onChangeColor: onChangeColor!,
+                                        onChangeIcon: onChangeIcon!,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   )
                   : null,
       child: Container(
-        width: size + 16,
-        height: size + 16,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           shape: BoxShape.rectangle,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           color: color,
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Icon(
-          icon.iconData,
+          icon.toIconData(),
           color: theme.colorScheme.onPrimary,
-          size: size,
+          size: size * 0.6,
         ),
       ),
     );

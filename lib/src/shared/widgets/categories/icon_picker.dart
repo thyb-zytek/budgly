@@ -1,10 +1,10 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/models/category/category_icon.dart' as cim;
-import 'package:app/src/shared/widgets/buttons/button.dart';
-import 'package:app/src/shared/widgets/buttons/constants.dart';
-import 'package:app/src/shared/widgets/categories/icon.dart';
-import 'package:app/src/shared/widgets/inputs/input.dart';
-import 'package:app/src/shared/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/models/category/category_icon.dart' as cim;
+import 'package:budgly/src/shared/widgets/buttons/button.dart';
+import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/shared/widgets/categories/icon.dart';
+import 'package:budgly/src/shared/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -149,7 +149,7 @@ class _IconPickerState extends State<IconPicker> {
                                         child: Icon(
                                           IconPickerIcon(
                                             name: icon.iconName,
-                                            data: icon.iconData,
+                                            data: icon.toIconData(),
                                             pack: icon.iconPack,
                                           ).data,
                                           size: 40,
