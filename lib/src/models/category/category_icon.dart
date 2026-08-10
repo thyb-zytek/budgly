@@ -15,7 +15,9 @@ class CategoryIcon {
 
   factory CategoryIcon.fromJson(Map<String, dynamic> json) => CategoryIcon(
     iconName: json['icon_name'],
-    iconCode: int.parse(json['icon_code']),
+    iconCode: json['icon_code'] is String 
+        ? int.parse(json['icon_code'] as String)
+        : json['icon_code'] as int,
     iconPack: json['icon_pack'],
     labels: (json['labels'] as Map<String, dynamic>).map<String, String>(
       (String key, dynamic value) => MapEntry(key, value.toString()),
@@ -31,11 +33,16 @@ class CategoryIcon {
     };
   }
 
-  IconData get iconData => IconData(
-    int.parse('0x${iconCode.toRadixString(16)}'),
-    fontFamily: iconPack,
-    matchTextDirection: true,
-  );
+  IconData toIconData() {
+    return IconData(
+      // ignore: non_const_argument_for_const_parameter
+      iconCode,
+      // ignore: non_const_argument_for_const_parameter
+      fontFamily: iconPack,
+      matchTextDirection: true,
+      fontPackage: null,
+    );
+  }
 
   CategoryIcon copyWith({
     String? iconName,
