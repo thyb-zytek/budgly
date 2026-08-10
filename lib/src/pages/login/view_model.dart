@@ -1,21 +1,24 @@
-import 'package:app/src/core/exceptions/auth_exceptions.dart';
-import 'package:app/src/models/user/user.dart';
-import 'package:app/src/pages/login/models/auth_event.dart';
-import 'package:app/src/pages/login/models/auth_state.dart';
-import 'package:app/src/services/auth.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
+import 'package:budgly/src/core/exceptions/auth_exceptions.dart';
+import 'package:budgly/src/core/stores/user_profile_store.dart';
+import 'package:budgly/src/core/view_models/base_view_model.dart';
+import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/src/core/auth/auth_event.dart';
+import 'package:budgly/src/core/auth/auth_state.dart';
+import 'package:budgly/src/core/auth/auth_error.dart';
+import 'package:budgly/src/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'models/auth_error.dart';
-
-class LoginViewModel with ChangeNotifier {
+class LoginViewModel extends BaseViewModel {
   final AuthService _authService = AuthService();
+  final UserProfileStore _userProfileStore = UserProfileStore.instance;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _password2Controller = TextEditingController();
   final Function(User)? onAuthenticated;
-  static const String _formTypeKey = 'LoginDefaultFormType';
+  static const String _formTypeKey = AppConstants.loginFormTypeKey;
 
   AuthState _state = AuthState();
 
@@ -28,10 +31,12 @@ class LoginViewModel with ChangeNotifier {
 
     if (currentUser != null) {
       if (!currentUser.emailVerified) {
+        if (isDisposed) return;
         _setState(
           currentUser: currentUser,
           formType: AuthForm.verifyEmail,
           isLoading: false,
+          isGoogleSignIn: false,
         );
         return;
       }
@@ -39,7 +44,8 @@ class LoginViewModel with ChangeNotifier {
     }
 
     final savedFormType = await _loadFormType();
-    _setState(formType: savedFormType, isLoading: false);
+    if (isDisposed) return;
+    _setState(formType: savedFormType, isLoading: false, isGoogleSignIn: false);
   }
 
   Future<AuthForm> _loadFormType() async {
@@ -82,6 +88,7 @@ class LoginViewModel with ChangeNotifier {
     String? errorMessage,
     bool? isLoading,
     User? currentUser,
+    bool? isGoogleSignIn,
   }) {
     _state = _state.copyWith(
       formType: formType,
@@ -89,8 +96,11 @@ class LoginViewModel with ChangeNotifier {
       errorMessage: errorMessage,
       isLoading: isLoading,
       currentUser: currentUser,
+      isGoogleSignIn: isGoogleSignIn,
     );
-    notifyListeners();
+    if (!isDisposed) {
+      notifyListeners();
+    }
   }
 
   void handleEvent(AuthEventParams event) {
@@ -102,6 +112,7 @@ class LoginViewModel with ChangeNotifier {
           ].any((e) => e == event.type),
       errorCode: null,
       errorMessage: null,
+      isGoogleSignIn: event.type == AuthEvent.googleSignIn,
     );
 
     event.when(
@@ -119,16 +130,23 @@ class LoginViewModel with ChangeNotifier {
         .reloadCurrentUser()
         .then((user) {
           if (user != null && user.emailVerified) {
-            _setState(isLoading: true, currentUser: user);
+            if (!isDisposed) {
+              _userProfileStore.invalidateCache();
+              _setState(isLoading: true, currentUser: user, isGoogleSignIn: false);
+            }
             onAuthenticated?.call(user);
           }
-          _setState(
-            currentUser: user,
-            errorCode: _state.errorCode,
-            errorMessage: _state.errorMessage,
-          );
+          if (!isDisposed) {
+            _setState(
+              currentUser: user,
+              errorCode: _state.errorCode,
+              errorMessage: _state.errorMessage,
+              isGoogleSignIn: false,
+            );
+          }
         })
         .catchError((error) {
+          if (!isDisposed) return;
           final authError =
               error is AuthenticationException
                   ? AuthError(error.code, error.message)
@@ -137,13 +155,14 @@ class LoginViewModel with ChangeNotifier {
             errorCode: authError.code,
             errorMessage: authError.message,
             isLoading: false,
+            isGoogleSignIn: false,
           );
         });
   }
 
   void _handleSubmitForm() {
     if (!_formKey.currentState!.validate()) {
-      _setState(isLoading: false);
+      _setState(isLoading: false, isGoogleSignIn: false);
       return;
     }
 
@@ -155,13 +174,20 @@ class LoginViewModel with ChangeNotifier {
               _passwordController.text,
             )
             .then(
-              (user) => _setState(
-                isLoading: false,
-                currentUser: user,
-                formType: AuthForm.verifyEmail,
-              ),
+              (user) {
+                if (!isDisposed) {
+                  _userProfileStore.invalidateCache();
+                  _setState(
+                    isLoading: false,
+                    currentUser: user,
+                    formType: AuthForm.verifyEmail,
+                    isGoogleSignIn: false,
+                  );
+                }
+              },
             )
             .catchError((error) {
+              if (!isDisposed) return;
               _setState(
                 isLoading: false,
                 errorCode:
@@ -172,14 +198,19 @@ class LoginViewModel with ChangeNotifier {
                     error is AuthenticationException
                         ? error.message
                         : error.toString(),
+                isGoogleSignIn: false,
               );
             });
         break;
       case AuthForm.resetPassword:
         _authService
             .resetPassword(_emailController.text)
-            .then((_) => _setState(isLoading: false, formType: AuthForm.signIn))
+            .then((_) {
+              if (!isDisposed) return;
+              _setState(isLoading: false, formType: AuthForm.signIn, isGoogleSignIn: false);
+            })
             .catchError((error) {
+              if (!isDisposed) return;
               _setState(
                 isLoading: false,
                 errorCode:
@@ -190,6 +221,7 @@ class LoginViewModel with ChangeNotifier {
                     error is AuthenticationException
                         ? error.message
                         : error.toString(),
+                isGoogleSignIn: false,
               );
             });
 
@@ -201,17 +233,24 @@ class LoginViewModel with ChangeNotifier {
               _passwordController.text,
             )
             .then((user) {
+              if (!isDisposed) {
+                _userProfileStore.invalidateCache();
+              }
               if (user.emailVerified) {
                 onAuthenticated?.call(user);
               } else {
-                _setState(
-                  isLoading: false,
-                  currentUser: user,
-                  formType: AuthForm.verifyEmail,
-                );
+                if (!isDisposed) {
+                  _setState(
+                    isLoading: false,
+                    currentUser: user,
+                    formType: AuthForm.verifyEmail,
+                    isGoogleSignIn: false,
+                  );
+                }
               }
             })
             .catchError((error) {
+              if (!isDisposed) return;
               _setState(
                 isLoading: false,
                 errorCode:
@@ -222,6 +261,7 @@ class LoginViewModel with ChangeNotifier {
                     error is AuthenticationException
                         ? error.message
                         : error.toString(),
+                isGoogleSignIn: false,
               );
             });
 
@@ -229,7 +269,7 @@ class LoginViewModel with ChangeNotifier {
       case AuthForm.verifyEmail:
         _clearForm(keepEmail: true);
         _saveFormType(AuthForm.signIn);
-        _setState(formType: AuthForm.signIn);
+        _setState(formType: AuthForm.signIn, isGoogleSignIn: false);
         break;
     }
   }
@@ -239,12 +279,16 @@ class LoginViewModel with ChangeNotifier {
       _authService
           .signInWithGoogle()
           .then((user) {
+            if (!isDisposed) {
+              _userProfileStore.invalidateCache();
+            }
             onAuthenticated?.call(user);
           })
-          .catchError((error) {
+          .onError((error, stackTrace) {
+            if (!isDisposed) return;
             _setState(
               isLoading: false,
-              formType: AuthForm.signUp,
+              formType: AuthForm.signIn,
               errorCode:
                   error is AuthenticationException
                       ? error.code
@@ -253,15 +297,19 @@ class LoginViewModel with ChangeNotifier {
                   error is AuthenticationException
                       ? error.message
                       : error.toString(),
+              isGoogleSignIn: false,
             );
           });
     } catch (e) {
+      if (!isDisposed) return;
       final error = AuthError('googleSignInError', e.toString());
       _setState(
-        errorCode: error.code,
-        errorMessage: error.message,
+        errorCode: e is AuthenticationException ? e.code : error.code,
+        errorMessage: e is AuthenticationException ? e.message : error.message,
         isLoading: false,
+        isGoogleSignIn: false,
       );
+      return;
     }
   }
 
@@ -269,22 +317,28 @@ class LoginViewModel with ChangeNotifier {
     _authService
         .signOut()
         .then((_) {
-          _clearForm();
-          _setState(
-            currentUser: null,
-            formType:
-                _state.formType == AuthForm.resetPassword
-                    ? AuthForm.signIn
-                    : AuthForm.signUp,
-            isLoading: false,
-          );
+          if (!isDisposed) {
+            _userProfileStore.clearUser();
+            _clearForm();
+            _setState(
+              currentUser: null,
+              formType:
+                  _state.formType == AuthForm.resetPassword
+                      ? AuthForm.signIn
+                      : AuthForm.signUp,
+              isLoading: false,
+              isGoogleSignIn: false,
+            );
+          }
         })
         .catchError((e) {
+          if (!isDisposed) return;
           final error = AuthError('signOutError', e.toString());
           _setState(
             errorCode: error.code,
             errorMessage: error.message,
             isLoading: false,
+            isGoogleSignIn: false,
           );
         });
   }
@@ -310,17 +364,20 @@ class LoginViewModel with ChangeNotifier {
       isLoading: false,
       errorCode: null,
       errorMessage: null,
+      isGoogleSignIn: false,
     );
   }
 
   void _handleResendEmailVerification() {
     _authService.sendEmailVerification().catchError((error) {
+      if (isDisposed) return;
       _setState(
         isLoading: false,
         errorCode:
             error is AuthenticationException ? error.code : 'unknownError',
         errorMessage:
             error is AuthenticationException ? error.message : error.toString(),
+        isGoogleSignIn: false,
       );
     });
   }
