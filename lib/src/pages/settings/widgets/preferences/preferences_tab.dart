@@ -1,8 +1,8 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/pages/settings/widgets/preferences/view_model.dart';
-import 'package:app/src/pages/settings/widgets/preferences/currency_form.dart';
-import 'package:app/src/pages/settings/widgets/preferences/locale_form.dart';
-import 'package:app/src/pages/settings/widgets/preferences/theme_form.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/pages/settings/widgets/preferences/view_model.dart';
+import 'package:budgly/src/pages/settings/widgets/preferences/currency_form.dart';
+import 'package:budgly/src/pages/settings/widgets/preferences/locale_form.dart';
+import 'package:budgly/src/pages/settings/widgets/preferences/theme_form.dart';
 import 'package:flutter/material.dart';
 
 class PreferencesTab extends StatefulWidget {
