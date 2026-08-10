@@ -1,7 +1,9 @@
-import 'package:app/src/pages/login/view.dart';
-import 'package:app/src/pages/overview/view.dart';
-import 'package:app/src/pages/settings/view.dart';
-import 'package:app/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
+import 'package:budgly/src/core/auth/auth_session.dart';
+import 'package:budgly/src/pages/login/view.dart';
+import 'package:budgly/src/pages/overview/view.dart';
+import 'package:budgly/src/pages/settings/view.dart';
+import 'package:budgly/src/pages/tutorial/view.dart';
+import 'package:budgly/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +31,7 @@ class NavigationHelper {
       router.routeInformationParser;
 
   static const String loginPath = '/login';
+  static const String tutorialPath = '/tutorial';
   static const String overviewPath = '/overview';
   static const String settingsPath = '/settings';
 
@@ -40,6 +43,12 @@ class NavigationHelper {
         path: loginPath,
         pageBuilder: (context, state) {
           return getPage(child: const LoginPage(), state: state);
+        },
+      ),
+      GoRoute(
+        path: tutorialPath,
+        pageBuilder: (context, state) {
+          return getPage(child: TutorialPage(), state: state);
         },
       ),
       StatefulShellRoute.indexedStack(
@@ -83,17 +92,22 @@ class NavigationHelper {
 
     router = GoRouter(
       navigatorKey: parentNavigatorKey,
-      initialLocation: overviewPath,
+      initialLocation: '/',
+      refreshListenable: AuthSessionNotifier.instance,
       routes: routes,
       redirect: (BuildContext context, GoRouterState state) {
         final user = firebase.FirebaseAuth.instance.currentUser;
 
         if (state.matchedLocation == loginPath && user != null) {
-          return overviewPath;
+          return tutorialPath;
         }
 
         if (user == null && state.matchedLocation != loginPath) {
           return loginPath;
+        }
+
+        if (user != null && state.matchedLocation == '/') {
+          return tutorialPath;
         }
 
         return null;
