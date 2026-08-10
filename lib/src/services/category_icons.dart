@@ -1,7 +1,9 @@
 import 'dart:convert';
 
-import 'package:app/src/models/category/category_icon.dart';
-import 'package:app/src/services/supabase.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
+import 'package:budgly/src/core/logging/logger.dart';
+import 'package:budgly/src/models/category/category_icon.dart';
+import 'package:budgly/src/services/supabase/storage_supabase.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,12 +17,12 @@ class CategoryIconsService {
 
   CategoryIconsService._();
 
-  final SupabaseService _service = SupabaseService();
+  final StorageSupabase _storage = StorageSupabase();
 
-  static const String _bucketName = 'config-files';
-  static const String _iconsFileName = 'category_icons.json';
-  static const String _cacheKey = 'cached_category_icons';
-  static const Duration _cacheValidity = Duration(days: 1);
+  static const String _bucketName = AppConstants.bucketConfig;
+  static const String _iconsFileName = AppConstants.categoryIconsFileName;
+  static const String _cacheKey = AppConstants.cacheCategoryIcons;
+  static const Duration _cacheValidity = AppConstants.cacheValidityLong;
 
   List<CategoryIcon> _icons = [];
   DateTime? _lastFetch;
@@ -55,7 +57,7 @@ class CategoryIconsService {
         return List.unmodifiable(_icons);
       }
     } catch (e) {
-      print('Erreur Supabase: $e');
+      AppLogger.error('Erreur Supabase: $e', e);
     }
 
     try {
@@ -64,14 +66,14 @@ class CategoryIconsService {
       _lastFetch = DateTime.now();
       return List.unmodifiable(_icons);
     } catch (e) {
-      print('Erreur assets: $e');
+      AppLogger.error('Erreur assets: $e', e);
     }
 
     return [];
   }
 
   Future<List<CategoryIcon>> _loadIconsFromSupabase() async {
-    final response = await _service.getFileContent(
+    final response = await _storage.getFileContent(
       bucketId: _bucketName,
       filePath: _iconsFileName,
     );
@@ -124,7 +126,7 @@ class CategoryIconsService {
           .map((json) => CategoryIcon.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('Erreur lecture cache: $e');
+      AppLogger.error('Erreur lecture cache: $e', e);
       return null;
     }
   }
@@ -134,9 +136,11 @@ class CategoryIconsService {
     await getIcons();
   }
 
-  CategoryIcon? getIconByCode(String iconCode) {
+  Future<CategoryIcon?> getIconByCode(String iconCode) async {
     if (iconCode.isEmpty) return null;
-    if (_icons.isEmpty) getIcons();
+    if (_icons.isEmpty) {
+      await getIcons();
+    }
 
     try {
       return _icons.firstWhere((icon) => icon.iconCode == int.parse(iconCode));

@@ -1,62 +1,91 @@
 import 'dart:io';
 
-import 'package:app/l10n/app_localizations.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ImageService {
-  static Future<String?> _pickImageFromGallery() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+  static final ImagePicker _picker = ImagePicker();
 
-    if (result != null && result.files.single.path != null) {
-      return result.files.single.path!;
-    }
-    return null;
+  static Future<String?> _pickImageFromGallery() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+    );
+
+    return image?.path;
   }
 
   static Future<String?> _cropToCircle(
     BuildContext context,
     String path,
   ) async {
-    final croppedFile = await ImageCropper().cropImage(
-      sourcePath: path,
-      aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
-      uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: AppLocalizations.of(context)!.cropImage,
-          toolbarColor: Theme.of(context).primaryColor,
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          showCropGrid: false,
-          toolbarWidgetColor: Theme.of(context).colorScheme.onPrimary,
-          initAspectRatio: CropAspectRatioPreset.square,
-          lockAspectRatio: true,
-          cropStyle: CropStyle.circle,
-          activeControlsWidgetColor: Theme.of(context).colorScheme.primary,
+    if (!context.mounted) return null;
+
+    try {
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: path,
+        aspectRatio: const CropAspectRatio(
+          ratioX: 1,
+          ratioY: 1,
         ),
-        IOSUiSettings(
-          title: AppLocalizations.of(context)!.cropImage,
-          aspectRatioLockEnabled: true,
-          cropStyle: CropStyle.circle,
-        ),
-      ],
-    );
-    return croppedFile?.path;
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: AppLocalizations.of(context)!.cropImage,
+            toolbarColor: Theme.of(context).primaryColor,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            showCropGrid: false,
+            toolbarWidgetColor: Theme.of(context).colorScheme.onPrimary,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            cropStyle: CropStyle.circle,
+            activeControlsWidgetColor:
+                Theme.of(context).colorScheme.primary,
+          ),
+          IOSUiSettings(
+            title: AppLocalizations.of(context)!.cropImage,
+            aspectRatioLockEnabled: true,
+            cropStyle: CropStyle.circle,
+          ),
+        ],
+      );
+
+      return croppedFile?.path;
+    } catch (e) {
+      return null;
+    }
   }
 
-  static Future<String?> pickAndCropImage(BuildContext context) async {
-    final path = await _pickImageFromGallery();
-    if (path == null || !context.mounted) return null;
-    return await _cropToCircle(context, path);
+  static Future<String?> pickAndCropImage(
+    BuildContext context,
+  ) async {
+    try {
+      final path = await _pickImageFromGallery();
+
+      if (path == null || !context.mounted) {
+        return null;
+      }
+
+      return _cropToCircle(context, path);
+    } catch (e) {
+      return null;
+    }
   }
 
-  static Future<File?> persistFile(String filepath, String fileName) async {
+  static Future<File?> persistFile(
+    String filepath,
+    String fileName,
+  ) async {
     final file = File(filepath);
-    if (!await file.exists()) return null;
+
+    if (!await file.exists()) {
+      return null;
+    }
 
     final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/$fileName';
-    return file.copy(path);
+    final destination = '${directory.path}/$fileName';
+
+    return file.copy(destination);
   }
 }
