@@ -1,4 +1,4 @@
-import 'package:app/src/core/extensions/color.dart';
+import 'package:budgly/src/core/extensions/color.dart';
 import 'package:flutter/material.dart';
 
 @immutable

@@ -1,6 +1,6 @@
-import 'package:app/src/core/extensions/color.dart';
-import 'package:app/src/models/account/account.dart';
-import 'package:app/src/models/category/category_icon.dart';
+import 'package:budgly/src/core/extensions/color.dart';
+import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:flutter/material.dart';
 
 class Category {
