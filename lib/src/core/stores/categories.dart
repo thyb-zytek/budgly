@@ -71,17 +71,13 @@ class CategoriesStore extends ChangeNotifier {
     }
   }
 
+  // List.unmodifiable évite une copie profonde de la liste (contrairement à
+  // List.from) tout en empêchant les appelants de muter l'état interne du
+  // store — ce getter est appelé à chaque build de l'UI qui écoute ce store.
   List<Category> getCategoriesForAccount(String accountId) {
-    // Defensive copy: callers must not be able to mutate the store's
-    // internal list without going through addCategory/updateCategory/
-    // removeCategory (and their notifyListeners()).
-    return List<Category>.from(_categoriesByAccount[accountId] ?? []);
+    return List.unmodifiable(_categoriesByAccount[accountId] ?? const []);
   }
 
-  /// Busts the cache for every account and re-fetches each one that was
-  /// previously loaded, so the store is never left empty with nothing to
-  /// repopulate it. Accounts keep showing their last known categories
-  /// until the fresh fetch for each of them completes.
   Future<void> invalidateCache() async {
     _categoriesService.invalidateCache();
     final accountIds = List<String>.from(_hasLoadedByAccount.keys);
@@ -90,9 +86,6 @@ class CategoriesStore extends ChangeNotifier {
     }
   }
 
-  /// Busts the cache for a single account and re-fetches it immediately
-  /// if it was previously loaded - never just wipes it and leaves it
-  /// with nothing to refill it.
   Future<void> invalidateAccountCache(String accountId) async {
     final wasLoaded = _hasLoadedByAccount[accountId] == true;
     _categoriesService.invalidateAccountCache(accountId);
