@@ -2,11 +2,11 @@ import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/services/auth.dart';
 import 'package:flutter/material.dart';
 
-class UserProfileStore extends ChangeNotifier {
-  static UserProfileStore? _instance;
+class ProfileStore extends ChangeNotifier {
+  static ProfileStore? _instance;
   
-  static UserProfileStore get instance {
-    _instance ??= UserProfileStore._();
+  static ProfileStore get instance {
+    _instance ??= ProfileStore._();
     return _instance!;
   }
 
@@ -20,7 +20,7 @@ class UserProfileStore extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get hasLoaded => _hasLoaded;
 
-  UserProfileStore._() {
+  ProfileStore._() {
     _currentUser = _authService.currentUser;
     // Auto-load user profile when store is created
     loadUserProfile();
