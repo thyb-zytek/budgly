@@ -61,6 +61,7 @@ class _CurrencyFormState extends State<CurrencyForm> {
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 8,
         children: [
           Text(
             tr.currency,
@@ -69,7 +70,6 @@ class _CurrencyFormState extends State<CurrencyForm> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
             child: Container(
