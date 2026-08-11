@@ -11,6 +11,9 @@ class BudglyCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: background ?? Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: 16,

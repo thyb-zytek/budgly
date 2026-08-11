@@ -120,12 +120,12 @@ class MaterialTheme {
       onError: Color(0xFFFFFFFF),
       errorContainer: Color(0xFFFFEBEE),
       onErrorContainer: Color(0xFFB71C1C),
-      surface: Color(0xFFFAFAFA),
+      surface: Color(0xFFF2F2F2),
       // Very light gray - clean
       inverseSurface: Color(0xFF1A1A1A),
       surfaceContainer: Color(0xFFFFFFFF),
       // Pure white cards
-      surfaceContainerHigh: Color(0xFFF5F5F5),
+      surfaceContainerHigh:  Color(0xFFFAFAFA),
       // Subtle gray for elevated elements
       onSurface: Color(0xFF1A1A1A),
       // Dark gray text - better than pure black
