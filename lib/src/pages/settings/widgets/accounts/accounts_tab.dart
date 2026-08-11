@@ -1,10 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/pages/settings/widgets/accounts/account_form.dart';
 import 'package:budgly/src/pages/settings/widgets/accounts/view_model.dart';
+import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
+import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
 import 'package:budgly/src/shared/widgets/accounts/default.dart';
-import 'package:budgly/src/shared/widgets/accounts/form.dart';
-import 'package:budgly/src/shared/widgets/buttons/add_fab.dart';
 import 'package:budgly/src/shared/widgets/common/card.dart';
 import 'package:flutter/material.dart';
 
@@ -39,25 +40,15 @@ class _AccountsTabState extends State<AccountsTab>
   }
 
   void _confirmDelete(Account account) {
-    final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => ConfirmDelete(
-          title: tr.confirmDeleteAccount(account.name),
-          content: tr.confirmDeleteAccountMessage(
-            account.name
-          ),
-          onConfirm: () async {
-            await widget.accountsViewModel.removeAccount(account);
-          },
-        ),
+
+    showConfirmDelete(
+      context,
+      title: tr.confirmDeleteAccount(account.name),
+      content: tr.confirmDeleteAccountMessage(account.name),
+      onConfirm: () async {
+        await widget.accountsViewModel.removeAccount(account);
+      },
     );
   }
 
@@ -65,7 +56,6 @@ class _AccountsTabState extends State<AccountsTab>
   Widget build(BuildContext context) {
     super.build(context);
     final tr = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
 
     return AnimatedBuilder(
       animation: widget.accountsViewModel,
@@ -83,111 +73,53 @@ class _AccountsTabState extends State<AccountsTab>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 24),
-                    child: Text(
-                      tr.accounts,
-                      style: theme.textTheme.headlineLarge,
-                    ),
+                  EntityTitle(
+                    title: tr.accounts,
+                    subtitle: tr.accountsDescription,
                   ),
                   Expanded(
-                    child:
-                        accounts.isNotEmpty
-                            ? ListView.builder(
-                              itemCount: accounts.length,
-                              itemBuilder: (context, index) {
-                                final account = accounts[index];
-                                return BudglyCard(
-                                  key: ValueKey(account.id ?? identityHashCode(account)),
-                                  child:
-                                      (account.id != null &&
-                                              account.id != editingAccountId)
-                                          ? AccountView(
-                                            account: account,
-                                            onEdit:
-                                                () =>
-                                                    widget
-                                                            .accountsViewModel
-                                                            .editingAccount =
-                                                        account,
-                                            onDelete:
-                                                () => _confirmDelete(account),
-                                          )
-                                          : AccountForm(
-                                            formKey: _formKey,
-                                            editingData:
-                                                widget
+                    child: accounts.isNotEmpty
+                        ? ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 100),
+                            itemCount: accounts.length,
+                            itemBuilder: (context, index) {
+                              final account = accounts[index];
+                              return BudglyCard(
+                                key: ValueKey(
+                                  account.id ?? identityHashCode(account),
+                                ),
+                                child:
+                                    (account.id != null &&
+                                        account.id != editingAccountId)
+                                    ? AccountView(
+                                        account: account,
+                                        onEdit: () =>
+                                            widget
                                                     .accountsViewModel
-                                                    .editingData,
-                                            pickImage:
-                                                () => widget.accountsViewModel
-                                                    .pickImage(context),
-                                            onChangeColor:
-                                                (color) =>
-                                                    widget
-                                                        .accountsViewModel
-                                                        .color = color,
-                                            onChangePicture:
-                                                (picture) =>
-                                                    widget
-                                                        .accountsViewModel
-                                                        .picture = picture,
-                                            onSubmit:
-                                                () =>
-                                                    account.id == null
-                                                        ? widget
-                                                            .accountsViewModel
-                                                            .createAccount(
-                                                              account,
-                                                            )
-                                                        : widget
-                                                            .accountsViewModel
-                                                            .updateAccount(
-                                                              account,
-                                                            ),
-                                            onCancel:
-                                                () =>
-                                                    account.id == null
-                                                        ? widget
-                                                            .accountsViewModel
-                                                            .removeAccount(
-                                                              account,
-                                                            )
-                                                        : widget
-                                                            .accountsViewModel
-                                                            .cancelEdit(),
-                                            onRemovePicture:
-                                                () =>
-                                                    widget.accountsViewModel
-                                                        .removePicture(),
-                                          ),
-                                );
-                              },
-                            )
-                            : Padding(
-                              padding: const EdgeInsets.all(
-                                16,
-                              ).copyWith(top: 40),
-                              child: Text(tr.noAccountFound),
-                            ),
+                                                    .editingAccount =
+                                                account,
+                                        onDelete: () => _confirmDelete(account),
+                                      )
+                                    : AccountForm(
+                                        formKey: _formKey,
+                                        viewModel: widget.accountsViewModel,
+                                        account: account,
+                                      ),
+                              );
+                            },
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.all(16).copyWith(top: 40),
+                            child: Text(tr.noAccountFound),
+                          ),
                   ),
                 ],
               ),
             ),
-            Positioned(
-              bottom: 24,
-              right: 24,
-              child: IgnorePointer(
-                ignoring: widget.accountsViewModel.isCreatingAccount,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 150),
-                  opacity: widget.accountsViewModel.isCreatingAccount ? 0.4 : 1,
-                  child: AddFab(
-                    heroTag: 'add_account',
-                    onPressed: widget.accountsViewModel.addAccount,
-                  ),
-                ),
-              ),
+            AddEntity(
+              heroTag: 'add_account',
+              disabled: widget.accountsViewModel.isCreatingAccount,
+              onPressed: widget.accountsViewModel.addAccount,
             ),
           ],
         );

@@ -9,7 +9,6 @@ class Avatar extends StatelessWidget {
   final double size;
   final VoidCallback? onTap;
   final Color? backgroundColor;
-  final bool showShadow;
   final bool canRemove;
   final VoidCallback? onRemove;
 
@@ -21,7 +20,6 @@ class Avatar extends StatelessWidget {
     this.size = 45,
     this.onTap,
     this.backgroundColor,
-    this.showShadow = false,
     this.canRemove = false,
     this.onRemove,
   });
@@ -33,90 +31,56 @@ class Avatar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        if (showShadow)
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.shadow.withAlpha(30),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+        GestureDetector(
+          onTap: onTap,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: CircleAvatar(
+              radius: size / 2,
+              backgroundColor: backgroundColor,
+              foregroundImage: picture == null
+                  ? null
+                  : isLocalPicture
+                  ? FileImage(File(picture!))
+                  : NetworkImage(picture!),
+              child: Text(
+                initial,
+                style: size < 100
+                    ? theme.textTheme.titleLarge!.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                      )
+                    : theme.textTheme.displayMedium!.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                      ),
+              ),
             ),
-            child: _buildAvatarContent(theme),
-          )
-        else
-          _buildAvatarContent(theme),
+          ),
+        ),
         if (canRemove)
           Positioned(
             top: -2,
             right: -2,
-            child: _RoundIconButton(
-              icon: Icons.close_rounded,
-              background: theme.colorScheme.surface,
-              foreground: theme.colorScheme.error,
-              onPressed: onRemove!,
+            child: Material(
+              color: theme.colorScheme.surface,
+              shape: const CircleBorder(),
+              elevation: 2,
+              shadowColor: Colors.black26,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onRemove!,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildAvatarContent(ThemeData theme) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-      width: size,
-      height: size,
-      child: CircleAvatar(
-        radius: size / 2,
-        backgroundColor: backgroundColor,
-        foregroundImage:
-            picture == null ? null : isLocalPicture ? FileImage(File(picture!)) : NetworkImage(picture!),
-        child: Text(
-          initial,
-          style: size < 100 ? theme.textTheme.titleLarge!.copyWith(
-            color: theme.colorScheme.onPrimary,
-          ) : theme.textTheme.displayMedium!.copyWith(
-            color: theme.colorScheme.onPrimary,
-          ),
-        ),
-      ),
-      )
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  final IconData icon;
-  final Color background;
-  final Color foreground;
-  final VoidCallback onPressed;
-
-  const _RoundIconButton({
-    required this.icon,
-    required this.background,
-    required this.foreground,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: background,
-      shape: const CircleBorder(),
-      elevation: 2,
-      shadowColor: Colors.black26,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(icon, size: 18, color: foreground),
-        ),
-      ),
     );
   }
 }

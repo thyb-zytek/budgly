@@ -2,13 +2,19 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:budgly/src/core/loading/progressive_loader.dart';
-import 'package:budgly/src/core/stores/accounts_store.dart';
+import 'package:budgly/src/core/stores/accounts.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts.dart';
 import 'package:budgly/src/services/image.dart';
 import 'package:budgly/src/shared/widgets/accounts/constants.dart';
 import 'package:flutter/material.dart';
+
+class _ImageProcessResult {
+  final String fileName;
+  final File file;
+  _ImageProcessResult(this.fileName, this.file);
+}
 
 class AccountsViewModel extends BaseViewModel {
   final AccountsStore _accountsStore = AccountsStore.instance;
@@ -19,56 +25,33 @@ class AccountsViewModel extends BaseViewModel {
 
   final TextEditingController _nameController = TextEditingController();
 
-  late Color _selectedColor;
-  String? _picture;
-  bool _isLocalPicture = true;
+  late final AccountEditingData _editingData = AccountEditingData(
+    nameController: _nameController,
+    color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
+    picture: null,
+  );
 
   List<Account> get accounts => [..._accountsStore.accounts, ..._localAccounts];
   bool get hasAccountsLoaded => _accountsStore.hasLoaded;
   bool get isCreatingAccount => _localAccounts.isNotEmpty;
 
   Account? get editingAccount => _editingAccount;
-
-  AccountEditingData get editingData => AccountEditingData(
-    nameController: _nameController,
-    color: _selectedColor,
-    picture: _picture,
-    isLocalPicture: _isLocalPicture,
-  );
+  AccountEditingData get editingData => _editingData;
 
   set editingAccount(Account? account) {
     _editingAccount = account;
     _nameController.text = account?.name ?? '';
-    _selectedColor =
-        account?.color ??
-        Colors.primaries[Random().nextInt(Colors.primaries.length)];
+    _editingData.color = account?.color ?? Colors.primaries[Random().nextInt(Colors.primaries.length)];
+    // On privilégie l'URL distante si elle existe, sinon le nom du fichier local
+    _editingData.picture = account?.pictureUrl ?? account?.picture;
 
-    if (account?.pictureUrl != null) {
-      _picture = account!.pictureUrl;
-      _isLocalPicture = false;
-    } else {
-      _picture = account?.picture;
-      _isLocalPicture = _picture == null || !_picture!.startsWith('http');
-    }
-
-    if (!isDisposed) {
-      notifyListeners();
-    }
+    if (!isDisposed) notifyListeners();
   }
 
-  set color(Color color) {
-    _selectedColor = color;
-    if (!isDisposed) {
-      notifyListeners();
-    }
-  }
-
-  set picture(String? picture) {
-    _picture = picture;
-    _isLocalPicture = true;
-    if (!isDisposed) {
-      notifyListeners();
-    }
+  Future<String?> pickImage(BuildContext context) async {
+    final path = await ImageService.pickAndCropImage(context);
+    if (path != null) _editingData.picture = path;
+    return path;
   }
 
   @override
@@ -77,25 +60,14 @@ class AccountsViewModel extends BaseViewModel {
     super.dispose();
   }
 
-  void removePicture() {
-    _picture = null;
-    _isLocalPicture = true;
-    if (!isDisposed) {
-      notifyListeners();
-    }
-  }
-
   Future<void> loadAccounts({bool needLoading = true}) async {
-    if (needLoading) {
-      setLoading(true);
-    }
+    if (needLoading) setLoading(true);
 
     await ProgressiveLoader.loadEssentialOnly(
       essentialData: () async {
         await _accountsStore.loadAccounts();
       },
       secondaryData: () async {
-        // Load signed URLs for accounts in background
         for (final account in _accountsStore.accounts) {
           if (account.picture != null && account.id != null) {
             try {
@@ -106,19 +78,14 @@ class AccountsViewModel extends BaseViewModel {
           }
         }
       },
-      onProgress: (progress) {
-        // Optional progress tracking
-      },
+      onProgress: (progress) {},
     );
 
     setLoading(false);
-    if (!isDisposed) {
-      notifyListeners();
-    }
+    if (!isDisposed) notifyListeners();
   }
 
   Future<void> addAccount() async {
-    // Only one account can be created at a time.
     if (_localAccounts.isNotEmpty) return;
 
     setLoading(true);
@@ -131,63 +98,35 @@ class AccountsViewModel extends BaseViewModel {
       color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
     );
 
-    _selectedColor = account.color!;
+    _editingData.color = account.color!;
     _nameController.text = '';
-    _picture = null;
-    _isLocalPicture = true;
+    _editingData.picture = null;
 
     _localAccounts.add(account);
 
     setLoading(false);
-    if (!isDisposed) {
-      notifyListeners();
-    }
+    if (!isDisposed) notifyListeners();
   }
 
   Future<void> removeAccount(Account account) async {
     if (account.id != null) {
-      // This is an existing account - actually delete it.
       if (account.picture != null) {
         await _accountsService.deletePicture(account.picture!, account.id!);
       }
       await _accountsService.deleteAccount(account.id!);
-
-      // _accountsStore.removeAccount() already updates the store's local
-      // state correctly and notifies its own listeners - do NOT follow it
-      // with _accountsStore.invalidateCache(): that would clear the store
-      // and require a full reload for something we already fixed locally.
-      // We only bust the service-level HTTP cache so a future full
-      // loadAccounts() doesn't return stale data.
       _accountsStore.removeAccount(account.id!);
       _accountsService.invalidateCache();
     } else {
-      // This is a local temporary account - just remove from local list.
-      // Use identity comparison: Account's == likely compares by id, and
-      // every not-yet-saved account shares id == null, so a value-based
-      // match would wipe out every local account instead of just this one.
       _localAccounts.removeWhere((a) => identical(a, account));
     }
-    if (!isDisposed) {
-      notifyListeners();
-    }
+    if (!isDisposed) notifyListeners();
   }
 
   void cancelEdit() {
-    // Cancel editing without deleting the account, and without touching
-    // any other account currently being created locally.
     _editingAccount = null;
     _nameController.clear();
-    _picture = null;
-    _isLocalPicture = true;
-    if (!isDisposed) {
-      notifyListeners();
-    }
-  }
-
-  Future<String?> pickImage(BuildContext context) async {
-    final path = await ImageService.pickAndCropImage(context);
-    if (path != null) picture = path;
-    return path;
+    _editingData.picture = null;
+    if (!isDisposed) notifyListeners();
   }
 
   Future<void> refreshPictureUrl(Account account) async {
@@ -201,117 +140,91 @@ class AccountsViewModel extends BaseViewModel {
         _accountsStore.updateAccount(updatedAccount);
         _accountsService.invalidateCache();
       } catch (e) {
-        // Handle error silently
+        // Ignore errors when refreshing picture URL
       }
+    }
+  }
+
+  Future<_ImageProcessResult?> _prepareImage() async {
+    if (_editingData.picture == null || !_editingData.isLocalPicture) return null;
+
+    final fileName = "${DateTime.now().millisecondsSinceEpoch}_${_editingData.picture!.split('/').last}";
+    final file = await ImageService.persistFile(_editingData.picture!, fileName);
+
+    return file != null ? _ImageProcessResult(fileName, file) : null;
+  }
+
+  Future<Account> _uploadAndLinkImage(Account account, _ImageProcessResult image) async {
+    try {
+      await _accountsService.uploadPicture(image.file, account.id!, image.fileName);
+      final url = await _accountsService.getSignedUrl(image.fileName, account.id!);
+      return account.copyWith(pictureUrl: url);
+    } catch (_) {
+      return account; 
     }
   }
 
   Future<void> createAccount(Account account) async {
     setLoading(true);
-
-    String? fileName;
-    File? persisted;
-    Account? createdAccount;
-
-    if (_picture != null) {
-      fileName =
-          "${DateTime.now().millisecondsSinceEpoch}_${_picture!.split('/').last}";
-      persisted = await ImageService.persistFile(_picture!, fileName);
-    }
-
     try {
-      final newAccount = account.copyWith(
+      final imageToUpload = await _prepareImage();
+
+      Account newAccount = account.copyWith(
         name: _nameController.text,
-        color: _selectedColor,
-        picture: fileName,
+        color: _editingData.color,
+        picture: imageToUpload?.fileName,
       );
-      createdAccount = await _accountsService.createAccount(newAccount);
-    } catch (e) {
+
+      newAccount = await _accountsService.createAccount(newAccount);
+
+      if (imageToUpload != null) {
+        newAccount = await _uploadAndLinkImage(newAccount, imageToUpload);
+      }
+
+      _localAccounts.removeWhere((a) => identical(a, account));
+      _accountsStore.addAccount(newAccount);
+      _editingAccount = null;
+    } finally {
       setLoading(false);
-      return;
+      _accountsService.invalidateCache();
     }
-
-    if (persisted != null && fileName != null) {
-      try {
-        await _accountsService.uploadPicture(
-          persisted,
-          createdAccount.id!,
-          fileName,
-        );
-        final pictureUrl = await _accountsService.getSignedUrl(
-          fileName,
-          createdAccount.id!,
-        );
-        createdAccount = createdAccount.copyWith(pictureUrl: pictureUrl);
-        _isLocalPicture = pictureUrl != null;
-      } catch (_) {}
-    }
-
-    // Remove from local accounts and add to store. The store is already
-    // correct at this point - only the service-level cache needs busting.
-    _localAccounts.removeWhere((a) => identical(a, account));
-    _accountsStore.addAccount(createdAccount!);
-    _editingAccount = null;
-    setLoading(false);
-    _accountsService.invalidateCache();
   }
 
   Future<void> updateAccount(Account account) async {
     setLoading(true);
-
-    String? fileName = account.picture;
-    File? persisted;
-    Account? updatedAccount;
-    String? pictureUrl;
-
     try {
-      if (_picture != null && _isLocalPicture) {
+      String? currentFileName = account.picture;
+      _ImageProcessResult? imageToUpload;
+
+      if (_editingData.picture != account.pictureUrl && _editingData.picture != account.picture) {
         if (account.picture != null) {
-          await _accountsService.deletePicture(
-            account.picture!,
-            account.id!,
-          );
-          fileName = null;
+          await _accountsService.deletePicture(account.picture!, account.id!);
+          currentFileName = null;
         }
 
-        fileName =
-            "${DateTime.now().millisecondsSinceEpoch}_${_picture!.split('/').last}";
-        persisted = await ImageService.persistFile(_picture!, fileName);
-
-        await _accountsService.uploadPicture(persisted!, account.id!, fileName);
-        pictureUrl = await _accountsService.getSignedUrl(fileName, account.id!);
-        _isLocalPicture = pictureUrl != null;
-      } else if (_picture == null && account.picture != null) {
-        await _accountsService.deletePicture(
-          account.picture!,
-          account.id!,
-        );
-        fileName = null;
+        imageToUpload = await _prepareImage();
+        if (imageToUpload != null) currentFileName = imageToUpload.fileName;
       }
 
-      account = account.copyWith(
+      Account updatedAccount = account.copyWith(
         name: _nameController.text,
-        color: _selectedColor,
-        picture: fileName,
+        color: _editingData.color,
+        picture: currentFileName,
       );
 
-      updatedAccount = await _accountsService.updateAccount(account);
+      updatedAccount = await _accountsService.updateAccount(updatedAccount);
 
-      if (pictureUrl != null) {
-        updatedAccount = updatedAccount.copyWith(pictureUrl: pictureUrl);
-      } else if (account.pictureUrl != null && !_isLocalPicture) {
+      if (imageToUpload != null) {
+        updatedAccount = await _uploadAndLinkImage(updatedAccount, imageToUpload);
+      } else if (_editingData.picture != null && !_editingData.isLocalPicture) {
         updatedAccount = updatedAccount.copyWith(pictureUrl: account.pictureUrl);
       }
-    } catch (e) {
-      setLoading(false);
-      return;
-    }
 
-    // The store is already correct via updateAccount() below - only the
-    // service-level cache needs busting.
-    _accountsStore.updateAccount(updatedAccount);
-    _editingAccount = null;
-    setLoading(false);
-    _accountsService.invalidateCache();
+      _accountsStore.updateAccount(updatedAccount);
+      _editingAccount = null;
+    } finally {
+      setLoading(false);
+      _accountsService.invalidateCache();
+    }
   }
 }

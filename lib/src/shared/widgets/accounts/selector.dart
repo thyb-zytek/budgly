@@ -34,15 +34,12 @@ class AccountSelector extends StatelessWidget {
       options: validAccounts,
       dense: true,
       optionBuilder:
-          (account, isSelected) => SizedBox(
-            width: MediaQuery.of(context).size.width * .75,
-            child: AccountView(
-              account: account,
-              color:
-                  isSelected
-                      ? theme.colorScheme.primary.withAlpha(75)
-                      : Theme.of(context).colorScheme.surfaceContainer,
-            ),
+          (account, isSelected) => AccountView(
+            account: account,
+            color:
+                isSelected
+                    ? theme.colorScheme.primary.withAlpha(75)
+                    : Theme.of(context).colorScheme.surfaceContainer,
           ),
     );
   }

@@ -39,7 +39,10 @@ class AccountView extends StatelessWidget {
               backgroundColor: account.color,
               size: 52,
             ),
-            Text(account.name, style: theme.textTheme.titleLarge),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Text(account.name, style: theme.textTheme.titleLarge),
+            ),
           ],
         ),
         if (onEdit != null || onDelete != null)
