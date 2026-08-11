@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 class ConfirmDelete extends StatelessWidget {
   final String title;
   final String content;
-  final VoidCallback onConfirm;
+  final Future<void> Function() onConfirm;
   final VoidCallback? onCancel;
 
   const ConfirmDelete({
@@ -58,9 +58,11 @@ class ConfirmDelete extends StatelessWidget {
                     ),
                     Expanded(
                       child: BudglyButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        onConfirm();
+                      onPressed: () async {
+                        await onConfirm();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       },
                       dense: true,
                       type: ButtonType.error,
@@ -75,3 +77,23 @@ class ConfirmDelete extends StatelessWidget {
         );
   }
 }
+
+
+void showConfirmDelete(BuildContext context, {required String title, required String content, required Future<void> Function() onConfirm}) {
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => ConfirmDelete(
+          title: title,
+          content: content,
+          onConfirm: onConfirm,
+        ),
+    );
+  }
