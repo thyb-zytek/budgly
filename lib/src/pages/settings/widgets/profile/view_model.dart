@@ -1,12 +1,16 @@
 import 'package:budgly/src/core/routers/base.dart';
-import 'package:budgly/src/core/stores/user_profile_store.dart';
+import 'package:budgly/src/core/stores/accounts.dart';
+import 'package:budgly/src/core/stores/categories.dart';
+import 'package:budgly/src/core/stores/profile.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/services/auth.dart';
 import 'package:flutter/material.dart';
 
-class UserViewModel extends BaseViewModel {
-  final UserProfileStore _userProfileStore = UserProfileStore.instance;
+class ProfileViewModel extends BaseViewModel {
+  final ProfileStore _profileStore = ProfileStore.instance;
+  final AccountsStore _accountsStore = AccountsStore.instance;
+  final CategoriesStore _categoriesStore = CategoriesStore.instance;
   final AuthService _authService = AuthService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -15,10 +19,10 @@ class UserViewModel extends BaseViewModel {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  User? get currentUser => _userProfileStore.currentUser;
+  User? get currentUser => _profileStore.currentUser;
 
   @override
-  bool get isLoading => super.isLoading || _userProfileStore.isLoading;
+  bool get isLoading => super.isLoading || _profileStore.isLoading;
   GlobalKey<FormState> get formKey => _formKey;
   TextEditingController get oldPasswordController => _oldPasswordController;
   TextEditingController get passwordController => _passwordController;
@@ -51,7 +55,7 @@ class UserViewModel extends BaseViewModel {
       return;
     }
     try {
-      await _userProfileStore.changePassword(
+      await _profileStore.changePassword(
         _oldPasswordController.value.text,
         _passwordController.value.text,
       );
@@ -67,7 +71,7 @@ class UserViewModel extends BaseViewModel {
 
   Future<void> loadUser() async {
     try {
-      await _userProfileStore.loadUserProfile(forceRefresh: true);
+      await _profileStore.loadUserProfile(forceRefresh: true);
       setLoading(false);
     } catch (e) {
       setLoading(false);
@@ -77,7 +81,9 @@ class UserViewModel extends BaseViewModel {
   Future<void> refreshUser() async {
     setLoading(true);
     try {
-      await _userProfileStore.refreshUserProfile();
+      await _accountsStore.invalidateCache();
+      await _categoriesStore.invalidateCache();
+      await _profileStore.refreshUserProfile();
       setLoading(false);
     } catch (e) {
       setLoading(false);
@@ -85,14 +91,14 @@ class UserViewModel extends BaseViewModel {
   }
 
   Future<void> onChangeName(String name) async {
-    await _userProfileStore.updateUserName(name);
+    await _profileStore.updateUserName(name);
   }
 
   Future<void> signOut() async {
     setLoading(true);
 
     await _authService.signOut();
-    _userProfileStore.clearUser();
+    _profileStore.clearUser();
     _oldPasswordController.clear();
     _passwordController.clear();
     _confirmPasswordController.clear();
