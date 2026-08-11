@@ -69,7 +69,7 @@ class TypedButtonStyle {
         _iconColor = theme.colorScheme.outlineVariant;
         break;
       case ButtonType.iconDefault:
-        _iconColor = theme.colorScheme.outlineVariant;
+        _iconColor = theme.colorScheme.inverseSurface;
         break;
       case ButtonType.iconOnPrimary:
         _iconColor = theme.colorScheme.onPrimaryContainer;
