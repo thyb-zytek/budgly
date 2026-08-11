@@ -140,5 +140,17 @@
   "serviceUnavailableTitle": "Service temporarily unavailable",
   "serviceUnavailableMessage": "We’re having trouble connecting you to our services right now. This could be due to an unstable internet connection or temporary maintenance.",
   "reloadApp": "Reload",
-  "avatarCustomization": "Avatar customization"
+  "avatarCustomization": "Avatar customization",
+  "selectAccountToManageCategories": "Select an account to manage its categories",
+  "categoryCustomization": "Category customization",
+  "profile": "Profile",
+  "accountsDescription": "Manage your accounts",
+  "addCategoriesToAccount": "Add categories to {accountName}",
+  "@addCategoriesToAccount": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      }
+    }
+  }
 }
