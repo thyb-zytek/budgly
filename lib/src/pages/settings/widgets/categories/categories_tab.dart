@@ -1,23 +1,23 @@
-import 'package:app/l10n/app_localizations.dart';
-import 'package:app/src/models/category/category.dart';
-import 'package:app/src/pages/settings/widgets/accounts/view_model.dart';
-import 'package:app/src/pages/settings/widgets/categories/view_model.dart';
-import 'package:app/src/pages/settings/widgets/confirm_dialog.dart';
-import 'package:app/src/shared/widgets/accounts/selector.dart';
-import 'package:app/src/shared/widgets/buttons/add_fab.dart';
-import 'package:app/src/shared/widgets/categories/form.dart';
-import 'package:app/src/shared/widgets/categories/default.dart';
-import 'package:app/src/shared/widgets/common/card.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/models/category/category.dart';
+import 'package:budgly/src/pages/settings/widgets/accounts/view_model.dart';
+import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
+import 'package:budgly/src/pages/settings/widgets/categories/category_form.dart';
+import 'package:budgly/src/pages/settings/widgets/categories/empty_categories.dart';
+import 'package:budgly/src/pages/settings/widgets/categories/view_model.dart';
+import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
+import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
+import 'package:budgly/src/shared/widgets/accounts/selector.dart';
+import 'package:budgly/src/shared/widgets/categories/default.dart';
+import 'package:budgly/src/shared/widgets/common/card.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesTab extends StatefulWidget {
   final AccountsViewModel accountsViewModel;
-  final CategoriesViewModel categoriesViewModel;
 
   const CategoriesTab({
     super.key,
     required this.accountsViewModel,
-    required this.categoriesViewModel,
   });
 
   @override
@@ -27,99 +27,86 @@ class CategoriesTab extends StatefulWidget {
 class _CategoriesTabState extends State<CategoriesTab>
     with AutomaticKeepAliveClientMixin<CategoriesTab> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late AccountsViewModel _accountsViewModel;
+  late CategoriesViewModel _categoriesViewModel;
 
   @override
   void initState() {
     super.initState();
-    widget.categoriesViewModel.loadAvailableIcons();
+    _accountsViewModel = widget.accountsViewModel;
+    _categoriesViewModel = CategoriesViewModel();
+    _loadData();
+  }
 
-    if (!widget.accountsViewModel.hasAccountsLoaded) {
-      widget.accountsViewModel.loadAccounts().then((_) {
-        if (widget.accountsViewModel.accounts.isNotEmpty &&
-            !widget.categoriesViewModel.hasCategoriesLoaded) {
-          widget.categoriesViewModel.selectAccount(
-            widget.accountsViewModel.accounts.first,
-          );
-        }
-      });
-    } else if (widget.accountsViewModel.accounts.isNotEmpty &&
-        !widget.categoriesViewModel.hasCategoriesLoaded) {
-      widget.categoriesViewModel.selectAccount(
-        widget.accountsViewModel.accounts.first,
-      );
+  Future<void> _loadData() async {
+    if (!_accountsViewModel.hasAccountsLoaded) {
+      await _accountsViewModel.loadAccounts();
+    }
+    // Le chargement des catégories est maintenant déclenché par le setter
+    // `account` du ViewModel ; on n'a plus qu'à sélectionner le compte.
+    if (_accountsViewModel.accounts.isNotEmpty &&
+        _categoriesViewModel.account == null) {
+      _categoriesViewModel.account = _accountsViewModel.accounts.first;
     }
   }
 
-  @override
-  void didUpdateWidget(covariant CategoriesTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    widget.categoriesViewModel.loadAvailableIcons();
+  void _confirmDelete(Category category, String accountName) {
+    final tr = AppLocalizations.of(context)!;
 
-    if (!widget.accountsViewModel.hasAccountsLoaded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.accountsViewModel.loadAccounts(needLoading: false).then((_) {
-          if (widget.accountsViewModel.accounts.isNotEmpty &&
-              !widget.categoriesViewModel.hasCategoriesLoaded) {
-            widget.categoriesViewModel.selectAccount(
-              widget.accountsViewModel.accounts.first,
-            );
-          }
-        });
-      });
-    }
-
-    if (widget.accountsViewModel.accounts.isNotEmpty &&
-        !widget.categoriesViewModel.hasCategoriesLoaded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.categoriesViewModel.selectAccount(
-          widget.accountsViewModel.accounts.first,
-        );
-      });
-    }
-
-    if (oldWidget.categoriesViewModel.selectedAccount !=
-        widget.categoriesViewModel.selectedAccount) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (widget.categoriesViewModel.selectedAccount != null) {
-          widget.categoriesViewModel.selectAccount(
-            widget.categoriesViewModel.selectedAccount!,
-          );
-        }
-      });
-    }
-  }
-
-  void _confirmDelete(Category category) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => ConfirmDialog(
-            title: AppLocalizations.of(
-              context,
-            )!.confirmDeleteCategory(category.name!),
-            content: AppLocalizations.of(context)!.confirmDeleteCategoryMessage(
-              category.name!,
-              widget.categoriesViewModel.selectedAccount!.name,
-            ),
-            onConfirm:
-                () => widget.categoriesViewModel.removeCategory(category),
-          ),
+    showConfirmDelete(
+      context,
+      title: tr.confirmDeleteCategory(category.name!),
+      content: tr.confirmDeleteCategoryMessage(category.name!, accountName),
+      onConfirm: () async {
+        await _categoriesViewModel.removeCategory(category);
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    AppLocalizations tr = AppLocalizations.of(context)!;
-    ThemeData theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return AnimatedBuilder(
-      animation: widget.categoriesViewModel,
+      animation: Listenable.merge([_categoriesViewModel, _accountsViewModel]),
       builder: (context, child) {
-        if (widget.categoriesViewModel.isLoading &&
-            widget.accountsViewModel.accounts.isEmpty) {
+        if (_categoriesViewModel.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
+
+        final accounts = _accountsViewModel.accounts;
+        if (accounts.isEmpty) {
+          return Center(
+            child: Row(
+              spacing: 16,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
+                Expanded(
+                  child: Text(
+                    tr.noAccountFound,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final categories = _categoriesViewModel.categories;
+        final selectedAccount = accounts.firstWhere(
+          (a) => a.id == _categoriesViewModel.account!.id!,
+          orElse: () => accounts.first,
+        );
+        final editingCategoryId = _categoriesViewModel.editingCategory?.id;
+
         return Stack(
           children: [
             Padding(
@@ -128,135 +115,76 @@ class _CategoriesTabState extends State<CategoriesTab>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: 8,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 8),
-                    child: Text(
-                      tr.accountCategory,
-                      style: theme.textTheme.headlineLarge,
-                    ),
+                  EntityTitle(
+                    title: tr.categories,
+                    subtitle: tr.selectAccountToManageCategories,
                   ),
-                  widget.accountsViewModel.accounts.isNotEmpty
-                      ? AccountSelector(
-                        accounts: widget.accountsViewModel.accounts,
-                        selectedAccount:
-                            widget.categoriesViewModel.selectedAccount,
-                        onSelect: widget.categoriesViewModel.selectAccount,
-                      )
-                      : Text(
-                        tr.noAccountFound,
-                        style: theme.textTheme.bodyMedium!.copyWith(
-                          color: theme.colorScheme.outlineVariant,
-                        ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant,
+                        width: 1,
                       ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 80),
-                    child: Divider(
-                      color: theme.colorScheme.outlineVariant,
-                      thickness: 2,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: AccountSelector(
+                      accounts: accounts,
+                      selectedAccount: selectedAccount,
+                      onSelect: (account) {
+                        _categoriesViewModel.account = account;
+                      },
                     ),
                   ),
                   Expanded(
-                    child:
-                        widget.categoriesViewModel.categories.isNotEmpty
-                            ? ListView.builder(
-                              itemCount:
-                                  widget.categoriesViewModel.categories.length,
-                              itemBuilder: (context, index) {
-                                final category =
-                                    widget
-                                        .categoriesViewModel
-                                        .categories[index];
+                    child: categories.isEmpty
+                        ? EmptyCategories(
+                            accountName: selectedAccount.name,
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 100),
+                            itemCount: categories.length,
+                            itemBuilder: (context, index) {
+                              final category = categories[index];
 
-                                return BudglyCard(
-                                  child:
-                                      (category.id != null &&
-                                              category.id !=
-                                                  widget
-                                                      .categoriesViewModel
-                                                      .editingCategory
-                                                      ?.id)
-                                          ? CategoryView(
-                                            category: category,
-                                            onEdit:
-                                                () =>
-                                                    widget
-                                                            .categoriesViewModel
-                                                            .editingCategory =
-                                                        category,
-                                            onDelete:
-                                                () => _confirmDelete(category),
-                                          )
-                                          : CategoryForm(
-                                            formKey: _formKey,
-                                            availableIcons:
-                                                widget
-                                                    .categoriesViewModel
-                                                    .availableIcons,
-                                            onChangeColor:
-                                                (color) =>
-                                                    widget
-                                                        .categoriesViewModel
-                                                        .color = color,
-                                            onChangeIcon:
-                                                (icon) => widget
-                                                    .categoriesViewModel
-                                                    .setIcon(icon),
-                                            editingData:
-                                                widget
-                                                    .categoriesViewModel
-                                                    .editingData,
-                                            onSubmit:
-                                                () =>
-                                                    category.id == null
-                                                        ? widget
-                                                            .categoriesViewModel
-                                                            .createCategory(
-                                                              category,
-                                                            )
-                                                        : widget
-                                                            .categoriesViewModel
-                                                            .updateCategory(
-                                                              category,
-                                                            ),
-                                            onCancel:
-                                                () =>
-                                                    category.id == null
-                                                        ? widget
-                                                            .categoriesViewModel
-                                                            .removeCategory(
-                                                              category,
-                                                            )
-                                                        : widget
-                                                            .categoriesViewModel
-                                                            .editingCategory = null,
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeInOut,
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: BudglyCard(
+                                  key: ValueKey(
+                                    category.id ?? identityHashCode(category),
+                                  ),
+                                  child: category.id != null && category.id != editingCategoryId
+                                      ? CategoryView(
+                                          category: category,
+                                          onEdit: () => _categoriesViewModel.editingCategory = category,
+                                          onDelete: () => _confirmDelete(
+                                            category,
+                                            selectedAccount.name,
                                           ),
-                                );
-                              },
-                            )
-                            : Padding(
-                              padding: const EdgeInsets.all(
-                                16,
-                              ).copyWith(top: 40),
-                              child: Text(
-                                tr.noCategoryFound,
-                                style: theme.textTheme.bodyMedium!.copyWith(
-                                  color: theme.colorScheme.outlineVariant,
+                                        )
+                                      : CategoryForm(
+                                          formKey: _formKey,
+                                          viewModel: _categoriesViewModel,
+                                          category: category,
+                                        ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),
             ),
-            if (widget.categoriesViewModel.selectedAccount != null)
-              Positioned(
-                bottom: 24,
-                right: 24,
-                child: AddFab(
-                  heroTag: 'add_category',
-                  onPressed: widget.categoriesViewModel.addCategory,
-                ),
-              ),
+            AddEntity(
+              heroTag: 'add_category',
+              disabled: _categoriesViewModel.isCreatingCategory,
+              onPressed: () {
+                _categoriesViewModel.addCategory();
+              },
+            ),
           ],
         );
       },
