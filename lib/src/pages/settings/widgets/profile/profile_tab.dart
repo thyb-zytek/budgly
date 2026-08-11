@@ -1,5 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/pages/settings/widgets/user/view_model.dart';
+import 'package:budgly/src/pages/settings/widgets/profile/view_model.dart';
 import 'package:budgly/src/shared/widgets/buttons/button.dart';
 import 'package:budgly/src/shared/widgets/buttons/constants.dart';
 import 'package:budgly/src/core/exceptions/auth_exceptions.dart';
@@ -9,23 +9,23 @@ import 'package:budgly/src/shared/widgets/user/details.dart';
 import 'package:budgly/src/shared/widgets/user/view_card.dart';
 import 'package:flutter/material.dart';
 
-class UserTab extends StatefulWidget {
-  final UserViewModel viewModel;
-  const UserTab({super.key, required this.viewModel});
+class ProfileTab extends StatefulWidget {
+  const ProfileTab({super.key});
 
   @override
-  State<UserTab> createState() => _UserTabState();
+  State<ProfileTab> createState() => _ProfileTabState();
 }
 
-class _UserTabState extends State<UserTab> {
+class _ProfileTabState extends State<ProfileTab> {
+  ProfileViewModel _viewModel = ProfileViewModel();
   @override
   void initState() {
     super.initState();
-    widget.viewModel.refreshUser();
+    _viewModel.refreshUser();
   }
 
   void _onChangeName(String name) {
-    widget.viewModel.onChangeName(name).then((_) {
+    _viewModel.onChangeName(name).then((_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBarMessage(
@@ -38,7 +38,7 @@ class _UserTabState extends State<UserTab> {
   }
 
   void _onChangePassword() {
-    widget.viewModel
+    _viewModel
         .changePassword()
         .then((_) {
           if (mounted) {
@@ -121,12 +121,12 @@ class _UserTabState extends State<UserTab> {
                         controller: scrollController,
                         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                         child: ChangePasswordForm(
-                          formKey: widget.viewModel.formKey,
-                          oldPasswordController: widget.viewModel.oldPasswordController,
-                          passwordController: widget.viewModel.passwordController,
+                          formKey: _viewModel.formKey,
+                          oldPasswordController: _viewModel.oldPasswordController,
+                          passwordController: _viewModel.passwordController,
                           confirmPasswordController:
-                              widget.viewModel.confirmPasswordController,
-                          validatePassword: widget.viewModel.validatePassword,
+                              _viewModel.confirmPasswordController,
+                          validatePassword: _viewModel.validatePassword,
                           onSubmit: _onChangePassword,
                         ),
                       ),
@@ -146,9 +146,9 @@ class _UserTabState extends State<UserTab> {
     final tr = AppLocalizations.of(context)!;
 
     return AnimatedBuilder(
-      animation: widget.viewModel,
+      animation: _viewModel,
       builder: (context, child) {
-        if (widget.viewModel.isLoading) {
+        if (_viewModel.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -160,18 +160,18 @@ class _UserTabState extends State<UserTab> {
             mainAxisSize: MainAxisSize.max,
             spacing: 16,
             children: [
-              UserCard(user: widget.viewModel.currentUser!),
+              UserCard(user: _viewModel.currentUser!),
               UserDetails(
-                user: widget.viewModel.currentUser!,
+                user: _viewModel.currentUser!,
                 onChangeName: _onChangeName,
               ),
               BudglyButton(
                 text: tr.refreshProfile,
                 type: ButtonType.primary,
                 leadingIcon: Icons.refresh,
-                onPressed: widget.viewModel.refreshUser,
+                onPressed: _viewModel.refreshUser,
               ),
-              if (!widget.viewModel.currentUser!.isGoogleUser)
+              if (!_viewModel.currentUser!.isGoogleUser)
                 BudglyButton(
                   text: tr.changePassword,
                   type: ButtonType.tertiary,
@@ -183,7 +183,7 @@ class _UserTabState extends State<UserTab> {
                 text: tr.logout,
                 type: ButtonType.error,
                 leadingIcon: Icons.logout,
-                onPressed: widget.viewModel.signOut,
+                onPressed: _viewModel.signOut,
               ),
             ],
           ),
