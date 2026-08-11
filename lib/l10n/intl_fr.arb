@@ -140,5 +140,17 @@
   "serviceUnavailableTitle": "Service temporairement indisponible",
   "serviceUnavailableMessage": "Nous n'arrivons pas à joindre nos serveurs pour le moment. Cela peut être dû à une connexion internet limitée ou à une maintenance de nos services.",
   "reloadApp": "Recharger",
-  "avatarCustomization": "Personnalisation de l'avatar"
+  "avatarCustomization": "Personnalisation de l'avatar",
+  "selectAccountToManageCategories": "Sélectionnez un compte pour gérer ses catégories",
+  "categoryCustomization": "Personnalisation de la catégorie",
+  "accountsDescription": "Gérez vos comptes",
+  "profile": "Profil",
+  "addCategoriesToAccount": "Ajoutez des catégories à {accountName}",
+  "@addCategoriesToAccount": {
+    "placeholders": {
+      "accountName": {
+        "type": "String"
+      }
+    }
+  }
 }
