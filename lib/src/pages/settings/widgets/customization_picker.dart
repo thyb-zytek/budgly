@@ -47,7 +47,7 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
       children: [
         Text(
           widget.title,
-          style: theme.textTheme.titleMedium?.copyWith(
+          style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
