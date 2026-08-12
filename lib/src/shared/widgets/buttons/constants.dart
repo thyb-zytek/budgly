@@ -40,19 +40,19 @@ class TypedButtonStyle {
         break;
       case ButtonType.error:
         _backgroundColor = theme.colorScheme.error;
-        _textColor = theme.colorScheme.onSecondaryContainer;
+        _textColor = theme.colorScheme.onError;
         _iconColor = theme.colorScheme.error;
         break;
       case ButtonType.secondary:
         _backgroundColor = theme.colorScheme.secondary;
-        _textColor = theme.colorScheme.onSecondaryContainer;
+        _textColor = theme.colorScheme.onSecondary;
         _iconColor = theme.colorScheme.secondary;
         break;
       case ButtonType.tertiary:
         _backgroundColor = theme.colorScheme.tertiary;
-        _textColor = theme.colorScheme.onTertiaryContainer;
+        _textColor = theme.colorScheme.onTertiary;
         _iconColor = theme.colorScheme.tertiary;
-        break;
+        break;  
       case ButtonType.neutral:
         _backgroundColor = theme.colorScheme.outline;
         _textColor = theme.colorScheme.onInverseSurface;
@@ -65,8 +65,8 @@ class TypedButtonStyle {
         break;
       case ButtonType.outlined:
         _backgroundColor = theme.colorScheme.surface;
-        _textColor = theme.colorScheme.onSurface;
-        _iconColor = theme.colorScheme.outlineVariant;
+        _textColor = theme.colorScheme.onSurfaceVariant;
+        _iconColor = theme.colorScheme.onSurfaceVariant;
         break;
       case ButtonType.iconDefault:
         _iconColor = theme.colorScheme.inverseSurface;
@@ -76,7 +76,7 @@ class TypedButtonStyle {
         break;
       default:
         _backgroundColor = theme.colorScheme.primary;
-        _textColor = theme.colorScheme.onPrimaryContainer;
+        _textColor = theme.colorScheme.onPrimary;
         _iconColor = theme.colorScheme.primary;
         break;
     }
