@@ -47,10 +47,10 @@ class Avatar extends StatelessWidget {
               child: Text(
                 initial,
                 style: size < 100
-                    ? theme.textTheme.titleLarge!.copyWith(
+                    ? theme.textTheme.headlineMedium!.copyWith(
                         color: theme.colorScheme.onPrimary,
                       )
-                    : theme.textTheme.displayMedium!.copyWith(
+                    : theme.textTheme.displayLarge!.copyWith(
                         color: theme.colorScheme.onPrimary,
                       ),
               ),

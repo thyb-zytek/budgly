@@ -30,7 +30,7 @@ class UserCard extends StatelessWidget {
                   user.profile != null
                       ? Text(
                         user.profile!.fullName.characters.first.toUpperCase(),
-                        style: theme.textTheme.titleLarge!.copyWith(
+                        style: theme.textTheme.headlineLarge!.copyWith(
                           color: theme.colorScheme.onPrimary,
                         ),
                       )
@@ -42,7 +42,7 @@ class UserCard extends StatelessWidget {
                 children: [
                   Text(
                     user.profile?.fullName ?? tr.user,
-                    style: theme.textTheme.titleLarge,
+                    style: theme.textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(

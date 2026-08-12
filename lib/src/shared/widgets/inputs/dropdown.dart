@@ -244,7 +244,7 @@ class _DropDownState<T> extends State<DropDown<T>>
                           maxHeight: _menuMaxHeight,
                         ),
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainer,
+                          color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: colorScheme.outlineVariant),
                         ),
@@ -394,7 +394,7 @@ class _DropdownOption<T> extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: selected
-                ? colorScheme.primaryContainer.withValues(alpha: 0.55)
+                ? colorScheme.primaryContainer.withAlpha(125)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -404,7 +404,7 @@ class _DropdownOption<T> extends StatelessWidget {
               DefaultTextStyle(
                 style: theme.textTheme.bodyMedium!.copyWith(
                   color: selected
-                      ? colorScheme.primary.withAlpha(125)
+                      ? colorScheme.primary
                       : colorScheme.onSurface,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 ),
