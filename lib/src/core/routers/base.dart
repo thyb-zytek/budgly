@@ -3,8 +3,9 @@ import 'package:budgly/src/pages/login/view.dart';
 import 'package:budgly/src/pages/overview/view.dart';
 import 'package:budgly/src/pages/settings/view.dart';
 import 'package:budgly/src/pages/tutorial/view.dart';
+import 'package:budgly/src/services/accounts.dart';
+import 'package:budgly/src/services/profile.dart';
 import 'package:budgly/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -59,9 +60,8 @@ class NavigationHelper {
             routes: [
               GoRoute(
                 path: overviewPath,
-                pageBuilder:
-                    (context, state) =>
-                        getPage(child: const OverviewPage(), state: state),
+                pageBuilder: (context, state) =>
+                    getPage(child: const OverviewPage(), state: state),
               ),
             ],
           ),
@@ -77,16 +77,17 @@ class NavigationHelper {
             ],
           ),
         ],
-        pageBuilder: (
-          BuildContext context,
-          GoRouterState state,
-          StatefulNavigationShell navigationShell,
-        ) {
-          return getPage(
-            child: BottomNavBar(child: navigationShell),
-            state: state,
-          );
-        },
+        pageBuilder:
+            (
+              BuildContext context,
+              GoRouterState state,
+              StatefulNavigationShell navigationShell,
+            ) {
+              return getPage(
+                child: BottomNavBar(child: navigationShell),
+                state: state,
+              );
+            },
       ),
     ];
 
@@ -95,19 +96,28 @@ class NavigationHelper {
       initialLocation: '/',
       refreshListenable: AuthSessionNotifier.instance,
       routes: routes,
-      redirect: (BuildContext context, GoRouterState state) {
-        final user = firebase.FirebaseAuth.instance.currentUser;
+      redirect: (BuildContext context, GoRouterState state) async {
+        final user = ProfileService.instance.currentUser;
+        final isLoggingIn = state.matchedLocation == NavigationHelper.loginPath;
 
-        if (state.matchedLocation == loginPath && user != null) {
-          return tutorialPath;
+        if (user == null && !isLoggingIn) {
+          return NavigationHelper.loginPath;
         }
 
-        if (user == null && state.matchedLocation != loginPath) {
-          return loginPath;
-        }
-
-        if (user != null && state.matchedLocation == '/') {
-          return tutorialPath;
+        if (user != null && isLoggingIn) {
+          if (!user.emailVerified) {
+            return null;
+          }
+          try {
+            await AccountsService.instance.loadAccounts();
+            if (AccountsService.instance.accounts.isNotEmpty) {
+              return NavigationHelper.overviewPath;
+            } else {
+              return NavigationHelper.tutorialPath;
+            }
+          } catch (_) {
+            return NavigationHelper.tutorialPath;
+          }
         }
 
         return null;
