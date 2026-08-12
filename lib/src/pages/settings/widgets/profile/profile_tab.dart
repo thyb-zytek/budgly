@@ -3,10 +3,11 @@ import 'package:budgly/src/pages/settings/widgets/profile/view_model.dart';
 import 'package:budgly/src/shared/widgets/buttons/button.dart';
 import 'package:budgly/src/shared/widgets/buttons/constants.dart';
 import 'package:budgly/src/core/exceptions/auth_exceptions.dart';
+import 'package:budgly/src/shared/widgets/inputs/constants.dart';
 import 'package:budgly/src/shared/widgets/snack_bar/snackbar.dart';
-import 'package:budgly/src/shared/widgets/user/change_password.dart';
 import 'package:budgly/src/shared/widgets/user/details.dart';
 import 'package:budgly/src/shared/widgets/user/view_card.dart';
+import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -21,7 +22,6 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   void initState() {
     super.initState();
-    _viewModel.refreshUser();
   }
 
   void _onChangeName(String name) {
@@ -44,8 +44,9 @@ class _ProfileTabState extends State<ProfileTab> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBarMessage(
-                message:
-                    AppLocalizations.of(context)!.passwordChangedSuccessfully,
+                message: AppLocalizations.of(
+                  context,
+                )!.passwordChangedSuccessfully,
                 type: SnackBarType.success,
               ),
             );
@@ -56,10 +57,9 @@ class _ProfileTabState extends State<ProfileTab> {
           final exception = error as AuthenticationException;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBarMessage(
-              message:
-                  exception.code == "password-change-failed"
-                      ? AppLocalizations.of(context)!.passwordChangeFailed
-                      : exception.message,
+              message: exception.code == "password-change-failed"
+                  ? AppLocalizations.of(context)!.passwordChangeFailed
+                  : exception.message,
               type: SnackBarType.error,
             ),
           );
@@ -67,74 +67,126 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   void _displayChangePasswordDialog() {
+    final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.4,
-            minChildSize: 0.3,
-            maxChildSize: 0.8,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(100),
-                      blurRadius: 10,
-                      offset: Offset(0, -5),
-                    ),
-                  ],
+        return SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 24,
+              children: [
+                Text(
+                  tr.editPassword,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Handle for dragging
-                    Container(
-                      margin: EdgeInsets.symmetric(vertical: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: AutofillGroup(
+                    child: Form(
+                      key: _viewModel.formKey,
+                      child: Column(
+                        spacing: 8,
+                        children: [
+                          TextInput(
+                            controller: _viewModel.oldPasswordController,
+                            labelText: tr.oldPassword,
+                            type: InputType.password,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) =>
+                                FocusScope.of(context).nextFocus(),
+                            hotValidating: (v) {
+                              if (v?.isEmpty ?? true) {
+                                return tr.passwordRequired;
+                              } else {
+                                return null;
+                              }
+                            },
+                          ),
+                          TextInput(
+                            controller: _viewModel.passwordController,
+                            labelText: tr.password,
+                            type: InputType.password,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) =>
+                                FocusScope.of(context).nextFocus(),
+                            hotValidating: (v) {
+                              String? result = _viewModel.validatePassword(v);
+                              if (result == "passwordRequired") {
+                                return tr.passwordRequired;
+                              } else if (result == "passwordTooShort") {
+                                return tr.passwordTooShort;
+                              } else {
+                                return result;
+                              }
+                            },
+                          ),
+                          TextInput(
+                            controller: _viewModel.confirmPasswordController,
+                            labelText: tr.confirmPassword,
+                            type: InputType.password,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) {
+                              _onChangePassword();
+                              Navigator.pop(context);
+                            },
+                            hotValidating: (v) {
+                              String? result = _viewModel.validatePassword(v);
+                              if (result == "passwordRequired") {
+                                return tr.passwordRequired;
+                              } else if (result == "passwordsDoNotMatch") {
+                                return tr.passwordsDontMatch;
+                              } else {
+                                return result;
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                    // Title
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                      child: Text(
-                        AppLocalizations.of(context)!.changePassword,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    // Form content
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        child: ChangePasswordForm(
-                          formKey: _viewModel.formKey,
-                          oldPasswordController: _viewModel.oldPasswordController,
-                          passwordController: _viewModel.passwordController,
-                          confirmPasswordController:
-                              _viewModel.confirmPasswordController,
-                          validatePassword: _viewModel.validatePassword,
-                          onSubmit: _onChangePassword,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    spacing: 16,
+                    children: [
+                      Expanded(
+                        child: BudglyButton(
+                          text: tr.cancel,
+                          type: ButtonType.error,
+                          dense: true,
+                          onPressed: () => Navigator.pop(context),
                         ),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: BudglyButton(
+                          text: tr.validate,
+                          type: ButtonType.primary,
+                          dense: true,
+                          onPressed: () {
+                            _onChangePassword();
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
         );
       },
