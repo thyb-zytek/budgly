@@ -53,39 +53,40 @@ class ThemeForm extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: TabSwitcher(
-                  backgroundColor: theme.colorScheme.surfaceContainer,
-                  spaceBetween: 4,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  spaceBetween: 8,
                   selectedIndex: ThemeMode.values.indexOf(currentThemeMode),
                   onTabSelected: (p0) => onThemeChanged(ThemeMode.values[p0]),
-                  tabs:
-                      ThemeMode.values
-                          .map(
-                            (e) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                spacing: 8,
-                                children: [
-                                  Icon(
-                                    _getIcon(e),
-                                    size: 22,
-                                  color:
-                                      e == currentThemeMode
-                                          ? theme.colorScheme.primary
-                                          : theme.colorScheme.onSurfaceVariant,
+                  tabs: ThemeMode.values
+                      .map(
+                        (e) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                          child: Row(
+                            spacing: 4,
+                            children: [
+                              Icon(
+                                _getIcon(e),
+                                size: 22,
+                                color: e == currentThemeMode
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant.withAlpha(156),
+                              ),
+                              Text(
+                                _getThemeName(e, tr),
+                                style: theme.textTheme.bodySmall!.copyWith(
+                                  fontWeight: e == currentThemeMode
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: e == currentThemeMode
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurfaceVariant,
                                 ),
-                                Text(
-                                  _getThemeName(e, tr),
-                                  style: TextStyle(
-                                    fontSize:
-                                        theme.textTheme.bodySmall!.fontSize!,
-                                    fontFamily:
-                                        theme.textTheme.bodySmall!.fontFamily,
-                                  ),
-                                ),
-                              ],
-                            )),
-                          )
-                          .toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],

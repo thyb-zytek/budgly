@@ -73,35 +73,34 @@ class _CurrencyFormState extends State<CurrencyForm> {
           Align(
             alignment: Alignment.centerRight,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(50),
                 shape: BoxShape.rectangle,
-                color: theme.colorScheme.surfaceContainer,
+                color: theme.colorScheme.surfaceContainerHighest,
               ),
               child: TabSwitcher(
-                backgroundColor: theme.colorScheme.surfaceContainer,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 selectedIndex: _reversedCurrencies.indexOf(_currentCurrency),
-                onTabSelected:
-                    (index) => _preferencesService.setCurrency(
-                      _reversedCurrencies[index],
-                    ),
-                tabs:
-                    _reversedCurrencies
-                        .map(
-                          (currency) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Icon(
-                              _getCurrencyIcon(currency),
-                              size: 22,
-                              color:
-                                  currency == _currentCurrency
-                                      ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                        .toList(),
+                onTabSelected: (index) =>
+                    _preferencesService.setCurrency(_reversedCurrencies[index]),
+                tabs: _reversedCurrencies
+                    .map(
+                      (currency) => Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          _getCurrencyIcon(currency),
+                          size: 22,
+                          fontWeight:
+                              currency == _currentCurrency
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                          color: currency == _currentCurrency
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ),
