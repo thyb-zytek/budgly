@@ -1,13 +1,16 @@
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/core/theme/component_styles.dart';
+import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/pages/overview/widgets/date_selector.dart';
-import 'package:budgly/src/shared/widgets/accounts/details.dart';
-import 'package:budgly/src/shared/widgets/buttons/add_fab.dart';
-import 'package:budgly/src/shared/widgets/categories/default.dart';
-import 'package:budgly/src/shared/widgets/common/card.dart';
-import 'package:budgly/src/core/routers/base.dart';
+import 'package:budgly/src/pages/overview/widgets/expense_form.dart';
+import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
+import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
+import 'package:budgly/src/pages/overview/widgets/summary.dart';
+import 'package:budgly/src/shared/widgets/categories/category_expenses.dart';
+import 'package:budgly/src/shared/widgets/empty_state/empty_state.dart';
+import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
 import 'package:flutter/material.dart';
-import 'package:sliver_tools/sliver_tools.dart';
-import 'package:go_router/go_router.dart';
 
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
@@ -17,114 +20,137 @@ class OverviewPage extends StatefulWidget {
 }
 
 class _OverviewPageState extends State<OverviewPage> {
-  late final OverviewViewModel _viewModel;
-  final ScrollController _scrollController = ScrollController();
-  bool _isHeaderExpanded = true;
+  final OverviewViewModel _viewModel = OverviewViewModel();
 
   @override
   void initState() {
     super.initState();
-    _viewModel = OverviewViewModel(
-      onNoAccounts: () {
-        if (mounted) {
-          context.go(NavigationHelper.tutorialPath);
-        }
-      },
-    );
-    _viewModel.loadUserAccounts();
-    _scrollController.addListener(_onScroll);
+    _loadData();
   }
 
-  void _onScroll() {
-    final isExpanded = _scrollController.offset <= 0;
-    if (_isHeaderExpanded != isExpanded) {
-      setState(() => _isHeaderExpanded = isExpanded);
+  Future<void> _loadData() async {
+    if (!_viewModel.hasAccountsLoaded) {
+      await _viewModel.loadAccounts();
+    }
+    if (_viewModel.accounts.isNotEmpty && _viewModel.account == null) {
+      _viewModel.account = _viewModel.accounts.first;
     }
   }
 
   @override
   void dispose() {
     _viewModel.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  void _openModal() {}
+  void _openAddExpenseModal() {
+    _viewModel.startNewExpense();
+    showAppBottomSheet(
+      context,
+      builder: (context) => ExpenseForm(viewModel: _viewModel),
+    );
+  }
+
+  void _onPeriodChanged(Period period) {
+    _viewModel.selectedPeriod = period;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _viewModel,
+    final tr = AppLocalizations.of(context)!;
+
+    return ListenableBuilder(
+      listenable: _viewModel,
       builder: (context, child) {
         if (_viewModel.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Scaffold(body: AppLoadingIndicator());
         }
 
-        return Stack(
-          children: [
-            CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                SliverPinnedHeader(
-                  child: Container(
-                    color: Theme.of(context).colorScheme.surface,
-                    padding: const EdgeInsets.only(
-                      top: 8,
-                      left: 16,
-                      right: 16,
-                      bottom: 8,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 8,
-                      children: [
-                        DateSelector(
-                          period: _viewModel.selectedPeriod,
-                          onPeriodChanged: _viewModel.changePeriod,
-                          maxMonthsAfter: _viewModel.limitMonthsAfter,
-                          maxMonthsBefore: _viewModel.limitMonthsBefore,
-                        ),
-                        BudglyCard(
-                          child: AccountDetails(
-                            selectedAccount: _viewModel.selectedAccount,
-                            onChangeAccount: _viewModel.changeAccount,
-                            accounts: _viewModel.accounts,
-                            incomes: _viewModel.incomeAmount,
-                            outcomes: _viewModel.outcomesAmount,
-                            available: _viewModel.availableAmount,
-                            categories: _viewModel.categories,
-                            isExpanded: _isHeaderExpanded,
+        final summaries = _viewModel.categorySummaries;
+
+        return Scaffold(
+          body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: PeriodSelector(
+                  period: _viewModel.selectedPeriod,
+                  minPeriod: _viewModel.minPeriod,
+                  maxPeriod: _viewModel.maxPeriod,
+                  onChanged: _onPeriodChanged,
+                ),
+              ),
+
+              SliverToBoxAdapter(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _viewModel.showRevenueEditor
+                      ? RevenueForm(
+                          key: const ValueKey('revenue-editor'),
+                          viewModel: _viewModel,
+                          onClose: _viewModel.closeRevenueEditor,
+                        )
+                      : const SizedBox.shrink(key: ValueKey('revenue-editor-hidden')),
+                ),
+              ),
+
+              SliverPadding(
+                padding: const EdgeInsets.all(16.0),
+                sliver: SliverToBoxAdapter(
+                  child: SummaryCard(
+                    viewModel: _viewModel,
+                    onEditRevenue: _viewModel.openRevenueEditor,
+                  ),
+                ),
+              ),
+
+              if (summaries.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: EmptyState(
+                    icon: Icons.receipt_long_rounded,
+                    title: tr.noExpensesForPeriod,
+                    subtitle: tr.addFirstExpenseHint,
+                  ),
+                )
+              else ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      tr.expensesByCategory,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        ),
-                      ],
                     ),
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final category = _viewModel.categories[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: BudglyCard(
-                          child: CategoryView(category: category),
-                        ),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                  sliver: SliverList.separated(
+                    itemCount: summaries.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      return CategoryExpenses(
+                        summary: summaries[index],
+                        currencyCode: _viewModel.currencyCode,
+                        localeName: _viewModel.localeName,
                       );
-                    }, childCount: _viewModel.categories.length),
+                    },
                   ),
                 ),
               ],
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            heroTag: "create_expense",
+            onPressed: _openAddExpenseModal,
+            child: Icon(
+              Icons.add_rounded,
+              size: BudglyComponentStyles.fabIconSize,
             ),
-            Positioned(
-              bottom: 24,
-              right: 24,
-              child: AddFab(heroTag: "create_expense", onPressed: _openModal),
-            ),
-          ],
+          ),
         );
       },
     );
