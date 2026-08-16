@@ -23,7 +23,7 @@ class Category {
   factory Category.fromJson(Map<String, dynamic> json) => Category(
     id: json['id'],
     name: json['name'],
-    color: HexColor.fromHex(json['color']),
+    color: json['color'] != null ? HexColor.fromHex(json['color']) : null,
     iconCode: json["icon"],
     accountId: json['account_id'],
   );
@@ -33,7 +33,7 @@ class Category {
       if (id != null) 'id': id,
       'name': name,
       'color': color?.toHex(),
-      'icon': '0x${icon!.iconCode.toRadixString(16)}',
+      'icon': icon != null ? '0x${icon!.iconCode.toRadixString(16)}' : iconCode,
       'account_id': accountId,
     };
   }
