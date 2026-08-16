@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/services/supabase/storage_supabase.dart';
+import 'package:budgly/src/services/providers/supabase/storage.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
