@@ -1,46 +1,38 @@
-import 'package:budgly/src/shared/widgets/accounts/default.dart';
-import 'package:budgly/src/shared/widgets/inputs/dropdown.dart';
-import 'package:flutter/material.dart';
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/shared/widgets/accounts/account_view.dart';
+import 'package:budgly/src/shared/widgets/selector/selector.dart';
+import 'package:flutter/material.dart';
 
 class AccountSelector extends StatelessWidget {
   final List<Account> accounts;
   final Account? selectedAccount;
-  final Function(Account) onSelect;
+  final ValueChanged<Account> onSelect;
+  final Color? backgroundColor;
 
   const AccountSelector({
     super.key,
     required this.accounts,
     this.selectedAccount,
     required this.onSelect,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    ThemeData theme = Theme.of(context);
-    final validAccounts =
-        accounts.where((account) => account.id != null).toList();
-    final initialAccount =
-        selectedAccount ??
-        (validAccounts.isNotEmpty ? validAccounts.first : null);
+    final validAccounts = accounts
+        .where((account) => account.id != null)
+        .toList();
 
-    if (validAccounts.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return DropDown<Account>(
-      initialValue: initialAccount!,
-      onSelect: (account) => onSelect(account),
-      options: validAccounts,
-      dense: true,
-      optionBuilder:
-          (account, isSelected) => AccountView(
-            account: account,
-            color:
-                isSelected
-                    ? theme.colorScheme.primary.withAlpha(75)
-                    : Theme.of(context).colorScheme.surfaceContainer,
-          ),
+    return Selector<Account>(
+      items: validAccounts,
+      selectedItem: selectedAccount,
+      onSelect: onSelect,
+      maxHeight: 300,
+      backgroundColor: backgroundColor,
+      itemBuilder: (context, account) => AccountView(
+        account: account,
+        color: Colors.transparent,
+      ),
     );
   }
 }

@@ -1,10 +1,9 @@
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
-import 'package:budgly/src/models/user/user.dart';
-import 'package:budgly/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
-import 'package:budgly/src/shared/widgets/buttons/icon_button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
 
 class UserDetails extends StatefulWidget {
   final User user;
@@ -42,7 +41,7 @@ class _UserDetailsState extends State<UserDetails> {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainer,
+      color: theme.colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16).copyWith(top: 24),
         child: Column(
@@ -85,7 +84,9 @@ class _UserDetailsState extends State<UserDetails> {
                           padding: const EdgeInsets.only(left: 8),
                           child: Text(
                             widget.user.profile?.fullName ?? tr.notAvailable,
-                            style: theme.textTheme.bodyMedium,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.normal,
+                            ),
                           ),
                         ),
                   ],
@@ -98,39 +99,38 @@ class _UserDetailsState extends State<UserDetails> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         spacing: 4,
                         children: [
-                          BudglyIconButton(
-                            icon: Icons.check_circle_rounded,
-                            type: ButtonType.success,
+                          IconButton(
+                            icon: Icon(Icons.check_circle_rounded, size: 32),
                             onPressed: () {
                               widget.onChangeName(_nameController.text);
                               setState(() {
                                 _isEditingName = false;
                               });
                             },
-                            smallIcon: true,
+                            color: ButtonType.primary.iconButtonColor(theme),
+                            style: ButtonType.primary.iconButtonStyle(theme),
                           ),
-                          BudglyIconButton(
-                            icon: Icons.cancel_rounded,
-                            type: ButtonType.error,
-                            onPressed:
-                                () => setState(() {
-                                  _isEditingName = false;
-                                  _nameController.text =
-                                      widget.user.profile?.fullName ?? '';
-                                }),
-                            smallIcon: true,
+                          IconButton(
+                            icon: Icon(Icons.cancel_rounded, size: 32),
+                            onPressed: () => setState(() {
+                              _isEditingName = false;
+                              _nameController.text =
+                                  widget.user.profile?.fullName ?? '';
+                            }),
+                            color: ButtonType.error.iconButtonColor(theme),
+                            style: ButtonType.error.iconButtonStyle(theme),
                           ),
                         ],
                       ),
                     )
                     : Positioned(
                       right: 0,
-                      top: 0,
-                      child: BudglyIconButton(
+                      top: 16,
+                      child: IconButton(
                         onPressed: _displayEditName,
-                        icon: Icons.edit,
-                        type: ButtonType.primary,
-                        smallIcon: true,
+                        icon: Icon(Icons.edit, size: 32),
+                        color: ButtonType.primary.iconButtonColor(theme),
+                        style: ButtonType.primary.iconButtonStyle(theme),
                       ),
                     ),
               ],
@@ -152,7 +152,9 @@ class _UserDetailsState extends State<UserDetails> {
                   padding: const EdgeInsets.only(left: 8),
                   child: Text(
                     widget.user.email ?? tr.notAvailable,
-                    style: theme.textTheme.bodyMedium,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                 ),
               ],
@@ -178,7 +180,9 @@ class _UserDetailsState extends State<UserDetails> {
                           'dd/MM/yyyy',
                         ).format(widget.user.profile!.createdAt)
                         : tr.notAvailable,
-                    style: theme.textTheme.bodyMedium,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                 ),
               ],

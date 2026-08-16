@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
-import 'package:budgly/src/shared/widgets/inputs/constants.dart';
 
 class TextInput extends StatefulWidget {
   final TextEditingController controller;
@@ -16,11 +12,15 @@ class TextInput extends StatefulWidget {
   final String? errorText;
 
   final FocusNode? focusNode;
+  final InputDecoration? decoration;
 
   final InputType type;
   final TextInputAction? textInputAction;
+  final TextStyle? style;
+  final bool? enabled;
   final void Function(String)? onFieldSubmitted;
   final void Function(String)? onChange;
+  final Widget? suffix;
 
   const TextInput({
     super.key,
@@ -31,10 +31,14 @@ class TextInput extends StatefulWidget {
     this.helperText,
     this.errorText,
     this.focusNode,
-    this.type = InputType.global,
+    this.decoration,
+    this.type = InputType.text,
     this.textInputAction,
+    this.style,
+    this.enabled,
     this.onFieldSubmitted,
     this.onChange,
+    this.suffix
   });
 
   @override
@@ -42,25 +46,24 @@ class TextInput extends StatefulWidget {
 }
 
 class _TextInputState extends State<TextInput> {
-  bool focused = false;
-  bool error = false;
-  bool erasable = false;
+  bool _hasText = false;
   bool _obscurePassword = true;
   late FocusNode _focusNode;
 
   @override
   void initState() {
-    _focusNode = widget.focusNode ?? FocusNode();
-    erasable = widget.controller.text.isNotEmpty;
     super.initState();
+    _focusNode = widget.focusNode ?? FocusNode();
+    _hasText = widget.controller.text.isNotEmpty;
   }
 
   @override
   void didUpdateWidget(covariant TextInput oldWidget) {
-    if (erasable != widget.controller.text.isNotEmpty) {
-      setState(() => erasable = widget.controller.text.isNotEmpty);
-    }
     super.didUpdateWidget(oldWidget);
+    final hasText = widget.controller.text.isNotEmpty;
+    if (_hasText != hasText) {
+      setState(() => _hasText = hasText);
+    }
   }
 
   @override
@@ -71,247 +74,73 @@ class _TextInputState extends State<TextInput> {
     super.dispose();
   }
 
-  void displayCalendar() {
-    showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-    ).then((date) {
-      if (!mounted) return;
-      if (date != null) {
-        widget.controller.text = DateFormat.yMMMd(
-          AppLocalizations.of(context)?.localeName,
-        ).format(date);
-        setState(() => erasable = true);
-      }
-    });
+  void _clearText() {
+    setState(() => _hasText = false);
+    widget.controller.clear();
   }
 
-  Iterable<String> getAutofillHints() {
-    switch (widget.type) {
-      case InputType.email:
-        return [AutofillHints.email];
-      case InputType.username:
-        return [AutofillHints.newUsername, AutofillHints.username];
-      case InputType.password:
-        return [AutofillHints.password];
-      default:
-        return [];
+  void _onTextChanged(String value) {
+    widget.onChange?.call(value);
+    final hasText = value.isNotEmpty;
+    if (_hasText != hasText) {
+      setState(() => _hasText = hasText);
     }
   }
 
-  TextInputType getTextInputType() {
-    switch (widget.type) {
-      case InputType.email:
-        return TextInputType.emailAddress;
-      case InputType.username:
-        return TextInputType.name;
-      case InputType.password:
-        return TextInputType.visiblePassword;
-      case InputType.url:
-        return TextInputType.url;
-      default:
-        return TextInputType.text;
-    }
-  }
+  InputDecoration _buildDecoration(ThemeData theme) {
+  final baseDecoration = (widget.decoration ?? const InputDecoration()).copyWith(
+    labelText: widget.labelText,
+    hintText: widget.hintText,
+    helperText: widget.helperText,
+    errorText: widget.errorText,
+    contentPadding: EdgeInsets.all(16)
+  );
+
+  return widget.type.decorate(
+    baseDecoration,
+    InputTypeContext(
+      theme: theme,
+      obscureText: _obscurePassword,
+      onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+      showClearButton: _hasText,
+      onClear: _clearText,
+      suffix: widget.suffix,
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
-    ThemeData theme = Theme.of(context);
-    AppLocalizations tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: 8, left: 4, right: 4),
-      child: FocusScope(
-        child: TextFormField(
-          autofillHints: getAutofillHints(),
-          focusNode: _focusNode,
-          keyboardType: getTextInputType(),
-          textInputAction: widget.textInputAction,
-          onFieldSubmitted: widget.onFieldSubmitted,
-          onTapOutside: (e) => _focusNode.unfocus(),
-          onChanged: (v) {
-            if (widget.onChange != null) {
-              widget.onChange!(v);
-            }
-            if (v.isEmpty) {
-              setState(() => erasable = false);
-            } else {
-              setState(() => erasable = true);
-            }
-          },
-          onTap:
-              widget.type == InputType.calendar
-                  ? () => displayCalendar()
-                  : null,
-          controller: widget.controller,
-          autocorrect: false,
-          validator: (v) {
-            String? result;
-            if (widget.hotValidating != null) {
-              result = widget.hotValidating!(v);
-            }
-
-            if (widget.type == InputType.currency &&
-                v != null &&
-                v.isNotEmpty &&
-                result == null) {
-              final match = RegExp(r'^-?\d*(?:[.,]\d+)?$').firstMatch(v);
-              if (match == null) {
-                result = tr.invalidCurrency;
-              }
-            }
-
-            if (widget.type == InputType.calendar &&
-                v != null &&
-                v.isNotEmpty &&
-                result == null) {
-              try {
-                DateFormat.yMMMd(Platform.localeName).parseStrict(v);
-              } on FormatException {
-                result = tr.invalidDate;
-              }
-            }
-
-            if (result != null) {
-              setState(() => error = true);
-            }
-            return result;
-          },
-          style: theme.textTheme.bodyLarge,
-          autovalidateMode: AutovalidateMode.disabled,
-          obscureText: widget.type == InputType.password && _obscurePassword,
-          decoration: InputDecoration(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            helperText: widget.helperText,
-            errorText: widget.errorText,
-            alignLabelWithHint: true,
-            errorMaxLines: 3,
-            filled: false,
-            border: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.colorScheme.outline,
-                width: 1,
-              ),
-            ),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.colorScheme.outline,
-                width: 1,
-              ),
-            ),
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.colorScheme.primary,
-                width: 2,
-              ),
-            ),
-            errorBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.colorScheme.error,
-                width: 1,
-              ),
-            ),
-            focusedErrorBorder: UnderlineInputBorder(
-              borderSide: BorderSide(
-                color: theme.colorScheme.error,
-                width: 2,
-              ),
-            ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 0,
-              minHeight: 0,
-            ),
-            prefixIcon:
-                widget.type == InputType.calendar
-                    ? Padding(
-                      padding: EdgeInsets.only(top: 16),
-                      child: Icon(Icons.calendar_today),
-                    )
-                    : null,
-            suffixIcon: _buildSuffixIcon(theme),
-          ),
-        ),
+      padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+      child: TextFormField(
+        controller: widget.controller,
+        focusNode: _focusNode,
+        enabled: widget.enabled,
+        autofillHints: widget.type.autofillHints,
+        keyboardType: widget.type.keyboardType,
+        textInputAction: widget.textInputAction,
+        onFieldSubmitted: widget.onFieldSubmitted,
+        onTapOutside: (_) => _focusNode.unfocus(),
+        onChanged: _onTextChanged,
+        onTap: widget.type == InputType.date
+            ? () => pickInputDate(context, widget.controller, () {
+                setState(() => _hasText = true);
+              })
+            : null,
+        autocorrect: false,
+        obscureText: widget.type.obscuresText && _obscurePassword,
+        style: widget.style ?? theme.textTheme.bodyLarge,
+        autovalidateMode: AutovalidateMode.disabled,
+        validator: (value) {
+          return widget.hotValidating?.call(value) ??
+              widget.type.validateValue(value, tr);
+        },
+        decoration: _buildDecoration(theme),
       ),
-    );
-  }
-
-  Widget _buildSuffixIcon(ThemeData theme) {
-    final List<Widget> suffixIcons = [];
-
-    if (widget.type == InputType.currency) {
-      suffixIcons.add(
-        Padding(
-          padding: EdgeInsets.only(top: 16),
-          child: Text(
-            NumberFormat.simpleCurrency(
-              locale: Platform.localeName,
-            ).currencySymbol,
-            style: theme.textTheme.bodyLarge?.merge(
-              TextStyle(
-                fontWeight: FontWeight.w900,
-                color: theme.colorScheme.outlineVariant,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (widget.type == InputType.password) {
-      final List<Widget> passwordIcons = [
-        IconButton(
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-          icon: Icon(
-            _obscurePassword
-                ? Icons.visibility_rounded
-                : Icons.visibility_off_rounded,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ];
-
-      if (erasable) {
-        passwordIcons.add(
-          IconButton(
-            onPressed: () {
-              setState(() => erasable = false);
-              widget.controller.clear();
-            },
-            icon: Icon(Icons.close_rounded),
-          ),
-        );
-      }
-
-      suffixIcons.add(
-        Row(mainAxisSize: MainAxisSize.min, children: passwordIcons),
-      );
-    } else if (erasable) {
-      suffixIcons.add(
-        IconButton(
-          onPressed: () {
-            setState(() => erasable = false);
-            widget.controller.clear();
-          },
-          icon: Icon(Icons.close_rounded),
-        ),
-      );
-    }
-
-    if (suffixIcons.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: suffixIcons,
     );
   }
 }
