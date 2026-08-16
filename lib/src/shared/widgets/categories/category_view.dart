@@ -1,7 +1,6 @@
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
-import 'package:budgly/src/shared/widgets/buttons/icon_button.dart';
-import 'package:budgly/src/shared/widgets/categories/icon.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/shared/widgets/categories/category_icon_view.dart';
 import 'package:flutter/material.dart';
 
 class CategoryView extends StatelessWidget {
@@ -25,7 +24,7 @@ class CategoryView extends StatelessWidget {
     return Row(
       spacing: 16,
       children: [
-        CategoryIcon(icon: category.icon!, color: category.color!),
+        CategoryIconView(icon: category.icon!, color: category.color!),
         Expanded(
           child: Text(category.name!, style: theme.textTheme.titleLarge),
         ),
@@ -35,18 +34,18 @@ class CategoryView extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               if (onEdit != null)
-                BudglyIconButton(
-                  icon: Icons.edit_rounded,
-                  type: ButtonType.primary,
-                  smallIcon: true,
+                IconButton(
+                  icon: Icon(Icons.edit_rounded, size: 32),
                   onPressed: onEdit,
+                  color: ButtonType.primary.iconButtonColor(theme),
+                  style: ButtonType.primary.iconButtonStyle(theme),
                 ),
               if (onDelete != null)
-                BudglyIconButton(
-                  icon: Icons.delete_rounded,
-                  type: ButtonType.error,
-                  smallIcon: true,
+                IconButton(
+                  icon: Icon(Icons.delete_rounded, size: 32),
                   onPressed: onDelete,
+                  color: ButtonType.error.iconButtonColor(theme),
+                  style: ButtonType.error.iconButtonStyle(theme),
                 ),
             ],
           ),

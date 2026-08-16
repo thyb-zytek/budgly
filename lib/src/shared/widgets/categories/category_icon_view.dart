@@ -1,13 +1,13 @@
-import 'package:budgly/src/models/category/category_icon.dart' as cim;
+import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:flutter/material.dart';
 
-class CategoryIcon extends StatelessWidget {
-  final cim.CategoryIcon icon;
+class CategoryIconView extends StatelessWidget {
+  final CategoryIcon icon;
   final Color color;
   final double size;
   final VoidCallback? onTap;
 
-  const CategoryIcon({
+  const CategoryIconView({
     super.key,
     required this.icon,
     required this.color,
