@@ -1,6 +1,8 @@
 import 'dart:async';
-import 'package:budgly/src/core/routers/base.dart';
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/routers/navigation_helper.dart';
 import 'package:budgly/src/pages/tutorial/view_model.dart';
+import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,12 +40,10 @@ class _TutorialPageState extends State<TutorialPage> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, child) {
+        final tr = AppLocalizations.of(context)!;
+
         if (_viewModel.isChecking) {
-          return Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return const Scaffold(body: AppLoadingIndicator());
         }
 
         return Scaffold(
@@ -52,7 +52,7 @@ class _TutorialPageState extends State<TutorialPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'tutorial',
+                  tr.tutorial,
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 24),
@@ -80,14 +80,14 @@ class _TutorialPageState extends State<TutorialPage> {
                     print("Fallback: navigating to login");
                     _navigateToLogin();
                   },
-                  child: const Text('Logout'),
+                  child: Text(tr.logout),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
                     context.go(NavigationHelper.settingsPath);
                   },
-                  child: const Text('Settings (Dev)'),
+                  child: Text(tr.settingsDev),
                 ),
               ],
             ),

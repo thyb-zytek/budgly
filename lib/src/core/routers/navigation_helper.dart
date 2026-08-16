@@ -93,7 +93,7 @@ class NavigationHelper {
 
     router = GoRouter(
       navigatorKey: parentNavigatorKey,
-      initialLocation: '/',
+      initialLocation: loginPath,
       refreshListenable: AuthSessionNotifier.instance,
       routes: routes,
       redirect: (BuildContext context, GoRouterState state) async {

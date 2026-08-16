@@ -1,10 +1,10 @@
 import 'package:budgly/src/core/view_models/base_view_model.dart';
-import 'package:budgly/src/services/auth.dart';
+import 'package:budgly/src/services/auth.dart'; 
 import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/core/routers/base.dart';
+import 'package:budgly/src/core/routers/navigation_helper.dart';
 
 class TutorialViewModel extends BaseViewModel {
-  final AuthService _authService = AuthService();
+  final AuthService _authService = AuthService.instance;
   final AccountsService _accountsService = AccountsService.instance;
 
   bool _isChecking = true;
@@ -17,18 +17,20 @@ class TutorialViewModel extends BaseViewModel {
   Future<void> _checkAccountsAndRedirect() async {
     await _authService.reloadCurrentUser();
     try {
-        // Load accounts with signed URLs and cache them in AccountsService
-        final accounts = await _accountsService.listAccountsWithSignedUrls();
-        if (accounts.isNotEmpty) {
-          // User has accounts, redirect to overview
-          // Accounts are now cached with signed URLs and will be used by overview page
-          NavigationHelper.router.go(NavigationHelper.overviewPath);
-          return;
-        }
-      } catch (e) {
-        // If checking accounts fails, stay on tutorial
+      // Charge les comptes (avec URLs signées) et les met en cache dans AccountsService
+      await _accountsService.loadAccounts();
+      final accounts = _accountsService.accounts;
+
+      if (accounts.isNotEmpty) {
+        // L'utilisateur a des comptes, on redirige vers l’overview
+        // Les comptes sont déjà en cache côté service
+        NavigationHelper.router.go(NavigationHelper.overviewPath);
+        return;
       }
-    
+    } catch (e) {
+      // Si la vérification échoue, on reste sur le tutoriel
+    }
+
     _isChecking = false;
     notifyListeners();
   }
@@ -38,5 +40,4 @@ class TutorialViewModel extends BaseViewModel {
     _accountsService.invalidateCache();
     notifyListeners();
   }
-
 }
