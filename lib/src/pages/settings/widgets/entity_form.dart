@@ -1,6 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
@@ -39,6 +38,7 @@ class EntityForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Form(
       key: formKey,
@@ -66,19 +66,23 @@ class EntityForm extends StatelessWidget {
             spacing: 16,
             children: [
               Expanded(
-                child: BudglyButton(
+                child: FilledButton(
+                  style: ButtonType.error.filledStyle(theme, dense: denseButtons),
                   onPressed: onCancel,
-                  type: ButtonType.outlined,
-                  text: tr.cancel,
-                  dense: denseButtons,
+                  child: Text(
+                    tr.cancel,
+                    style: ButtonType.error.labelStyle(theme, dense: denseButtons),
+                  ),
                 ),
               ),
               Expanded(
-                child: BudglyButton(
+                child: FilledButton(
+                  style: ButtonType.primary.filledStyle(theme, dense: denseButtons),
                   onPressed: _onSubmit,
-                  type: ButtonType.primary,
-                  text: tr.validate,
-                  dense: denseButtons,
+                  child: Text(
+                    tr.validate,
+                    style: ButtonType.primary.labelStyle(theme, dense: denseButtons),
+                  ),
                 ),
               ),
             ],

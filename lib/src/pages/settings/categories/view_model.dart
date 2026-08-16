@@ -1,23 +1,21 @@
 import 'dart:math';
 import 'package:budgly/src/core/loading/progressive_loader.dart';
-import 'package:budgly/src/core/stores/categories.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/models/category/category_icon.dart' as cim;
-import 'package:budgly/src/models/category/editing_data.dart';
+import 'package:budgly/src/models/category/category_icon.dart';
+import 'package:budgly/src/models/category/category_editing_data.dart';
 import 'package:budgly/src/services/categories.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesViewModel extends BaseViewModel {
-  static const cim.CategoryIcon _defaultIcon = cim.CategoryIcon(
+  static const CategoryIcon _defaultIcon = CategoryIcon(
     iconName: 'category',
     iconPack: 'material',
     iconCode: 0xf624,
     labels: {"en": "Category", "fr": "Catégorie"},
   );
 
-  final CategoriesStore _categoriesStore = CategoriesStore.instance;
   final CategoriesService _categoriesService = CategoriesService.instance;
 
   Account? _account;
@@ -33,24 +31,19 @@ class CategoriesViewModel extends BaseViewModel {
   );
 
   CategoriesViewModel() {
-    // Relaie les notifications du store (chargements en arrière-plan,
-    // création/mise à jour/suppression) vers les listeners du ViewModel,
-    // qui est ce que le widget écoute réellement.
-    _categoriesStore.addListener(_onStoreChanged);
+    _categoriesService.addListener(_onServiceChanged);
   }
 
-  void _onStoreChanged() {
+  void _onServiceChanged() {
     if (!isDisposed) notifyListeners();
   }
 
   Account? get account => _account;
-  set account(Account value) {
+  set account(Account? value) {
     if (_account == value) return;
     _account = value;
     notifyListeners();
-    // Le changement de compte doit déclencher le chargement de ses
-    // catégories si ce n'est pas déjà fait, sinon la liste reste vide.
-    if (!hasCategoriesLoaded) {
+    if (value?.id != null && !hasCategoriesLoaded) {
       loadCategories();
     }
   }
@@ -58,14 +51,13 @@ class CategoriesViewModel extends BaseViewModel {
   List<Category> get categories {
     if (_account?.id == null) return [];
     return [
-      ..._categoriesStore.getCategoriesForAccount(_account!.id!),
+      ..._categoriesService.getCategoriesForAccount(_account!.id!),
       ..._localCategories,
     ];
   }
 
   bool get hasCategoriesLoaded =>
-      _account?.id != null &&
-      _categoriesStore.categoriesByAccount[_account!.id!] != null;
+      _account?.id != null && _categoriesService.hasLoadedAccount(_account!.id!);
 
   bool get isCreatingCategory => _localCategories.isNotEmpty;
 
@@ -94,7 +86,7 @@ class CategoriesViewModel extends BaseViewModel {
 
   @override
   void dispose() {
-    _categoriesStore.removeListener(_onStoreChanged);
+    _categoriesService.removeListener(_onServiceChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -105,9 +97,9 @@ class CategoriesViewModel extends BaseViewModel {
 
     await ProgressiveLoader.loadEssentialOnly(
       essentialData: () async {
-        await _categoriesStore.loadCategoriesForAccount(_account!.id!);
-        await _categoriesStore.loadAvailableIcons();
-        _editingData.availableIcons = _categoriesStore.availableIcons;
+        await _categoriesService.listCategoriesByAccount(_account!.id!);
+        await _categoriesService.loadAvailableIcons();
+        _editingData.availableIcons = _categoriesService.availableIcons;
       },
       secondaryData: () async {},
       onProgress: (progress) {},
@@ -122,8 +114,8 @@ class CategoriesViewModel extends BaseViewModel {
 
     setLoading(true);
 
-    await _categoriesStore.loadAvailableIcons();
-    _editingData.availableIcons = _categoriesStore.availableIcons;
+    await _categoriesService.loadAvailableIcons();
+    _editingData.availableIcons = _categoriesService.availableIcons;
 
     final defaultIcon = _editingData.availableIcons.isNotEmpty
         ? _editingData.availableIcons.first
@@ -150,9 +142,8 @@ class CategoriesViewModel extends BaseViewModel {
   Future<void> removeCategory(Category category) async {
     if (category.id != null) {
       await _categoriesService.deleteCategory(category.id!);
-      _categoriesStore.removeCategory(category.id!);
       if (_account?.id != null) {
-        await _categoriesStore.invalidateAccountCache(_account!.id!);
+        _categoriesService.invalidateAccountCache(_account!.id!);
       }
     } else {
       _localCategories.removeWhere((c) => identical(c, category));
@@ -171,16 +162,13 @@ class CategoriesViewModel extends BaseViewModel {
         icon: _editingData.icon,
       );
 
-      final createdCategory = await _categoriesService.createCategory(
-        newCategory,
-      );
+      await _categoriesService.createCategory(newCategory);
 
       _localCategories.removeWhere((c) => identical(c, category));
-      _categoriesStore.addCategory(createdCategory);
       _editingCategory = null;
     } finally {
       setLoading(false);
-      await _categoriesStore.loadCategoriesForAccount(
+      await _categoriesService.listCategoriesByAccount(
         _account!.id!,
         forceRefresh: true,
       );
@@ -197,15 +185,12 @@ class CategoriesViewModel extends BaseViewModel {
         icon: _editingData.icon,
       );
 
-      final updatedCategory = await _categoriesService.updateCategory(
-        updatedCategoryData,
-      );
-
-      _categoriesStore.updateCategory(updatedCategory);
+      await _categoriesService.updateCategory(updatedCategoryData);
       _editingCategory = null;
     } finally {
       setLoading(false);
-      await _categoriesStore.invalidateAccountCache(_account!.id!);
+      _categoriesService.invalidateAccountCache(_account!.id!);
+      await _categoriesService.listCategoriesByAccount(_account!.id!);
     }
   }
 }

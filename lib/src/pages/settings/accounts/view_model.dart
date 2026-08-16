@@ -2,12 +2,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:budgly/src/core/loading/progressive_loader.dart';
-import 'package:budgly/src/core/stores/accounts.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts.dart';
 import 'package:budgly/src/services/image.dart';
-import 'package:budgly/src/shared/widgets/accounts/constants.dart';
+import 'package:budgly/src/models/account/account_editing_data.dart';
 import 'package:flutter/material.dart';
 
 class _ImageProcessResult {
@@ -17,7 +16,6 @@ class _ImageProcessResult {
 }
 
 class AccountsViewModel extends BaseViewModel {
-  final AccountsStore _accountsStore = AccountsStore.instance;
   final AccountsService _accountsService = AccountsService.instance;
 
   final List<Account> _localAccounts = [];
@@ -31,8 +29,9 @@ class AccountsViewModel extends BaseViewModel {
     picture: null,
   );
 
-  List<Account> get accounts => [..._accountsStore.accounts, ..._localAccounts];
-  bool get hasAccountsLoaded => _accountsStore.hasLoaded;
+  // Utilisation exclusive du service pour récupérer l'état
+  List<Account> get accounts => [..._accountsService.accounts, ..._localAccounts];
+  bool get hasAccountsLoaded => _accountsService.hasLoaded;
   bool get isCreatingAccount => _localAccounts.isNotEmpty;
 
   Account? get editingAccount => _editingAccount;
@@ -65,10 +64,10 @@ class AccountsViewModel extends BaseViewModel {
 
     await ProgressiveLoader.loadEssentialOnly(
       essentialData: () async {
-        await _accountsStore.loadAccounts();
+        await _accountsService.loadAccounts();
       },
       secondaryData: () async {
-        for (final account in _accountsStore.accounts) {
+        for (final account in _accountsService.accounts) {
           if (account.picture != null && account.id != null) {
             try {
               await refreshPictureUrl(account);
@@ -113,8 +112,8 @@ class AccountsViewModel extends BaseViewModel {
       if (account.picture != null) {
         await _accountsService.deletePicture(account.picture!, account.id!);
       }
+      // La méthode deleteAccount du service gère maintenant la suppression dans le store
       await _accountsService.deleteAccount(account.id!);
-      _accountsStore.removeAccount(account.id!);
       _accountsService.invalidateCache();
     } else {
       _localAccounts.removeWhere((a) => identical(a, account));
@@ -137,7 +136,8 @@ class AccountsViewModel extends BaseViewModel {
           account.id!,
         );
         final updatedAccount = account.copyWith(pictureUrl: pictureUrl);
-        _accountsStore.updateAccount(updatedAccount);
+        // On met à jour le compte localement via le service
+        _accountsService.updateLocalAccount(updatedAccount);
         _accountsService.invalidateCache();
       } catch (e) {
         // Ignore errors when refreshing picture URL
@@ -175,14 +175,15 @@ class AccountsViewModel extends BaseViewModel {
         picture: imageToUpload?.fileName,
       );
 
+      // Le service crée le compte ET l'ajoute au store
       newAccount = await _accountsService.createAccount(newAccount);
 
       if (imageToUpload != null) {
         newAccount = await _uploadAndLinkImage(newAccount, imageToUpload);
+        _accountsService.updateLocalAccount(newAccount);
       }
 
       _localAccounts.removeWhere((a) => identical(a, account));
-      _accountsStore.addAccount(newAccount);
       _editingAccount = null;
     } finally {
       setLoading(false);
@@ -212,15 +213,17 @@ class AccountsViewModel extends BaseViewModel {
         picture: currentFileName,
       );
 
+      // Le service met à jour le compte côté API ET dans le store
       updatedAccount = await _accountsService.updateAccount(updatedAccount);
 
       if (imageToUpload != null) {
         updatedAccount = await _uploadAndLinkImage(updatedAccount, imageToUpload);
+        _accountsService.updateLocalAccount(updatedAccount);
       } else if (_editingData.picture != null && !_editingData.isLocalPicture) {
         updatedAccount = updatedAccount.copyWith(pictureUrl: account.pictureUrl);
+        _accountsService.updateLocalAccount(updatedAccount);
       }
 
-      _accountsStore.updateAccount(updatedAccount);
       _editingAccount = null;
     } finally {
       setLoading(false);
