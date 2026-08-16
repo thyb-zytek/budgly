@@ -152,5 +152,60 @@
         "type": "String"
       }
     }
-  }
+  },
+  "newExpense": "Créer une dépense",
+  "editExpense": "Modifier une dépense",
+  "accountRequired": "Le compte est requis",
+  "categoryRequired": "La catégorie est requise",
+  "nameRequired": "Le nom est requis",
+  "amountInvalid": "Le montant est invalide",
+  "expenseCreatedSuccessfully": "Dépense créée avec succès",
+  "expenseCreationFailed": "Échec de la création de la dépense",
+  "noCategoryForAccount": "Aucune catégorie disponible pour ce compte",
+  "expenseFormTitle": "Nouvelle dépense",
+  "category": "Catégorie",
+  "noCategoryForAccount": "Aucune catégorie disponible pour ce compte",
+  "activity": "Activité",
+  "amount": "Montant",
+  "advancedOptions": "Options avancées",
+  "recurrence": "Récurrence",
+  "recurrenceNone": "Aucune",
+  "recurrenceOnce": "Une fois",
+  "recurrenceDaily": "Quotidien",
+  "recurrenceWeekly": "Hebdomadaire",
+  "recurrenceMonthly": "Mensuel",
+  "recurrenceYearly": "Annuel",
+  "recurrenceBiMonthly": "Tout les 2 mois",
+  "recurrenceTriMonthly": "Tout les 3 mois",
+  "recurrenceHalfYearly": "Tout les 6 mois",
+  "recurrenceBiYearly": "Tout les 2 ans",
+  "debitDate": "Date de débit",
+  "revenue": "Revenue",
+  "remaining": "Restant",
+  "expenses": "Dépenses",
+  "expensesByCategory": "Dépenses par catégorie",
+  "noExpensesForPeriod": "Aucune dépense pour cette période",
+  "addFirstExpenseHint": "Appuyez sur + pour ajouter votre première dépense.",
+  "remainingWeekend": "Reste / week-end",
+  "debited": "Débité {amount}",
+  "@debited": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "pending": "En attente ({count}) · {amount}",
+  "@pending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorial": "Tutoriel",
+  "settingsDev": "Paramètres (Dev)"
 }

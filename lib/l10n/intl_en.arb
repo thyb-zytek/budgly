@@ -152,5 +152,59 @@
         "type": "String"
       }
     }
-  }
+  },
+  "newExpense": "Create expense",
+  "editExpense": "Edit expense",
+  "accountRequired": "Account is required",
+  "categoryRequired": "Category is required",
+  "nameRequired": "Name is required",
+  "amountInvalid": "Amount is invalid",
+  "expenseCreatedSuccessfully": "Expense created successfully",
+  "expenseCreationFailed": "Expense creation failed",
+  "noCategoryForAccount": "No category available for this account",
+  "expenseFormTitle": "New expense",
+  "category": "Category",
+  "activity": "Activity",
+  "amount": "Amount",
+  "advancedOptions": "Advanced options",
+  "recurrence": "Recurrence",
+  "recurrenceNone": "None",
+  "recurrenceOnce": "Once",
+  "recurrenceDaily": "Daily",
+  "recurrenceWeekly": "Weekly",
+  "recurrenceMonthly": "Monthly",
+  "recurrenceYearly": "Yearly",
+  "recurrenceBiMonthly": "Every 2 months",
+  "recurrenceTriMonthly": "Every 3 months",
+  "recurrenceHalfYearly": "Every 6 months",
+  "recurrenceBiYearly": "Every 2 years",
+  "debitDate": "Debit date",
+  "revenue": "Revenue",
+  "remaining": "Remaining",
+  "expenses": "Expenses",
+  "expensesByCategory": "Expenses by category",
+  "noExpensesForPeriod": "No expenses for this period",
+  "addFirstExpenseHint": "Tap + to add your first expense.",
+  "remainingWeekend": "Remaining / week-end",
+  "debited": "Debited {amount}",
+  "@debited": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "pending": "Pending ({count}) · {amount}",
+  "@pending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorial": "Tutorial",
+  "settingsDev": "Settings (Dev)"
 }
