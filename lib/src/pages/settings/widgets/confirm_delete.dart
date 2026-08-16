@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:flutter/material.dart';
 
 class ConfirmDelete extends StatelessWidget {
@@ -49,25 +49,29 @@ class ConfirmDelete extends StatelessWidget {
                   spacing: 16,
                   children: [
                     Expanded(
-                      child: BudglyButton(
+                      child: FilledButton(
+                        style: ButtonType.outlined.filledStyle(theme, dense: true),
                         onPressed: () => Navigator.pop(context),
-                        type: ButtonType.outlined,
-                        text: tr.cancel,
-                        dense: true,
+                        child: Text(
+                          tr.cancel,
+                          style: ButtonType.outlined.labelStyle(theme, dense: true),
+                        ),
                       ),
                     ),
                     Expanded(
-                      child: BudglyButton(
-                      onPressed: () async {
-                        await onConfirm();
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      dense: true,
-                      type: ButtonType.error,
-                      text: tr.validate,
-                    ),
+                      child: FilledButton(
+                        style: ButtonType.error.filledStyle(theme, dense: true),
+                        onPressed: () async {
+                          await onConfirm();
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Text(
+                          tr.validate,
+                          style: ButtonType.error.labelStyle(theme, dense: true),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -82,14 +86,9 @@ class ConfirmDelete extends StatelessWidget {
 void showConfirmDelete(BuildContext context, {required String title, required String content, required Future<void> Function() onConfirm}) {
     final theme = Theme.of(context);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+    showAppBottomSheet(
+      context,
       backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (context) => ConfirmDelete(
           title: title,
           content: content,

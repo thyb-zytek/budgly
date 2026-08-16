@@ -1,9 +1,9 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/pages/settings/widgets/accounts/accounts_tab.dart';
-import 'package:budgly/src/pages/settings/widgets/accounts/view_model.dart';
-import 'package:budgly/src/pages/settings/widgets/categories/categories_tab.dart';
-import 'package:budgly/src/pages/settings/widgets/preferences/preferences_tab.dart';
-import 'package:budgly/src/pages/settings/widgets/profile/profile_tab.dart';
+import 'package:budgly/src/pages/settings/accounts/view_model.dart';
+import 'package:budgly/src/pages/settings/accounts/tab.dart';
+import 'package:budgly/src/pages/settings/categories/tab.dart';
+import 'package:budgly/src/pages/settings/preferences/tab.dart';
+import 'package:budgly/src/pages/settings/profile/tab.dart';
 import 'package:budgly/src/shared/widgets/tabs/swipe_tabs.dart';
 import 'package:flutter/material.dart';
 

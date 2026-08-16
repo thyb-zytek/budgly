@@ -1,12 +1,13 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/pages/settings/widgets/accounts/account_form.dart';
-import 'package:budgly/src/pages/settings/widgets/accounts/view_model.dart';
+import 'package:budgly/src/pages/settings/accounts/view_model.dart';
+import 'package:budgly/src/pages/settings/accounts/widgets/account_form.dart';
 import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
-import 'package:budgly/src/shared/widgets/accounts/default.dart';
-import 'package:budgly/src/shared/widgets/common/card.dart';
+import 'package:budgly/src/core/theme/component_styles.dart';
+import 'package:budgly/src/shared/widgets/accounts/account_view.dart';
+import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 class AccountsTab extends StatefulWidget {
@@ -61,7 +62,7 @@ class _AccountsTabState extends State<AccountsTab>
       animation: widget.accountsViewModel,
       builder: (context, child) {
         if (widget.accountsViewModel.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const AppLoadingIndicator();
         }
         final accounts = widget.accountsViewModel.accounts;
         final editingAccountId = widget.accountsViewModel.editingAccount?.id;
@@ -84,27 +85,34 @@ class _AccountsTabState extends State<AccountsTab>
                             itemCount: accounts.length,
                             itemBuilder: (context, index) {
                               final account = accounts[index];
-                              return BudglyCard(
-                                key: ValueKey(
-                                  account.id ?? identityHashCode(account),
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Card(
+                                  key: ValueKey(
+                                    account.id ?? identityHashCode(account),
+                                  ),
+                                  child: Padding(
+                                    padding: BudglyComponentStyles.cardPadding,
+                                    child:
+                                        (account.id != null &&
+                                            account.id != editingAccountId)
+                                        ? AccountView(
+                                            account: account,
+                                            onEdit: () =>
+                                                widget
+                                                        .accountsViewModel
+                                                        .editingAccount =
+                                                    account,
+                                            onDelete: () =>
+                                                _confirmDelete(account),
+                                          )
+                                        : AccountForm(
+                                            formKey: _formKey,
+                                            viewModel: widget.accountsViewModel,
+                                            account: account,
+                                          ),
+                                  ),
                                 ),
-                                child:
-                                    (account.id != null &&
-                                        account.id != editingAccountId)
-                                    ? AccountView(
-                                        account: account,
-                                        onEdit: () =>
-                                            widget
-                                                    .accountsViewModel
-                                                    .editingAccount =
-                                                account,
-                                        onDelete: () => _confirmDelete(account),
-                                      )
-                                    : AccountForm(
-                                        formKey: _formKey,
-                                        viewModel: widget.accountsViewModel,
-                                        account: account,
-                                      ),
                               );
                             },
                           )

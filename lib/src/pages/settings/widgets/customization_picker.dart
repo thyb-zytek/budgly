@@ -1,6 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/shared/widgets/tabs/tab.dart';
 import 'package:budgly/src/shared/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
@@ -102,18 +101,23 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
             spacing: 16,
             children: [
               Expanded(
-                child: BudglyButton(
-                  text: tr.cancel,
-                  type: ButtonType.error,
+                child: FilledButton(
+                  style: ButtonType.error.filledStyle(theme, dense: true),
                   onPressed: widget.onCancel,
-                  dense: true,
+                  child: Text(
+                    tr.cancel,
+                    style: ButtonType.error.labelStyle(theme, dense: true),
+                  ),
                 ),
               ),
               Expanded(
-                child: BudglyButton(
-                  text: tr.validate,
+                child: FilledButton(
+                  style: ButtonType.primary.filledStyle(theme, dense: true),
                   onPressed: widget.onValidate,
-                  dense: true,
+                  child: Text(
+                    tr.validate,
+                    style: ButtonType.primary.labelStyle(theme, dense: true),
+                  ),
                 ),
               ),
             ],

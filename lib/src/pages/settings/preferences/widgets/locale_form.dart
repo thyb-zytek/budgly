@@ -1,5 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/inputs/dropdown.dart';
+import 'package:budgly/src/shared/widgets/selector/selector.dart';
 import 'package:flutter/material.dart';
 
 class LocaleForm extends StatelessWidget {
@@ -34,27 +34,31 @@ class LocaleForm extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.5,
+                maxWidth: MediaQuery.of(context).size.width * 0.3,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(50),
                 shape: BoxShape.rectangle,
-                color: theme.colorScheme.surfaceContainer,
+                color: theme.colorScheme.surfaceContainerHighest,
               ),
-              child: DropDown(
-                dense: true,
-                initialValue: currentLocale,
-                options: AppLocalizations.supportedLocales,
-                onSelect: onLocaleChanged,
-                optionBuilder:
-                    (option, _) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      child: Text(option.languageCode.toUpperCase()),
-                    ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(50),
+                  color: theme.colorScheme.surfaceContainerHighest,
                 ),
-              ),  
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Selector<Locale>(
+                  items: const [Locale('en'), Locale('fr')],
+                  selectedItem: currentLocale,
+                  onSelect: onLocaleChanged,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  itemBuilder: (context, locale) =>
+                      Text(locale.languageCode.toUpperCase()),
+                ),
+              ),
             ),
+          ),
         ],
       ),
     );

@@ -1,13 +1,14 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/pages/settings/widgets/profile/view_model.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
-import 'package:budgly/src/core/exceptions/auth_exceptions.dart';
-import 'package:budgly/src/shared/widgets/inputs/constants.dart';
-import 'package:budgly/src/shared/widgets/snack_bar/snackbar.dart';
+import 'package:budgly/src/pages/settings/profile/view_model.dart';
+import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/snackbar.dart';
+import 'package:budgly/src/core/auth/auth_exception.dart';
+import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/widgets/user/details.dart';
 import 'package:budgly/src/shared/widgets/user/view_card.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -27,11 +28,10 @@ class _ProfileTabState extends State<ProfileTab> {
   void _onChangeName(String name) {
     _viewModel.onChangeName(name).then((_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBarMessage(
-            message: AppLocalizations.of(context)!.nameChangedSuccessfully,
-            type: SnackBarType.success,
-          ),
+        showAppSnackBar(
+          context,
+          message: AppLocalizations.of(context)!.nameChangedSuccessfully,
+          type: SnackBarType.success,
         );
       }
     });
@@ -42,26 +42,24 @@ class _ProfileTabState extends State<ProfileTab> {
         .changePassword()
         .then((_) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBarMessage(
-                message: AppLocalizations.of(
-                  context,
-                )!.passwordChangedSuccessfully,
-                type: SnackBarType.success,
-              ),
+            showAppSnackBar(
+              context,
+              message: AppLocalizations.of(
+                context,
+              )!.passwordChangedSuccessfully,
+              type: SnackBarType.success,
             );
           }
         })
         .onError((error, stackTrace) {
           if (!mounted) return;
           final exception = error as AuthenticationException;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBarMessage(
-              message: exception.code == "password-change-failed"
-                  ? AppLocalizations.of(context)!.passwordChangeFailed
-                  : exception.message,
-              type: SnackBarType.error,
-            ),
+          showAppSnackBar(
+            context,
+            message: exception.code == "password-change-failed"
+                ? AppLocalizations.of(context)!.passwordChangeFailed
+                : exception.message,
+            type: SnackBarType.error,
           );
         });
   }
@@ -70,14 +68,8 @@ class _ProfileTabState extends State<ProfileTab> {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: theme.colorScheme.surfaceContainerHighest,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    showAppBottomSheet(
+      context,
       builder: (context) {
         return SafeArea(
           top: false,
@@ -164,22 +156,26 @@ class _ProfileTabState extends State<ProfileTab> {
                     spacing: 16,
                     children: [
                       Expanded(
-                        child: BudglyButton(
-                          text: tr.cancel,
-                          type: ButtonType.error,
-                          dense: true,
+                        child: FilledButton(
+                          style: ButtonType.error.filledStyle(theme, dense: true),
                           onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            tr.cancel,
+                            style: ButtonType.error.labelStyle(theme, dense: true),
+                          ),
                         ),
                       ),
                       Expanded(
-                        child: BudglyButton(
-                          text: tr.validate,
-                          type: ButtonType.primary,
-                          dense: true,
+                        child: FilledButton(
+                          style: ButtonType.primary.filledStyle(theme, dense: true),
                           onPressed: () {
                             _onChangePassword();
                             Navigator.pop(context);
                           },
+                          child: Text(
+                            tr.validate,
+                            style: ButtonType.primary.labelStyle(theme, dense: true),
+                          ),
                         ),
                       ),
                     ],
@@ -196,12 +192,13 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return AnimatedBuilder(
       animation: _viewModel,
       builder: (context, child) {
         if (_viewModel.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const AppLoadingIndicator();
         }
 
         return Padding(
@@ -217,25 +214,46 @@ class _ProfileTabState extends State<ProfileTab> {
                 user: _viewModel.currentUser!,
                 onChangeName: _onChangeName,
               ),
-              BudglyButton(
-                text: tr.refreshProfile,
-                type: ButtonType.primary,
-                leadingIcon: Icons.refresh,
+              FilledButton.icon(
+                style: ButtonType.primary.filledStyle(theme),
                 onPressed: _viewModel.refreshUser,
+                iconAlignment: IconAlignment.start,
+                icon: Icon(
+                  Icons.refresh,
+                  color: ButtonType.primary.colors(theme).foreground,
+                ),
+                label: Text(
+                  tr.refreshProfile,
+                  style: ButtonType.primary.labelStyle(theme),
+                ),
               ),
               if (!_viewModel.currentUser!.isGoogleUser)
-                BudglyButton(
-                  text: tr.changePassword,
-                  type: ButtonType.tertiary,
-                  leadingIcon: Icons.lock,
+                FilledButton.icon(
+                  style: ButtonType.tertiary.filledStyle(theme),
                   onPressed: _displayChangePasswordDialog,
+                  iconAlignment: IconAlignment.start,
+                  icon: Icon(
+                    Icons.lock,
+                    color: ButtonType.tertiary.colors(theme).foreground,
+                  ),
+                  label: Text(
+                    tr.changePassword,
+                    style: ButtonType.tertiary.labelStyle(theme),
+                  ),
                 ),
               const Spacer(),
-              BudglyButton(
-                text: tr.logout,
-                type: ButtonType.error,
-                leadingIcon: Icons.logout,
+              FilledButton.icon(
+                style: ButtonType.error.filledStyle(theme),
                 onPressed: _viewModel.signOut,
+                iconAlignment: IconAlignment.start,
+                icon: Icon(
+                  Icons.logout,
+                  color: ButtonType.error.colors(theme).foreground,
+                ),
+                label: Text(
+                  tr.logout,
+                  style: ButtonType.error.labelStyle(theme),
+                ),
               ),
             ],
           ),

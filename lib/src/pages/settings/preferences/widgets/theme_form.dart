@@ -66,7 +66,7 @@ class ThemeForm extends StatelessWidget {
                             children: [
                               Icon(
                                 _getIcon(e),
-                                size: 22,
+                                size: 20,
                                 color: e == currentThemeMode
                                     ? theme.colorScheme.primary
                                     : theme.colorScheme.onSurfaceVariant.withAlpha(156),

@@ -1,4 +1,4 @@
-import 'package:budgly/src/shared/widgets/buttons/add_fab.dart';
+import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:flutter/material.dart';
 
 class AddEntity extends StatelessWidget {
@@ -18,9 +18,17 @@ class AddEntity extends StatelessWidget {
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 150),
                   opacity: disabled ? 0.4 : 1,
-                  child: AddFab(
-                    heroTag: heroTag,
-                    onPressed: onPressed,
+                  child: SizedBox(
+                    width: BudglyComponentStyles.fabSize,
+                    height: BudglyComponentStyles.fabSize,
+                    child: FloatingActionButton(
+                      heroTag: heroTag,
+                      onPressed: onPressed,
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: BudglyComponentStyles.fabIconSize,
+                      ),
+                    ),
                   ),
                 ),
               ),
