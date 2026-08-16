@@ -1,7 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/services/errors.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
 import 'package:flutter/material.dart';
 
 class ServiceUnavailableScreen extends StatelessWidget {
@@ -14,8 +13,9 @@ class ServiceUnavailableScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       body: SafeArea(
@@ -50,11 +50,18 @@ class ServiceUnavailableScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: BudglyButton(
-                      text: tr.reloadApp,
-                      leadingIcon: Icons.refresh,
+                    child: FilledButton.icon(
+                      style: ButtonType.primary.filledStyle(theme),
                       onPressed: _reloadApp,
-                      type: ButtonType.primary,
+                      iconAlignment: IconAlignment.start,
+                      icon: Icon(
+                        Icons.refresh,
+                        color: ButtonType.primary.colors(theme).foreground,
+                      ),
+                      label: Text(
+                        tr.reloadApp,
+                        style: ButtonType.primary.labelStyle(theme),
+                      ),
                     ),
                   ),
                 ],

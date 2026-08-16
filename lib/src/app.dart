@@ -1,11 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/loading/progressive_loader.dart';
-import 'package:budgly/src/core/routers/base.dart';
-import 'package:budgly/src/core/theme/theme.dart';
+import 'package:budgly/src/core/routers/navigation_helper.dart';
+import 'package:budgly/src/core/theme/material_theme.dart';
 import 'package:budgly/src/pages/error/service_unavailable.dart';
 import 'package:budgly/src/services/category_icons.dart';
-import 'package:budgly/src/services/preferences.dart';
 import 'package:budgly/src/services/errors.dart';
+import 'package:budgly/src/services/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -17,59 +17,32 @@ class BudglyApp extends StatefulWidget {
 }
 
 class _BudglyAppState extends State<BudglyApp> {
-  final PreferencesService _preferencesService = PreferencesService();
-  final CategoryIconsService _categoryIconsService =
-      CategoryIconsService.instance;
+  final ProfileService _profileService = ProfileService.instance;
+  final CategoryIconsService _categoryIconsService = CategoryIconsService.instance;
   final ErrorService _errorProvider = ErrorService.instance;
-  late ThemeMode _currentThemeMode;
-  late Locale _currentLocale;
 
   @override
   void initState() {
     super.initState();
-    _currentThemeMode = _preferencesService.themeMode;
-    _currentLocale = _preferencesService.locale;
-    _preferencesService.addListener(_handleThemeChange);
-    _preferencesService.addListener(_handleLocaleChange);
-    
-    // Progressive loading: load icons in background after essential app init
     _loadSecondaryData();
   }
-  
+
   Future<void> _loadSecondaryData() async {
     await ProgressiveLoader.loadEssentialOnly(
-      essentialData: () async {
-        // Essential: already loaded via _currentThemeMode and _currentLocale
-      },
+      essentialData: () async {},
       secondaryData: () async {
-        // Secondary: category icons can be loaded in background
         await _categoryIconsService.getIcons();
       },
-      onProgress: (progress) {
-        // Optional: track progress if needed
-      },
+      onProgress: (progress) {},
     );
   }
-
-  @override
-  void dispose() {
-    _preferencesService.removeListener(_handleThemeChange);
-    _preferencesService.removeListener(_handleLocaleChange);
-    super.dispose();
-  }
-
-  void _handleThemeChange() =>
-      setState(() => _currentThemeMode = _preferencesService.themeMode);
-
-  void _handleLocaleChange() =>
-      setState(() => _currentLocale = _preferencesService.locale);
 
   @override
   Widget build(BuildContext context) {
     final theme = MaterialTheme();
 
     return ListenableBuilder(
-      listenable: _errorProvider,
+      listenable: Listenable.merge([_profileService, _errorProvider]),
       builder: (context, child) {
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
@@ -77,8 +50,8 @@ class _BudglyAppState extends State<BudglyApp> {
           restorationScopeId: 'budgly_app',
           theme: theme.light(),
           darkTheme: theme.dark(),
-          themeMode: _currentThemeMode,
-          locale: _currentLocale,
+          themeMode: _profileService.themeMode,
+          locale: _profileService.locale,
           supportedLocales: const [Locale('en'), Locale('fr')],
           localizationsDelegates: const [
             AppLocalizations.delegate,

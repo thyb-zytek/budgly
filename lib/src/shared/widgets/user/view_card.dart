@@ -13,7 +13,7 @@ class UserCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainer,
+      color: theme.colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
