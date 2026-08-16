@@ -1,5 +1,4 @@
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/services/accounts.dart';
 import 'package:flutter/material.dart';
 
 class AccountsStore extends ChangeNotifier {
@@ -9,8 +8,6 @@ class AccountsStore extends ChangeNotifier {
     _instance ??= AccountsStore._();
     return _instance!;
   }
-
-  final AccountsService _accountsService = AccountsService.instance;
 
   List<Account> _accounts = [];
   bool _isLoading = false;
@@ -22,35 +19,20 @@ class AccountsStore extends ChangeNotifier {
 
   AccountsStore._();
 
-  Future<void> loadAccounts({bool forceRefresh = false}) async {
-    if (_hasLoaded && !forceRefresh) {
-      return;
-    }
-
-    _isLoading = true;
+  void setAccounts(List<Account> accounts) {
+    _accounts = List.from(accounts);
+    _accounts.sort((a, b) => a.name.compareTo(b.name));
     notifyListeners();
-
-    try {
-      _accounts = await _accountsService.listAccountsWithSignedUrls();
-      _accounts.sort((a, b) => a.name.compareTo(b.name));
-      _hasLoaded = true;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
   }
 
-  /// Busts the service-level cache AND forces a fresh fetch right away,
-  /// so the store is never left empty with no data on the way.
-  ///
-  /// Only call this when the server-side data may differ from what we
-  /// already know locally (e.g. a signed URL expired). If you just
-  /// performed a local mutation, use addAccount/updateAccount/
-  /// removeAccount instead - they already keep the store correct, and
-  /// calling invalidateCache() afterwards would only throw that away.
-  Future<void> invalidateCache() async {
-    _accountsService.invalidateCache();
-    await loadAccounts(forceRefresh: true);
+  void setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void setLoaded(bool loaded) {
+    _hasLoaded = loaded;
+    notifyListeners();
   }
 
   Account? getAccountById(String id) {
