@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/inputs/constants.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +20,14 @@ class ResetPasswordForm extends StatelessWidget {
     required this.onSubmitForm,
     required this.onSignInPressed,
   });
+
+  String? _translateEmailError(AppLocalizations tr, String? code) {
+    return switch (code) {
+      'emailRequired' => tr.emailRequired,
+      'emailInvalid' => tr.emailInvalid,
+      _ => code,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,21 +49,12 @@ class ResetPasswordForm extends StatelessWidget {
                   style: theme.textTheme.bodyMedium,
                 ),
                 TextInput(
-                  type: InputType.username,
+                  type: InputType.email,
                   controller: emailController,
                   labelText: tr.email,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) {
-                    String? result = validateEmail(v);
-                    if (result == "emailRequired") {
-                      return tr.emailRequired;
-                    } else if (result == "emailRequired") {
-                      return tr.emailRequired;
-                    } else {
-                      return result;
-                    }
-                  },
+                  hotValidating: (v) => _translateEmailError(tr, validateEmail(v)),
                 ),
               ],
             ),
@@ -79,7 +78,14 @@ class ResetPasswordForm extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(top: 24),
-          child: BudglyButton(text: tr.sendEmail, onPressed: onSubmitForm),
+          child: FilledButton(
+            style: ButtonType.primary.filledStyle(theme),
+            onPressed: onSubmitForm,
+            child: Text(
+              tr.sendEmail,
+              style: ButtonType.primary.labelStyle(theme),
+            ),
+          ),
         ),
       ],
     );

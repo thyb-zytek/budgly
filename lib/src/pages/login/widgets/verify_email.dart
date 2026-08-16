@@ -1,8 +1,7 @@
 import 'dart:async';
 
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/buttons/constants.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:flutter/material.dart';
 
 class VerifyEmail extends StatefulWidget {
@@ -47,6 +46,7 @@ class _VerifyEmailState extends State<VerifyEmail> {
   @override
   Widget build(BuildContext context) {
     AppLocalizations tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Center(
       child: Column(
@@ -62,17 +62,24 @@ class _VerifyEmailState extends State<VerifyEmail> {
           ),
           Padding(
             padding: EdgeInsets.only(top: 24),
-            child: BudglyButton(
-              text: tr.resendVerificationEmail,
+            child: FilledButton(
+              style: ButtonType.primary.filledStyle(theme),
               onPressed: widget.onResendPressed,
+              child: Text(
+                tr.resendVerificationEmail,
+                style: ButtonType.primary.labelStyle(theme),
+              ),
             ),
           ),
           Padding(
             padding: EdgeInsets.only(top: 8),
-            child: BudglyButton(
-              text: tr.signIn,
-              type: ButtonType.neutralVariant,
+            child: FilledButton(
+              style: ButtonType.neutralVariant.filledStyle(theme),
               onPressed: widget.onSignInPressed,
+              child: Text(
+                tr.signIn,
+                style: ButtonType.neutralVariant.labelStyle(theme),
+              ),
             ),
           ),
         ],
