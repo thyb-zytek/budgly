@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/buttons/button.dart';
-import 'package:budgly/src/shared/widgets/inputs/constants.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
@@ -29,6 +29,30 @@ class SignUpForm extends StatelessWidget {
     required this.onSubmitForm,
   });
 
+  String? _translateEmailError(AppLocalizations tr, String? code) {
+    return switch (code) {
+      'emailRequired' => tr.emailRequired,
+      'emailInvalid' => tr.emailInvalid,
+      _ => code,
+    };
+  }
+
+  String? _translatePasswordError(AppLocalizations tr, String? code) {
+    return switch (code) {
+      'passwordRequired' => tr.passwordRequired,
+      'passwordTooShort' => tr.passwordTooShort,
+      _ => code,
+    };
+  }
+
+  String? _translateConfirmPasswordError(AppLocalizations tr, String? code) {
+    return switch (code) {
+      'confirmPasswordRequired' => tr.passwordRequired,
+      'passwordsDoNotMatch' => tr.passwordsDontMatch,
+      _ => code,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     AppLocalizations tr = AppLocalizations.of(context)!;
@@ -45,21 +69,12 @@ class SignUpForm extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextInput(
-                  type: InputType.username,
+                  type: InputType.email,
                   controller: emailController,
                   labelText: tr.email,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  hotValidating: (v) {
-                    String? result = validateEmail(v);
-                    if (result == "emailRequired") {
-                      return tr.emailRequired;
-                    } else if (result == "emailRequired") {
-                      return tr.emailRequired;
-                    } else {
-                      return result;
-                    }
-                  },
+                  hotValidating: (v) => _translateEmailError(tr, validateEmail(v)),
                 ),
                 TextInput(
                   controller: passwordController,
@@ -67,16 +82,7 @@ class SignUpForm extends StatelessWidget {
                   type: InputType.password,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  hotValidating: (v) {
-                    String? result = validatePassword(v);
-                    if (result == "passwordRequired") {
-                      return tr.passwordRequired;
-                    } else if (result == "passwordTooShort") {
-                      return tr.passwordTooShort;
-                    } else {
-                      return result;
-                    }
-                  },
+                  hotValidating: (v) => _translatePasswordError(tr, validatePassword(v)),
                 ),
                 TextInput(
                   controller: password2Controller,
@@ -84,16 +90,7 @@ class SignUpForm extends StatelessWidget {
                   type: InputType.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) {
-                    String? result = validateConfirmPassword(v);
-                    if (result == "confirmPasswordRequired") {
-                      return tr.passwordRequired;
-                    } else if (result == "passwordsDoNotMatch") {
-                      return tr.passwordsDontMatch;
-                    } else {
-                      return result;
-                    }
-                  },
+                  hotValidating: (v) => _translateConfirmPasswordError(tr, validateConfirmPassword(v)),
                 ),
               ],
             ),
@@ -117,7 +114,14 @@ class SignUpForm extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(top: MediaQuery.of(context).viewInsets.bottom > 0 ? 24 : 8),
-          child: BudglyButton(text: tr.signUp, onPressed: onSubmitForm),
+          child: FilledButton(
+            style: ButtonType.primary.filledStyle(theme),
+            onPressed: onSubmitForm,
+            child: Text(
+              tr.signUp,
+              style: ButtonType.primary.labelStyle(theme),
+            ),
+          ),
         ),
       ],
     );

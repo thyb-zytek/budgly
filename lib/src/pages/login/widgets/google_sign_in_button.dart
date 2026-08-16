@@ -13,18 +13,25 @@ class GoogleSignInButton extends StatelessWidget {
 
     return OutlinedButton(
       onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        side: BorderSide(color: theme.colorScheme.outline),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.max,
         children: [
-          Image.network(
-            "https://www.gstatic.com/marketing-cms/assets/images/d5/dc/cfe9ce8b4425b410b49b7f2dd3f3/g.webp=s48-fcrop64=1,00000000ffffffff-rw",
+          Image.asset(
+            'assets/images/google.webp',
             height: 30,
           ),
           Expanded(
             child: Text(
               tr.googleSignIn,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge!.copyWith(
+              style: theme.textTheme.titleMedium!.copyWith(
                 color: theme.colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),

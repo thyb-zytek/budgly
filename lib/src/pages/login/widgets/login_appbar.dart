@@ -2,7 +2,9 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class LoginAppbar extends StatelessWidget {
-  const LoginAppbar({super.key});
+  final bool isCompact;
+
+  const LoginAppbar({super.key, this.isCompact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -10,9 +12,10 @@ class LoginAppbar extends StatelessWidget {
     AppLocalizations tr = AppLocalizations.of(context)!;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: MediaQuery.of(context).viewInsets.bottom > 0 ? 10 : 40,
+      spacing: isCompact ? 10 : 40,
       children: [
         Row(
           spacing: 24,
@@ -20,14 +23,16 @@ class LoginAppbar extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: 16),
-              child: Image.asset(
-                'assets/images/logo.png',
-                width: MediaQuery.of(context).viewInsets.bottom > 0 ? 100 : 125,
+              padding: const EdgeInsets.only(left: 16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                width: isCompact ? 100 : 125,
+                child: Image.asset('assets/images/logo.png'),
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.only(bottom: 24),
               child: Text(
                 "Budgly",
                 style: theme.textTheme.displayLarge!.copyWith(
@@ -38,12 +43,10 @@ class LoginAppbar extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             tr.appDescription,
-            style:  MediaQuery.of(context).viewInsets.bottom > 0 ? theme.textTheme.titleLarge!.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ): theme.textTheme.titleLarge!.copyWith(
+            style: theme.textTheme.titleLarge!.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
