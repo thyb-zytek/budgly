@@ -1,0 +1,31 @@
+* text=auto eol=lf
+
+*.dart text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.arb text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.plist text eol=lf
+*.xml text eol=lf
+*.sh text eol=lf
+*.gradle text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.lock text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.keystore binary
+*.jks binary
+*.p12 binary
+*.zip binary
+*.aab binary
+*.apk binary
