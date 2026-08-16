@@ -186,7 +186,7 @@
   "expensesByCategory": "Dépenses par catégorie",
   "noExpensesForPeriod": "Aucune dépense pour cette période",
   "addFirstExpenseHint": "Appuyez sur + pour ajouter votre première dépense.",
-  "remainingWeekend": "Reste / week-end",
+  "remainingWeekend": "Budget/semaines",
   "debited": "Débité {amount}",
   "@debited": {
     "placeholders": {
