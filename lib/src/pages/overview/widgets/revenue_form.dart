@@ -1,9 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/extensions/currency.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/shared/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/widgets/forms/form_actions.dart';
+import 'package:budgly/src/shared/widgets/inputs/currency_input.dart';
 import 'package:flutter/material.dart';
 
 class RevenueForm extends StatefulWidget {
@@ -62,44 +60,14 @@ class _RevenueFormState extends State<RevenueForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 8,
           children: [
-            TextInput(
+            CurrencyInput(
               controller: _controller,
+              currencyCode: widget.viewModel.currencyCode,
               labelText: tr.revenue,
-              type: InputType.currency,
-              suffix: Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Icon(
-                  widget.viewModel.currencyCode.currencyIcon,
-                  size: 20,
-                  opticalSize: 14,
-                  color: theme.colorScheme.onSurface.withAlpha(155),
-                ),
-              ),
-              textInputAction: TextInputAction.done,
-              hotValidating: (v) {
-                final amount = double.tryParse((v ?? '').replaceAll(',', '.'));
-                if (amount == null || amount <= 0) return tr.amountInvalid;
-                return null;
-              },
             ),
-            Row(
-              spacing: 16,
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    style: ButtonType.error.filledStyle(theme, dense: true),
-                    onPressed: widget.onClose,
-                    child: Text(tr.cancel),
-                  ),
-                ),
-                Expanded(
-                  child: FilledButton(
-                    style: ButtonType.primary.filledStyle(theme, dense: true),
-                    onPressed: _save,
-                    child: Text(tr.validate),
-                  ),
-                ),
-              ],
+            FormActions(
+              onCancel: widget.onClose,
+              onSubmit: _save,
             ),
           ],
         ),

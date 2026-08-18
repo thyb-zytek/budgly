@@ -1,6 +1,6 @@
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/shared/widgets/avatar/avatar.dart';
+import 'package:budgly/src/shared/widgets/layout/avatar.dart';
 import 'package:flutter/material.dart';
 
 class AccountView extends StatelessWidget {
