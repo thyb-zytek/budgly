@@ -20,5 +20,13 @@ class AccountBudgetsStore extends ChangeNotifier {
 
   void clear(String key) {
     _loadedKeys.remove(key);
+    _budgets.remove(key);
+    notifyListeners();
+  }
+
+  void clearAll() {
+    _loadedKeys.clear();
+    _budgets.clear();
+    notifyListeners();
   }
 }

@@ -14,6 +14,7 @@ class ExpensesStore extends ChangeNotifier {
   final Map<String, List<Expense>> _expensesByAccount = {};
   final Set<String> _loadedAccounts = {};
   bool _isLoading = false;
+  int _loadingCount = 0;
 
   Map<String, List<Expense>> get expensesByAccount => _expensesByAccount;
   bool get isLoading => _isLoading;
@@ -33,28 +34,58 @@ class ExpensesStore extends ChangeNotifier {
     return null;
   }
 
+  void beginLoading() {
+    _loadingCount++;
+    if (!_isLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
+  }
+
+  void endLoading() {
+    if (_loadingCount > 0) _loadingCount--;
+    if (_loadingCount == 0 && _isLoading) {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
+    if (value) {
+      beginLoading();
+    } else {
+      _loadingCount = 0;
+      if (_isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
   }
 
   void setExpensesForAccount(String accountId, List<Expense> expenses) {
-    _expensesByAccount[accountId] = expenses;
+    final sorted = List<Expense>.from(expenses)
+      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _expensesByAccount[accountId] = sorted;
     _loadedAccounts.add(accountId);
     notifyListeners();
   }
 
   void addExpense(Expense expense) {
-    _expensesByAccount.putIfAbsent(expense.accountId, () => []);
-    _expensesByAccount[expense.accountId]!.insert(0, expense);
+    final list = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
+    list.add(expense);
+    list.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     notifyListeners();
   }
 
   void updateExpense(Expense expense) {
-    final list = _expensesByAccount[expense.accountId];
-    if (list == null) return;
-    final index = list.indexWhere((e) => e.id == expense.id);
-    if (index != -1) list[index] = expense;
+    // Remove the previous copy first so this also works if accountId changes.
+    for (final list in _expensesByAccount.values) {
+      list.removeWhere((e) => e.id == expense.id);
+    }
+
+    final list = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
+    list.add(expense);
+    list.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     notifyListeners();
   }
 
@@ -72,5 +103,6 @@ class ExpensesStore extends ChangeNotifier {
   void clearAll() {
     _expensesByAccount.clear();
     _loadedAccounts.clear();
+    notifyListeners();
   }
 }

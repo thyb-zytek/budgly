@@ -9,18 +9,15 @@ class ProfileStore extends ChangeNotifier {
     _instance ??= ProfileStore._();
     return _instance!;
   }
-
-  // État du Profil
   User? _currentUser;
   bool _isLoading = false;
+  int _loadingCount = 0;
   bool _hasLoaded = false;
 
-  // État des Préférences
   ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale(AppConstants.defaultLocale);
   String _currency = AppConstants.defaultCurrency;
 
-  // Getters
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   bool get hasLoaded => _hasLoaded;
@@ -36,9 +33,32 @@ class ProfileStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void beginLoading() {
+    _loadingCount++;
+    if (!_isLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
+  }
+
+  void endLoading() {
+    if (_loadingCount > 0) _loadingCount--;
+    if (_loadingCount == 0 && _isLoading) {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+    if (loading) {
+      beginLoading();
+    } else {
+      _loadingCount = 0;
+      if (_isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
   }
 
   void setPreferences({ThemeMode? themeMode, Locale? locale, String? currency}) {
