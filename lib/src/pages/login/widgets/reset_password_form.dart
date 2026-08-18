@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
+import 'package:budgly/src/pages/login/widgets/auth_validators.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
@@ -20,14 +21,6 @@ class ResetPasswordForm extends StatelessWidget {
     required this.onSubmitForm,
     required this.onSignInPressed,
   });
-
-  String? _translateEmailError(AppLocalizations tr, String? code) {
-    return switch (code) {
-      'emailRequired' => tr.emailRequired,
-      'emailInvalid' => tr.emailInvalid,
-      _ => code,
-    };
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +47,7 @@ class ResetPasswordForm extends StatelessWidget {
                   labelText: tr.email,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) => _translateEmailError(tr, validateEmail(v)),
+                  hotValidating: (v) => AuthValidators.translateEmailError(tr, validateEmail(v)),
                 ),
               ],
             ),

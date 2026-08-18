@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
+import 'package:budgly/src/pages/login/widgets/auth_validators.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
@@ -44,22 +45,6 @@ class LoginForm extends StatelessWidget {
     }
   }
 
-  String? _translateEmailError(AppLocalizations tr, String? code) {
-    return switch (code) {
-      'emailRequired' => tr.emailRequired,
-      'emailInvalid' => tr.emailInvalid,
-      _ => code,
-    };
-  }
-
-  String? _translatePasswordError(AppLocalizations tr, String? code) {
-    return switch (code) {
-      'passwordRequired' => tr.passwordRequired,
-      'passwordTooShort' => tr.passwordTooShort,
-      _ => code,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     ThemeData theme = Theme.of(context);
@@ -90,7 +75,7 @@ class LoginForm extends StatelessWidget {
                   labelText: tr.email,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  hotValidating: (v) => _translateEmailError(tr, validateEmail(v)),
+                  hotValidating: (v) => AuthValidators.translateEmailError(tr, validateEmail(v)),
                 ),
                 TextInput(
                   controller: passwordController,
@@ -98,7 +83,7 @@ class LoginForm extends StatelessWidget {
                   type: InputType.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) => _translatePasswordError(tr, validatePassword(v)),
+                  hotValidating: (v) => AuthValidators.translatePasswordError(tr, validatePassword(v)),
                 ),
                 TextButton(
                   onPressed: onResetPassword,

@@ -9,6 +9,7 @@ import 'package:budgly/src/pages/login/widgets/login_loading_page.dart';
 import 'package:budgly/src/services/accounts.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +19,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
   late final LoginViewModel _viewModel = LoginViewModel(
     onAuthenticated: (user) async {
       if (!mounted) return;
@@ -38,12 +40,22 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    _initFormType();
+  }
+
+  Future<void> _initFormType() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasLaunched = prefs.getBool('hasLaunched') ?? false;
+    if (!mounted) return;
     _viewModel.handleEvent(
       AuthEventParams(
         type: AuthEvent.changeFormType,
-        formType: AuthForm.signUp,
+        formType: hasLaunched ? AuthForm.signIn : AuthForm.signUp,
       ),
     );
+    if (!hasLaunched) {
+      await prefs.setBool('hasLaunched', true);
+    }
   }
 
   @override
@@ -129,6 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   LoginFormSwitcher(
                                     viewModel: _viewModel,
+                                    formKey: _formKey,
                                     onEvent: (event) =>
                                         _viewModel.handleEvent(event),
                                   ),
