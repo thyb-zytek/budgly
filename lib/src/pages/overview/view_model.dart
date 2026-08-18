@@ -5,6 +5,7 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/accounts.dart';
 import 'package:budgly/src/services/accounts_budget.dart';
@@ -28,14 +29,12 @@ class OverviewViewModel extends BaseViewModel {
   Account? _account;
   bool _isSaving = false;
 
-  // Banner de revenu : visible tant que le revenu du compte + période
-  // sélectionnés n'est pas configuré. Évaluée à chaque changement de
-  // période ou de compte, une seule fois par couple (compte, période).
   bool _showRevenueEditor = false;
   String? _lastRevenueEvaluationKey;
 
-  // Par défaut, la période correspond au mois courant.
   Period _selectedPeriod = Period.current();
+  List<ExpenseOccurrence>? _cachedPeriodOccurrences;
+  String? _periodOccurrencesCacheKey;
 
   late final ExpenseEditingData editingData = ExpenseEditingData(
     nameController: TextEditingController(),
@@ -52,6 +51,7 @@ class OverviewViewModel extends BaseViewModel {
 
   void _onServiceChanged() {
     _syncSelectedAccount();
+    _invalidatePeriodOccurrencesCache();
     _maybeShowRevenueEditor();
     if (!isDisposed) notifyListeners();
   }
@@ -81,18 +81,44 @@ class OverviewViewModel extends BaseViewModel {
   Future<void> loadAccounts({bool needLoading = true}) async {
     if (hasAccountsLoaded) return;
     if (needLoading) setLoading(true);
-    await _accountsService.loadAccounts();
-    setLoading(false);
+    try {
+      await _accountsService.loadAccounts();
+    } finally {
+      if (needLoading) setLoading(false);
+      if (!isDisposed) notifyListeners();
+    }
+  }
+
+  /// Force-refresh all data for the current account (pull-to-refresh).
+  Future<void> refreshAll() async {
+    final accountId = _account?.id;
+
+    await _accountsService.loadAccounts(forceRefresh: true);
+
+    if (accountId != null) {
+      await Future.wait([
+        _categoriesService.listCategoriesByAccount(accountId, forceRefresh: true),
+        _expensesService.listExpensesByAccount(accountId, forceRefresh: true),
+        _accountBudgetsService.loadRevenue(
+          accountId,
+          _selectedPeriod.year,
+          _selectedPeriod.month,
+          forceRefresh: true,
+        ),
+      ]);
+    }
+
+    _invalidatePeriodOccurrencesCache();
+    _lastRevenueEvaluationKey = null;
     if (!isDisposed) notifyListeners();
   }
 
   Account? get account => _account;
 
-  // Gère correctement le changement de compte pour rafraîchir les
-  // données dépendantes (catégories, dépenses, revenu).
   set account(Account? value) {
     if (_account?.id == value?.id) return;
     _account = value;
+    _invalidatePeriodOccurrencesCache();
     notifyListeners();
 
     if (value?.id == null) return;
@@ -107,8 +133,6 @@ class OverviewViewModel extends BaseViewModel {
     _maybeShowRevenueEditor();
   }
 
-  // --- Période ---
-
   Period get selectedPeriod => _selectedPeriod;
   Period get minPeriod => Period.current().addMonths(-12);
   Period get maxPeriod => Period.current().addMonths(3);
@@ -116,6 +140,7 @@ class OverviewViewModel extends BaseViewModel {
   set selectedPeriod(Period value) {
     if (_selectedPeriod == value) return;
     _selectedPeriod = value;
+    _invalidatePeriodOccurrencesCache();
     notifyListeners();
     _ensureRevenueLoaded();
     _maybeShowRevenueEditor();
@@ -127,8 +152,6 @@ class OverviewViewModel extends BaseViewModel {
       _accountBudgetsService.loadRevenue(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
     }
   }
-
-  // --- Banner de revenu ---
 
   bool get showRevenueEditor => _showRevenueEditor;
 
@@ -142,10 +165,6 @@ class OverviewViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
   }
 
-  /// Affiche la banner tant que le revenu du compte + période
-  /// sélectionnés n'est pas configuré. Attend le chargement asynchrone
-  /// du revenu (via _onServiceChanged) et ne se rejoue qu'une fois par
-  /// couple (compte, période).
   void _maybeShowRevenueEditor() {
     final accountId = _account?.id;
     if (accountId == null) return;
@@ -161,8 +180,6 @@ class OverviewViewModel extends BaseViewModel {
       if (!isDisposed) notifyListeners();
     }
   }
-
-  // --- Revenu (AccountBudget) ---
 
   String formatRevenue(double value) {
     return formatCurrency(
@@ -192,8 +209,32 @@ class OverviewViewModel extends BaseViewModel {
     return _expensesService.getExpensesForAccount(_account!.id!);
   }
 
-  List<Expense> get periodExpenses =>
-      expenses.where((e) => _selectedPeriod.contains(e.debitDate)).toList();
+  void _invalidatePeriodOccurrencesCache() {
+    _cachedPeriodOccurrences = null;
+    _periodOccurrencesCacheKey = null;
+  }
+
+  String get _currentPeriodCacheKey =>
+      '${_account?.id}_${_selectedPeriod.year}_${_selectedPeriod.month}';
+
+  List<ExpenseOccurrence> get periodOccurrences {
+    if (_account?.id == null) return [];
+    final key = _currentPeriodCacheKey;
+    if (_cachedPeriodOccurrences != null && _periodOccurrencesCacheKey == key) {
+      return _cachedPeriodOccurrences!;
+    }
+    final result = <ExpenseOccurrence>[];
+    for (final expense in expenses) {
+      result.addAll(expandExpenseOccurrences(expense, _selectedPeriod));
+    }
+    result.sort((a, b) {
+      if (a.isDebited != b.isDebited) return a.isDebited ? 1 : -1;
+      return a.date.compareTo(b.date);
+    });
+    _cachedPeriodOccurrences = result;
+    _periodOccurrencesCacheKey = key;
+    return result;
+  }
 
   bool get hasExpensesLoaded =>
       _account?.id != null && _expensesService.hasLoadedAccount(_account!.id!);
@@ -203,39 +244,35 @@ class OverviewViewModel extends BaseViewModel {
   Future<void> loadExpenses({bool needLoading = true}) async {
     if (_account?.id == null) return;
     if (needLoading) setLoading(true);
-    await _expensesService.listExpensesByAccount(_account!.id!);
-    setLoading(false);
-    if (!isDisposed) notifyListeners();
+    try {
+      await _expensesService.listExpensesByAccount(_account!.id!);
+      _invalidatePeriodOccurrencesCache();
+    } finally {
+      if (needLoading) setLoading(false);
+      if (!isDisposed) notifyListeners();
+    }
   }
 
-  double get totalExpenses => periodExpenses.fold(0.0, (sum, e) => sum + e.amount);
+  double get totalExpenses =>
+      periodOccurrences.fold(0.0, (sum, occurrence) => sum + occurrence.amount);
   double get remaining => revenue - totalExpenses;
 
-  // --- Budget par week-end ---
-
-  /// Nombre de week-ends restants dans la période, uniquement pertinent
-  /// pour le mois EN COURS → null sinon.
   int? get remainingWeekendsInPeriod {
     if (_selectedPeriod != Period.current()) return null;
     return _selectedPeriod.remainingWeekends();
   }
 
-  /// Montant "à dépenser par week-end" pour tenir le reste du mois :
-  /// reste / nombre de week-ends restants. Null si non applicable
-  /// (période différente du mois en cours).
   double? get weeklyBudget {
     final weekends = remainingWeekendsInPeriod;
     if (weekends == null) return null;
 
-    // On divise par 1 au minimum pour éviter la division par zéro s'il
-    // ne reste aucun week-end.
     return remaining / (weekends > 0 ? weekends : 1);
   }
 
   List<CategoryExpenseSummary> get categorySummaries {
-    final byCategory = <String, List<Expense>>{};
-    for (final expense in periodExpenses) {
-      byCategory.putIfAbsent(expense.categoryId, () => []).add(expense);
+    final byCategory = <String, List<ExpenseOccurrence>>{};
+    for (final occurrence in periodOccurrences) {
+      byCategory.putIfAbsent(occurrence.categoryId, () => []).add(occurrence);
     }
 
     final summaries = <CategoryExpenseSummary>[];
@@ -246,11 +283,11 @@ class OverviewViewModel extends BaseViewModel {
       double debited = 0;
       double undebited = 0;
       int undebitedCount = 0;
-      for (final expense in entry.value) {
-        if (expense.isDebited == true) {
-          debited += expense.amount;
+      for (final occurrence in entry.value) {
+        if (occurrence.isDebited) {
+          debited += occurrence.amount;
         } else {
-          undebited += expense.amount;
+          undebited += occurrence.amount;
           undebitedCount++;
         }
       }
@@ -341,6 +378,7 @@ class OverviewViewModel extends BaseViewModel {
   }
 
   Future<bool> createExpense() async {
+    if (_isSaving) return false;
     final formAccount = editingData.account;
     final category = editingData.category;
     if (formAccount?.id == null || category?.id == null) return false;
@@ -377,6 +415,7 @@ class OverviewViewModel extends BaseViewModel {
     _categoriesService.removeListener(_onServiceChanged);
     _expensesService.removeListener(_onServiceChanged);
     _accountBudgetsService.removeListener(_onServiceChanged);
+    _profileService.removeListener(_onServiceChanged);
     editingData.nameController.dispose();
     editingData.amountController.dispose();
     super.dispose();
