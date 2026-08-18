@@ -59,4 +59,32 @@ class ExpenseFirestore {
       return false;
     }
   }
+
+  Future<void> deleteByAccountId(String accountId) async {
+    try {
+      final snapshot = await _collection.where('accountId', isEqualTo: accountId).get();
+      if (snapshot.docs.isEmpty) return;
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      AppLogger.error('Failed to delete expenses for account $accountId', e);
+    }
+  }
+
+  Future<void> deleteByCategoryId(String categoryId) async {
+    try {
+      final snapshot = await _collection.where('categoryId', isEqualTo: categoryId).get();
+      if (snapshot.docs.isEmpty) return;
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      AppLogger.error('Failed to delete expenses for category $categoryId', e);
+    }
+  }
 }

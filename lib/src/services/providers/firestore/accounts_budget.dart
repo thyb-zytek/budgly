@@ -29,4 +29,18 @@ class AccountBudgetFirestore {
     await _collection.doc(id).set(budget.toMap(), SetOptions(merge: true));
     return budget.copyWith(id: id);
   }
+
+  Future<void> deleteByAccountId(String accountId) async {
+    try {
+      final snapshot = await _collection
+          .where('accountId', isEqualTo: accountId)
+          .get();
+      if (snapshot.docs.isEmpty) return;
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (_) {}
+  }
 }

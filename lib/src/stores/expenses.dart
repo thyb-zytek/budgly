@@ -100,6 +100,16 @@ class ExpensesStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearCategoryCache(String categoryId) {
+    bool changed = false;
+    for (final list in _expensesByAccount.values) {
+      final before = list.length;
+      list.removeWhere((e) => e.categoryId == categoryId);
+      if (list.length != before) changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
   void clearAll() {
     _expensesByAccount.clear();
     _loadedAccounts.clear();

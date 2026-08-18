@@ -59,4 +59,9 @@ class AccountBudgetsService {
       _store.set(_key(accountId, year, month), updated);
     }
   }
+
+  Future<void> deleteByAccountId(String accountId) async {
+    await _provider.deleteByAccountId(accountId);
+    _store.clearByAccountId(accountId);
+  }
 }

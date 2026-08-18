@@ -6,6 +6,7 @@ import 'package:budgly/src/stores/accounts.dart';
 import 'providers/supabase/accounts.dart';
 import 'providers/supabase/storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/foundation.dart';
 
 class AccountsService {
   static AccountsService? _instance;
@@ -29,6 +30,7 @@ class AccountsService {
 
   AccountsService._();
 
+  Listenable get changeNotifier => _store;
   List<Account> get accounts => _store.accounts;
   bool get isLoading => _store.isLoading;
   bool get hasLoaded => _store.hasLoaded;
@@ -201,6 +203,14 @@ class AccountsService {
     return _storageSupabase.deleteFile(
       bucketId: _bucketId,
       filePath: fullPath,
+    );
+  }
+
+  Future<void> deleteAccountFolder(String accountId) async {
+    final folderPath = '$_currentUserId/$accountId';
+    await _storageSupabase.deleteFolder(
+      bucketId: _bucketId,
+      folderPath: folderPath,
     );
   }
 
