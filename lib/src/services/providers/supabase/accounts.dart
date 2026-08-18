@@ -23,11 +23,13 @@ class AccountSupabase {
   }
 
   Future<Account?> update(Account account) async {
+    final id = account.id;
+    if (id == null) return null;
     final response =
         await supabase
             .from('accounts')
             .update(account.toJson())
-            .eq('id', account.id!)
+            .eq('id', id)
             .select()
             .single();
     return Account.fromJson(response);

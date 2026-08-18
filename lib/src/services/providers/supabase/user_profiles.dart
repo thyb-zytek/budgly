@@ -9,66 +9,74 @@ class UserProfileSupabase {
 
   Future<UserProfile?> getProfile(String userId) async {
     try {
-      final response =
-          await _client.from('user_profiles').select().eq('user_id', userId).single();
+      return await _getProfile(userId);
+    } on sb.PostgrestException catch (e) {
+      if (e.code == 'PGRST116') return null;
+      if (!_isJwtError(e)) rethrow;
+
+      // Supabase is using the Firebase ID token supplied by the
+      // `accessToken` callback. A Supabase `refreshSession()` does not refresh
+      // that Firebase token, so force-refresh Firebase and retry the request.
+      final firebaseUser = fb.FirebaseAuth.instance.currentUser;
+      if (firebaseUser == null) rethrow;
+      await firebaseUser.getIdToken(true);
+      return await _getProfile(userId);
+    }
+  }
+
+  Future<UserProfile?> _getProfile(String userId) async {
+    try {
+      final response = await _client
+          .from('user_profiles')
+          .select()
+          .eq('user_id', userId)
+          .single();
       return UserProfile.fromJson(response);
     } on sb.PostgrestException catch (e) {
-      if (e.code == 'PGRST116') {
-        return null;
-      }
-      // Handle JWT errors - usually due to clock sync issues
-      if (e.code == 'PGRST303' || e.message.contains('JWT')) {
-        // Try to refresh the auth session
-        try {
-          await sb.Supabase.instance.client.auth.refreshSession();
-          // Retry the request
-          final response =
-              await _client.from('user_profiles').select().eq('user_id', userId).single();
-          return UserProfile.fromJson(response);
-        } catch (_) {
-          rethrow;
-        }
-      }
+      if (e.code == 'PGRST116') return null;
       rethrow;
     }
   }
+
+  bool _isJwtError(sb.PostgrestException e) =>
+      e.code == 'PGRST303' || e.message.toLowerCase().contains('jwt');
 
   Future<UserProfile> createProfile(
     String userId,
     Map<String, dynamic> json,
   ) async {
-    json.remove('accounts');
+    final payload = Map<String, dynamic>.from(json)
+      ..remove('accounts')
+      ..['user_id'] = userId;
 
-    try {
-      final response =
-          await _client
-              .from('user_profiles')
-              .update(json)
-              .eq('user_id', userId)
-              .select()
-              .single();
-      return UserProfile.fromJson(response);
-    } catch (_) {
-      final response =
-          await _client.from('user_profiles').insert(json).select().single();
-      return UserProfile.fromJson(response);
-    }
+    final response = await _client
+        .from('user_profiles')
+        .upsert(payload, onConflict: 'user_id')
+        .select()
+        .single();
+
+    return UserProfile.fromJson(response);
   }
 
   Future<UserProfile> getOrCreateProfile(fb.User firebaseUser) async {
     final profile = await getProfile(firebaseUser.uid);
-    if (profile != null) {
-      return profile;
+    if (profile != null) return profile;
+
+    final payload = UserProfile(
+      id: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      fullName: firebaseUser.displayName ??
+          firebaseUser.email?.split('@').first ??
+          'User',
+    ).toJson();
+
+    try {
+      return await createProfile(firebaseUser.uid, payload);
+    } on sb.PostgrestException catch (e) {
+      if (!_isJwtError(e)) rethrow;
+      await firebaseUser.getIdToken(true);
+      return await createProfile(firebaseUser.uid, payload);
     }
-    return createProfile(
-      firebaseUser.uid,
-      UserProfile(
-        id: firebaseUser.uid,
-        email: firebaseUser.email!,
-        fullName:
-            firebaseUser.displayName ?? firebaseUser.email!.split('@').first,
-      ).toJson(),
-    );
   }
 
   Future<bool> updateProfile(

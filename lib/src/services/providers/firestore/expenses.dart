@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -43,7 +44,8 @@ class ExpenseFirestore {
     try {
       await _collection.doc(expense.id).update(expense.toUpdateMap());
       return true;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('Failed to update expense ${expense.id}', e);
       return false;
     }
   }
@@ -52,7 +54,8 @@ class ExpenseFirestore {
     try {
       await _collection.doc(expenseId).delete();
       return true;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('Failed to delete expense $expenseId', e);
       return false;
     }
   }
