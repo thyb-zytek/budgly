@@ -4,14 +4,12 @@
   "appDescription": "Manage your budget in a simple way.",
   "overviewLink": "Overview",
   "settingsLink": "Settings",
-  "noOptionsAvailable": "No options available",
   "invalidCurrency": "Invalid currency amount.",
   "invalidDate": "Invalid date.",
   "userHasAccount": "Already have an account?",
   "userHasNoAccount": "Don't have an account?",
   "signIn": "Sign in",
   "signUp": "Sign up",
-  "signOut": "Sign out",
   "sendEmail": "Send email",
   "email": "Email",
   "emailRequired": "Please provide an email.",
@@ -35,7 +33,6 @@
   },
   "resendVerificationEmail": "Resend verification email",
   "emailAlreadyInUse": "Email already in use.",
-  "wrongPassword": "Incorrect password.",
   "invalidCredentials": "Invalid credentials.",
   "userNotFound": "User not found.",
   "notAvailable": "Not Available",
@@ -48,43 +45,22 @@
   "light": "Light",
   "dark": "Dark",
   "system": "System",
-  "connecting": "Connecting...",
   "signingIn": "Signing in...",
   "signingUp": "Creating account...",
   "resettingPassword": "Sending reset email...",
   "verifyingEmail": "Verifying email...",
-  "sendingVerification": "Sending verification email...",
   "googleSigningIn": "Signing in with Google...",
-  "errorChangingPassword": "An error occurred while changing password",
-  "errorChangingPasswordFailed": "Failed to change password",
-  "errorSignUpFailed": "Failed to sign up",
-  "errorSignInFailed": "Failed to sign in",
-  "errorResetPasswordFailed": "Failed to reset password",
-  "errorSendEmailVerificationFailed": "Failed to send email verification",
-  "errorGoogleSignInFailed": "An error occurred during Google Sign-In",
-  "errorGoogleAuthProcess": "An error occurred during Google authentication process",
-  "errorFailedToCreateUser": "Failed to create user",
-  "errorFailedToCreateAccount": "Failed to create account",
-  "errorFailedToUpdateAccount": "Failed to update account",
-  "errorFailedToDeleteAccount": "Failed to delete account",
-  "errorFailedToCreateCategory": "Failed to create category",
-  "errorFailedToUpdateCategory": "Failed to update category",
-  "errorFailedToDeleteCategory": "Failed to delete category",
-  "newAccount": "New account",
-  "newCategory": "New category",
   "locale": "Locale",
   "currency": "Currency",
   "accountName": "Account name",
   "nameRequired": "Name is required.",
   "validate": "Validate",
   "cancel": "Cancel",
-  "delete": "Delete",
   "commonError": "Error",
   "cropImage": "Adjust image",
   "pickImage": "Pick image",
   "picture": "Picture",
   "color": "Color",
-  "accountCreateFailed": "Account creation failed.",
   "confirmDeleteAccount": "Delete account: {accountName}",
   "@confirmDeleteAccount": {
     "placeholders": {
@@ -121,8 +97,8 @@
     }
   },
   "icon": "Icon",
-  "accountCategory": "Account category",
   "noAccountFound": "No account found. Please add one to start.",
+  "noAccountForCategories": "No account found. Create an account first to manage categories.",
   "categoryName": "Category name",
   "noCategoryFound": "No category found.",
   "searchIcon": "Search icon",
@@ -138,7 +114,7 @@
   "passwordChangeFailed": "Changing password failed",
   "passwordChangedSuccessfully": "Password changed successfully",
   "serviceUnavailableTitle": "Service temporarily unavailable",
-  "serviceUnavailableMessage": "We’re having trouble connecting you to our services right now. This could be due to an unstable internet connection or temporary maintenance.",
+  "serviceUnavailableMessage": "We're having trouble connecting you to our services right now. This could be due to an unstable internet connection or temporary maintenance.",
   "reloadApp": "Reload",
   "avatarCustomization": "Avatar customization",
   "selectAccountToManageCategories": "Select an account to manage its categories",
@@ -157,19 +133,14 @@
   "editExpense": "Edit expense",
   "accountRequired": "Account is required",
   "categoryRequired": "Category is required",
-  "nameRequired": "Name is required",
   "amountInvalid": "Amount is invalid",
-  "expenseCreatedSuccessfully": "Expense created successfully",
-  "expenseCreationFailed": "Expense creation failed",
   "noCategoryForAccount": "No category available for this account",
-  "expenseFormTitle": "New expense",
   "category": "Category",
   "activity": "Activity",
   "amount": "Amount",
   "advancedOptions": "Advanced options",
   "recurrence": "Recurrence",
   "recurrenceNone": "None",
-  "recurrenceOnce": "Once",
   "recurrenceDaily": "Daily",
   "recurrenceWeekly": "Weekly",
   "recurrenceMonthly": "Monthly",
@@ -205,6 +176,57 @@
       }
     }
   },
+  "markAsDebited": "Mark as debited",
+  "expenseMarkedAsDebited": "Expense marked as debited",
+  "expenseMarkedAsPending": "Expense marked as pending",
+  "markDebitedOccurrence": "Only marks the {date} occurrence",
+  "@markDebitedOccurrence": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "createdOnDate": "Created on",
+  "debitedOnDate": "Debited on",
+  "deleteExpense": "Delete expense",
+  "noExpensesForCategory": "No expenses for this category yet",
+  "noExpensesForCategoryHint": "Add an expense with this category from the overview to see it here.",
+  "swipeHint": "Swipe",
+  "confirmDeleteExpense": "Delete expense: {expenseName}",
+  "@confirmDeleteExpense": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteExpenseMessage": "The expense [{expenseName}] will be deleted permanently, are you sure you want to delete this expense?",
+  "@confirmDeleteExpenseMessage": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
+  "expenseDeletedSuccessfully": "Expense deleted successfully",
+  "expenseUpdatedSuccessfully": "Expense updated successfully",
+  "expenseUpdateFailed": "Expense update failed",
   "tutorial": "Tutorial",
-  "settingsDev": "Settings (Dev)"
+  "settingsDev": "Settings (Dev)",
+  "tutorialWelcome": "Welcome to Budgly!",
+  "tutorialWelcomeDescription": "Set up your first account to start tracking your expenses.",
+  "tutorialStepAccounts": "Create an account",
+  "tutorialStepAccountsDescription": "An account represents a bank account or wallet.",
+  "tutorialStepCategories": "Add a category",
+  "tutorialStepCategoriesDescription": "Categorize your expenses to better understand your spending.",
+  "tutorialStepBudget": "Set your budget",
+  "tutorialStepBudgetDescription": "Define your monthly revenue to track what's remaining. You can skip this step.",
+  "tutorialGetStarted": "Get started",
+  "tutorialNext": "Next",
+  "tutorialSkip": "Skip",
+  "tutorialFinish": "Let's go!",
+  "tutorialDefaultAccountName": "Main account",
+  "tutorialDefaultCategoryName": "Category name",
+  "tutorialLogoutConfirm": "Are you sure you want to log out? Your setup progress will be lost."
 }
