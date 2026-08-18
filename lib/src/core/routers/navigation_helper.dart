@@ -1,10 +1,12 @@
 import 'package:budgly/src/core/auth/auth_session.dart';
+import 'package:budgly/src/pages/category_expenses/view.dart';
 import 'package:budgly/src/pages/login/view.dart';
 import 'package:budgly/src/pages/overview/view.dart';
 import 'package:budgly/src/pages/settings/view.dart';
 import 'package:budgly/src/pages/tutorial/view.dart';
 import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/models/budget/period.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:budgly/src/shared/widgets/bottom_navbar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +37,27 @@ class NavigationHelper {
   static const String tutorialPath = '/tutorial';
   static const String overviewPath = '/overview';
   static const String settingsPath = '/settings';
+  static const String categoryExpensesPath = '/overview/category';
+
+  /// Builds the deep-link path to a category expenses page.
+  static String buildCategoryExpensesPath(
+    String accountId,
+    String categoryId,
+    Period? period,
+  ) {
+    final path = '$categoryExpensesPath/$accountId/$categoryId';
+    if (period == null) return path;
+    return '$path?year=${period.year}&month=${period.month}';
+  }
+
+  static Period _parsePeriod(GoRouterState state) {
+    final year = int.tryParse(state.uri.queryParameters['year'] ?? '');
+    final month = int.tryParse(state.uri.queryParameters['month'] ?? '');
+    if (year == null || month == null || month < 1 || month > 12) {
+      return Period.current();
+    }
+    return Period(year: year, month: month);
+  }
 
   factory NavigationHelper() => _instance;
 
@@ -62,6 +85,21 @@ class NavigationHelper {
                 path: overviewPath,
                 pageBuilder: (context, state) =>
                     getPage(child: const OverviewPage(), state: state),
+                routes: [
+                  GoRoute(
+                    path: 'category/:accountId/:categoryId',
+                    pageBuilder: (context, state) {
+                      return getPage(
+                        child: CategoryExpensesPage(
+                          accountId: state.pathParameters['accountId']!,
+                          categoryId: state.pathParameters['categoryId']!,
+                          period: _parsePeriod(state),
+                        ),
+                        state: state,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -97,7 +135,7 @@ class NavigationHelper {
       refreshListenable: AuthSessionNotifier.instance,
       routes: routes,
       redirect: (BuildContext context, GoRouterState state) async {
-        final user = ProfileService.instance.currentUser;
+        final user = fb.FirebaseAuth.instance.currentUser;
         final isLoggingIn = state.matchedLocation == NavigationHelper.loginPath;
 
         if (user == null && !isLoggingIn) {
@@ -116,7 +154,7 @@ class NavigationHelper {
               return NavigationHelper.tutorialPath;
             }
           } catch (_) {
-            return NavigationHelper.tutorialPath;
+            return NavigationHelper.overviewPath;
           }
         }
 

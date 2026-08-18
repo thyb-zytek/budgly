@@ -28,16 +28,12 @@ class Period {
   bool isBefore(Period other) => _ordinal < other._ordinal;
   bool isAfter(Period other) => _ordinal > other._ordinal;
 
-  /// Ex: "Décembre 2023" (première lettre capitalisée).
   String label(String localeName) {
     final formatted = DateFormat.yMMMM(localeName).format(startOfMonth);
     if (formatted.isEmpty) return formatted;
     return formatted[0].toUpperCase() + formatted.substring(1);
   }
 
-  /// Compte le nombre de weekends restants dans le mois.
-  /// Un weekend est défini par la présence d'un Samedi. 
-  /// Si "today" tombe un dimanche, ce weekend en cours est pris en compte.
   int remainingWeekends({DateTime? now}) {
     final today = now ?? DateTime.now();
     if (!contains(today)) return 0;

@@ -3,10 +3,10 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 extension HexColor on Color {
   static Color fromHex(String hexString) {
-    final buffer = StringBuffer();
-    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-    buffer.write(hexString.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
+    var hex = hexString.replaceFirst('#', '');
+    if (hex.length == 6) hex = 'ff$hex';
+    if (hex.length == 8) hex = hex;
+    return Color(int.parse(hex, radix: 16));
   }
 
   String toHex({bool leadingHashSign = true, bool includeAlpha = true}) {

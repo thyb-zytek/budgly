@@ -40,7 +40,8 @@ class User {
               ? Uri.parse(firebaseUser.photoURL!)
               : null,
       provider:
-          firebaseUser.providerData.first.providerId == 'google.com'
+          firebaseUser.providerData.isNotEmpty &&
+                  firebaseUser.providerData.first.providerId == 'google.com'
               ? AuthProvider.google
               : AuthProvider.email,
       profile: profile,
