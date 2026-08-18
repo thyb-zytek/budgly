@@ -6,6 +6,7 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/models/category/category_editing_data.dart';
 import 'package:budgly/src/services/categories.dart';
+import 'package:budgly/src/services/expenses.dart';
 import 'package:budgly/src/shared/view_models/category_form_view_model.dart';
 import 'package:flutter/material.dart';
 
@@ -146,6 +147,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
   @override
   Future<void> removeCategory(Category category) async {
     if (category.id != null) {
+      await ExpensesService.instance.deleteByCategoryId(category.id!);
       await _categoriesService.deleteCategory(category.id!);
     } else {
       _localCategories.removeWhere((c) => identical(c, category));

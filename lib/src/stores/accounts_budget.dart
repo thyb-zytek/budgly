@@ -29,4 +29,15 @@ class AccountBudgetsStore extends ChangeNotifier {
     _budgets.clear();
     notifyListeners();
   }
+
+  void clearByAccountId(String accountId) {
+    final prefix = '${accountId}_';
+    final keysToRemove = _loadedKeys.where((k) => k.startsWith(prefix)).toList();
+    if (keysToRemove.isEmpty) return;
+    for (final key in keysToRemove) {
+      _loadedKeys.remove(key);
+      _budgets.remove(key);
+    }
+    notifyListeners();
+  }
 }

@@ -118,6 +118,16 @@ class ExpensesService {
 
   Expense? getExpenseById(String expenseId) => _store.getExpenseById(expenseId);
 
+  Future<void> deleteByAccountId(String accountId) async {
+    await _expenseFirestore.deleteByAccountId(accountId);
+    _store.clearAccountCache(accountId);
+  }
+
+  Future<void> deleteByCategoryId(String categoryId) async {
+    await _expenseFirestore.deleteByCategoryId(categoryId);
+    _store.clearCategoryCache(categoryId);
+  }
+
   /// Marks the occurrence of [expense] on [date] as debited.
   ///
   /// For one-off expenses this flips the expense flag; for recurring ones

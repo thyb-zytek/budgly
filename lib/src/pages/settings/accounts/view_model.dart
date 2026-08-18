@@ -1,20 +1,16 @@
-import 'dart:io';
 import 'dart:math';
 
 import 'package:budgly/src/core/loading/progressive_loader.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts.dart';
+import 'package:budgly/src/services/accounts_budget.dart';
+import 'package:budgly/src/services/expenses.dart';
 import 'package:budgly/src/services/image.dart';
 import 'package:budgly/src/models/account/account_editing_data.dart';
+import 'package:budgly/src/shared/services/account_image_helper.dart';
 import 'package:budgly/src/shared/view_models/account_form_view_model.dart';
 import 'package:flutter/material.dart';
-
-class _ImageProcessResult {
-  final String fileName;
-  final File file;
-  _ImageProcessResult(this.fileName, this.file);
-}
 
 class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
   final AccountsService _accountsService = AccountsService.instance;
@@ -108,9 +104,9 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
   @override
   Future<void> removeAccount(Account account) async {
     if (account.id != null) {
-      if (account.picture != null) {
-        await _accountsService.deletePicture(account.picture!, account.id!);
-      }
+      await ExpensesService.instance.deleteByAccountId(account.id!);
+      await AccountBudgetsService.instance.deleteByAccountId(account.id!);
+      await _accountsService.deleteAccountFolder(account.id!);
       await _accountsService.deleteAccount(account.id!);
     } else {
       _localAccounts.removeWhere((a) => identical(a, account));
@@ -141,23 +137,15 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
     }
   }
 
-  Future<_ImageProcessResult?> _prepareImage() async {
-    if (_editingData.picture == null || !_editingData.isLocalPicture) return null;
-
-    final fileName = "${DateTime.now().millisecondsSinceEpoch}_${_editingData.picture!.split('/').last}";
-    final file = await ImageService.persistFile(_editingData.picture!, fileName);
-
-    return file != null ? _ImageProcessResult(fileName, file) : null;
+  Future<ImageProcessResult?> _prepareImage() async {
+    return AccountImageHelper.prepareImage(
+      _editingData.picture,
+      isLocal: _editingData.isLocalPicture,
+    );
   }
 
-  Future<Account> _uploadAndLinkImage(Account account, _ImageProcessResult image) async {
-    try {
-      await _accountsService.uploadPicture(image.file, account.id!, image.fileName);
-      final url = await _accountsService.getSignedUrl(image.fileName, account.id!);
-      return account.copyWith(pictureUrl: url);
-    } catch (_) {
-      return account; 
-    }
+  Future<Account> _uploadAndLinkImage(Account account, ImageProcessResult image) async {
+    return AccountImageHelper.uploadAndLinkImage(_accountsService, account, image);
   }
 
   @override
@@ -191,7 +179,7 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
     setLoading(true);
     try {
       String? currentFileName = account.picture;
-      _ImageProcessResult? imageToUpload;
+      ImageProcessResult? imageToUpload;
 
       if (_editingData.picture != account.pictureUrl && _editingData.picture != account.picture) {
         if (account.picture != null) {

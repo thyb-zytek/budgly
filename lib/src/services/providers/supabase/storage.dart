@@ -56,4 +56,16 @@ class StorageSupabase {
     await _client.storage.from(bucketId).remove([filePath]);
     return true;
   }
+
+  Future<void> deleteFolder({
+    required String bucketId,
+    required String folderPath,
+  }) async {
+    try {
+      final files = await _client.storage.from(bucketId).list(path: folderPath);
+      if (files.isEmpty) return;
+      final paths = files.map((f) => '$folderPath/${f.name}').toList();
+      await _client.storage.from(bucketId).remove(paths);
+    } catch (_) {}
+  }
 }
