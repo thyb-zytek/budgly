@@ -14,7 +14,6 @@ import 'package:budgly/src/services/expenses.dart';
 import 'package:budgly/src/services/profile.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
-import 'package:budgly/src/stores/accounts.dart';
 import 'package:flutter/material.dart';
 
 class OverviewViewModel extends BaseViewModel {
@@ -23,8 +22,6 @@ class OverviewViewModel extends BaseViewModel {
   final ExpensesService _expensesService = ExpensesService.instance;
   final AccountBudgetsService _accountBudgetsService = AccountBudgetsService.instance;
   final ProfileService _profileService = ProfileService.instance;
-
-  final AccountsStore _accountsStore = AccountsStore.instance;
 
   Account? _account;
   bool _isSaving = false;
@@ -42,7 +39,7 @@ class OverviewViewModel extends BaseViewModel {
   );
 
   OverviewViewModel() {
-    _accountsStore.addListener(_onServiceChanged);
+    _accountsService.changeNotifier.addListener(_onServiceChanged);
     _categoriesService.addListener(_onServiceChanged);
     _expensesService.addListener(_onServiceChanged);
     _accountBudgetsService.addListener(_onServiceChanged);
@@ -53,7 +50,11 @@ class OverviewViewModel extends BaseViewModel {
     _syncSelectedAccount();
     _invalidatePeriodOccurrencesCache();
     _maybeShowRevenueEditor();
-    if (!isDisposed) notifyListeners();
+    if (!isDisposed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!isDisposed) notifyListeners();
+      });
+    }
   }
 
   void _syncSelectedAccount() {
@@ -119,7 +120,7 @@ class OverviewViewModel extends BaseViewModel {
     if (_account?.id == value?.id) return;
     _account = value;
     _invalidatePeriodOccurrencesCache();
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
 
     if (value?.id == null) return;
 
@@ -141,7 +142,7 @@ class OverviewViewModel extends BaseViewModel {
     if (_selectedPeriod == value) return;
     _selectedPeriod = value;
     _invalidatePeriodOccurrencesCache();
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
     _ensureRevenueLoaded();
     _maybeShowRevenueEditor();
   }
@@ -322,7 +323,7 @@ class OverviewViewModel extends BaseViewModel {
     final categories = categoriesForSelectedAccount();
     editingData.category = categories.isNotEmpty ? categories.first : null;
 
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
   }
 
   Future<void> selectFormAccount(Account formAccount) async {
@@ -330,7 +331,7 @@ class OverviewViewModel extends BaseViewModel {
 
     editingData.account = formAccount;
     editingData.category = null;
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
 
     if (formAccount.id != null &&
         !_categoriesService.hasLoadedAccount(formAccount.id!)) {
@@ -346,22 +347,22 @@ class OverviewViewModel extends BaseViewModel {
 
   void selectFormCategory(Category category) {
     editingData.category = category;
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
   }
 
   void setDebitDate(DateTime date) {
     editingData.debitDate = date;
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
   }
 
   void setRecurrence(RecurrenceType recurrence) {
     editingData.recurrence = recurrence;
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
   }
 
   void toggleAdvancedOptions() {
     editingData.showAdvancedOptions = !editingData.showAdvancedOptions;
-    notifyListeners();
+    if (!isDisposed) notifyListeners();
   }
 
   String? validate(AppLocalizations tr) {
@@ -411,7 +412,7 @@ class OverviewViewModel extends BaseViewModel {
 
   @override
   void dispose() {
-    _accountsStore.removeListener(_onServiceChanged);
+    _accountsService.changeNotifier.removeListener(_onServiceChanged);
     _categoriesService.removeListener(_onServiceChanged);
     _expensesService.removeListener(_onServiceChanged);
     _accountBudgetsService.removeListener(_onServiceChanged);
