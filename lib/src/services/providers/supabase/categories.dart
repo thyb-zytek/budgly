@@ -7,7 +7,7 @@ class CategorySupabase {
     final response =
         await supabase
             .from('categories')
-            .select('*, account:accounts(*)')
+            .select()
             .eq('account_id', accountId);
 
     return (response as List<dynamic>)
@@ -20,16 +20,18 @@ class CategorySupabase {
         await supabase
             .from('categories')
             .insert(category.toJson())
-            .select('*, account:accounts(*)')
+            .select()
             .single();
     return Category.fromJson(response);
   }
 
   Future<bool> update(Category category) async {
+    final id = category.id;
+    if (id == null) return false;
     await supabase
         .from('categories')
         .update(category.toJson())
-        .eq('id', category.id!);
+        .eq('id', id);
     return true;
   }
 
