@@ -2,7 +2,6 @@
   "@@locale": "fr",
   "appTitle": "Budgly",
   "appDescription": "Gérer votre budget en toute simplicité.",
-  "noOptionsAvailable": "Aucune options disponible",
   "overviewLink": "Budget",
   "settingsLink": "Paramètres",
   "invalidCurrency": "La valeur doit être un montant valide.",
@@ -11,7 +10,6 @@
   "userHasNoAccount": "Vous n'avez pas de compte ?",
   "signIn": "Se connecter",
   "signUp": "S'inscrire",
-  "signOut": "Se déconnecter",
   "sendEmail": "Envoyer le mail",
   "email": "Adresse mail",
   "emailRequired": "Veuillez fournir une adresse mail.",
@@ -35,7 +33,6 @@
   },
   "resendVerificationEmail": "Renvoyer l'email de vérification",
   "emailAlreadyInUse": "Cette adresse mail est déjà utilisée par un autre compte.",
-  "wrongPassword": "Mot de passe incorrect.",
   "invalidCredentials": "Identifiants incorrect.",
   "userNotFound": "Utilisateur introuvable.",
   "notAvailable": "Non disponible",
@@ -48,43 +45,22 @@
   "light": "Clair",
   "dark": "Sombre",
   "system": "Système",
-  "connecting": "Connexion en cours...",
   "signingIn": "Connexion en cours...",
   "signingUp": "Création du compte...",
   "resettingPassword": "Envoi de l'email de réinitialisation...",
   "verifyingEmail": "Vérification de l'email...",
-  "sendingVerification": "Envoi de l'email de vérification...",
   "googleSigningIn": "Connexion avec Google...",
-  "errorChangingPassword": "Une erreur est survenue lors du changement de mot de passe",
-  "errorChangingPasswordFailed": "Échec du changement de mot de passe",
-  "errorSignUpFailed": "Échec de l'inscription",
-  "errorSignInFailed": "Échec de la connexion",
-  "errorResetPasswordFailed": "Échec de la réinitialisation du mot de passe",
-  "errorSendEmailVerificationFailed": "Échec de l'envoi de l'email de vérification",
-  "errorGoogleSignInFailed": "Une erreur est survenue lors de la connexion Google",
-  "errorGoogleAuthProcess": "Une erreur est survenue lors du processus d'authentification Google",
-  "errorFailedToCreateUser": "Échec de la création de l'utilisateur",
-  "errorFailedToCreateAccount": "Échec de la création du compte",
-  "errorFailedToUpdateAccount": "Échec de la mise à jour du compte",
-  "errorFailedToDeleteAccount": "Échec de la suppression du compte",
-  "errorFailedToCreateCategory": "Échec de la création de la catégorie",
-  "errorFailedToUpdateCategory": "Échec de la mise à jour de la catégorie",
-  "errorFailedToDeleteCategory": "Échec de la suppression de la catégorie",
-  "newAccount": "Nouveau compte",
-  "newCategory": "Nouvelle catégorie",
   "locale": "Langue",
   "currency": "Devise",
   "accountName": "Nom du compte",
   "nameRequired": "Le nom est obligatoire.",
   "validate": "Valider",
   "cancel": "Annuler",
-  "delete": "Supprimer",
   "commonError": "Erreur",
   "cropImage": "Ajuster l'image",
   "pickImage": "Sélectionner une image",
   "picture": "Image",
   "color": "Couleur",
-  "accountCreateFailed": "Création du compte échouée.",
   "confirmDeleteAccount": "Supprimer le compte : {accountName}",
   "@confirmDeleteAccount": {
     "placeholders": {
@@ -121,8 +97,8 @@
     }
   },
   "icon": "Icône",
-  "accountCategory": "Catégorie du compte",
   "noAccountFound": "Aucun compte trouvé, ajoutez-en un pour commencer.",
+  "noAccountForCategories": "Aucun compte trouvé. Créez d'abord un compte pour gérer les catégories.",
   "categoryName": "Nom de la catégorie",
   "noCategoryFound": "Aucune catégorie trouvée.",
   "searchIcon": "Rechercher une icône",
@@ -157,20 +133,14 @@
   "editExpense": "Modifier une dépense",
   "accountRequired": "Le compte est requis",
   "categoryRequired": "La catégorie est requise",
-  "nameRequired": "Le nom est requis",
   "amountInvalid": "Le montant est invalide",
-  "expenseCreatedSuccessfully": "Dépense créée avec succès",
-  "expenseCreationFailed": "Échec de la création de la dépense",
   "noCategoryForAccount": "Aucune catégorie disponible pour ce compte",
-  "expenseFormTitle": "Nouvelle dépense",
   "category": "Catégorie",
-  "noCategoryForAccount": "Aucune catégorie disponible pour ce compte",
   "activity": "Activité",
   "amount": "Montant",
   "advancedOptions": "Options avancées",
   "recurrence": "Récurrence",
   "recurrenceNone": "Aucune",
-  "recurrenceOnce": "Une fois",
   "recurrenceDaily": "Quotidien",
   "recurrenceWeekly": "Hebdomadaire",
   "recurrenceMonthly": "Mensuel",
@@ -206,6 +176,57 @@
       }
     }
   },
+  "markAsDebited": "Marquer comme débité",
+  "expenseMarkedAsDebited": "Dépense marquée comme débitée",
+  "expenseMarkedAsPending": "Dépense remise en attente",
+  "markDebitedOccurrence": "Marque uniquement l'échéance du {date}",
+  "@markDebitedOccurrence": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "createdOnDate": "Créée le",
+  "debitedOnDate": "Débité le",
+  "deleteExpense": "Supprimer la dépense",
+  "noExpensesForCategory": "Aucune dépense pour cette catégorie pour le moment",
+  "noExpensesForCategoryHint": "Ajoutez une dépense avec cette catégorie depuis la page Budget pour la voir ici.",
+  "swipeHint": "Glissez",
+  "confirmDeleteExpense": "Supprimer la dépense : {expenseName}",
+  "@confirmDeleteExpense": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteExpenseMessage": "La suppression de la dépense [{expenseName}] est définitive, êtes-vous sûr de vouloir supprimer cette dépense ?",
+  "@confirmDeleteExpenseMessage": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
+  "expenseDeletedSuccessfully": "Dépense supprimée avec succès",
+  "expenseUpdatedSuccessfully": "Dépense mise à jour avec succès",
+  "expenseUpdateFailed": "Échec de la mise à jour de la dépense",
   "tutorial": "Tutoriel",
-  "settingsDev": "Paramètres (Dev)"
+  "settingsDev": "Paramètres (Dev)",
+  "tutorialWelcome": "Bienvenue sur Budgly !",
+  "tutorialWelcomeDescription": "Configure ton premier compte pour commencer à suivre tes dépenses.",
+  "tutorialStepAccounts": "Créer un compte",
+  "tutorialStepAccountsDescription": "Un compte représente un compte bancaire ou un portefeuille.",
+  "tutorialStepCategories": "Ajouter une catégorie",
+  "tutorialStepCategoriesDescription": "Classe tes dépenses pour mieux comprendre tes habitudes.",
+  "tutorialStepBudget": "Définir ton budget",
+  "tutorialStepBudgetDescription": "Définis tes revenus mensuels pour suivre ce qu'il te reste. Tu peux passer cette étape.",
+  "tutorialGetStarted": "Commencer",
+  "tutorialNext": "Suivant",
+  "tutorialSkip": "Passer",
+  "tutorialFinish": "C'est parti !",
+  "tutorialDefaultAccountName": "Compte principal",
+  "tutorialDefaultCategoryName": "Nom de la catégorie",
+  "tutorialLogoutConfirm": "Es-tu sûr de vouloir te déconnecter ? Ta progression sera perdue."
 }
