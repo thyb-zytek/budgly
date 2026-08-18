@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/routers/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:budgly/src/models/budget/period.dart';
@@ -11,6 +12,7 @@ import 'package:budgly/src/shared/widgets/categories/category_expenses.dart';
 import 'package:budgly/src/shared/widgets/empty_state/empty_state.dart';
 import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class OverviewPage extends StatefulWidget {
   const OverviewPage({super.key});
@@ -69,79 +71,96 @@ class _OverviewPageState extends State<OverviewPage> {
         final summaries = _viewModel.categorySummaries;
 
         return Scaffold(
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: PeriodSelector(
-                  period: _viewModel.selectedPeriod,
-                  minPeriod: _viewModel.minPeriod,
-                  maxPeriod: _viewModel.maxPeriod,
-                  onChanged: _onPeriodChanged,
-                ),
-              ),
-
-              SliverToBoxAdapter(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _viewModel.showRevenueEditor
-                      ? RevenueForm(
-                          key: const ValueKey('revenue-editor'),
-                          viewModel: _viewModel,
-                          onClose: _viewModel.closeRevenueEditor,
-                        )
-                      : const SizedBox.shrink(key: ValueKey('revenue-editor-hidden')),
-                ),
-              ),
-
-              SliverPadding(
-                padding: const EdgeInsets.all(16.0),
-                sliver: SliverToBoxAdapter(
-                  child: SummaryCard(
-                    viewModel: _viewModel,
-                    onEditRevenue: _viewModel.openRevenueEditor,
+          body: RefreshIndicator(
+            onRefresh: _viewModel.refreshAll,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: PeriodSelector(
+                    period: _viewModel.selectedPeriod,
+                    minPeriod: _viewModel.minPeriod,
+                    maxPeriod: _viewModel.maxPeriod,
+                    onChanged: _onPeriodChanged,
                   ),
                 ),
-              ),
 
-              if (summaries.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: EmptyState(
-                    icon: Icons.receipt_long_rounded,
-                    title: tr.noExpensesForPeriod,
-                    subtitle: tr.addFirstExpenseHint,
+                SliverToBoxAdapter(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: _viewModel.showRevenueEditor
+                        ? RevenueForm(
+                            key: const ValueKey('revenue-editor'),
+                            viewModel: _viewModel,
+                            onClose: _viewModel.closeRevenueEditor,
+                          )
+                        : const SizedBox.shrink(key: ValueKey('revenue-editor-hidden')),
                   ),
-                )
-              else ...[
+                ),
+
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  padding: const EdgeInsets.all(16.0),
                   sliver: SliverToBoxAdapter(
-                    child: Text(
-                      tr.expensesByCategory,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                    child: SummaryCard(
+                      viewModel: _viewModel,
+                      onEditRevenue: _viewModel.openRevenueEditor,
                     ),
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-                  sliver: SliverList.separated(
-                    itemCount: summaries.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      return CategoryExpenses(
-                        summary: summaries[index],
-                        currencyCode: _viewModel.currencyCode,
-                        localeName: _viewModel.localeName,
-                      );
-                    },
+
+                if (summaries.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: EmptyState(
+                      icon: Icons.receipt_long_rounded,
+                      title: tr.noExpensesForPeriod,
+                      subtitle: tr.addFirstExpenseHint,
+                    ),
+                  )
+                else ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    sliver: SliverToBoxAdapter(
+                      child: Text(
+                        tr.expensesByCategory,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
                   ),
-                ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                    sliver: SliverList.separated(
+                      itemCount: summaries.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final summary = summaries[index];
+                        final categoryId = summary.category.id;
+
+                        return CategoryExpenses(
+                          summary: summary,
+                          currencyCode: _viewModel.currencyCode,
+                          localeName: _viewModel.localeName,
+                          onTap: categoryId == null || _viewModel.account?.id == null
+                              ? null
+                              : () {
+                                  context.push(
+                                    NavigationHelper.buildCategoryExpensesPath(
+                                      _viewModel.account!.id!,
+                                      categoryId,
+                                      _viewModel.selectedPeriod,
+                                    ),
+                                  );
+                                },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
           floatingActionButton: FloatingActionButton(
             heroTag: "create_expense",
