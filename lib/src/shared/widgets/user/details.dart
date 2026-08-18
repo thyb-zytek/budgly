@@ -28,6 +28,12 @@ class _UserDetailsState extends State<UserDetails> {
     super.initState();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   void _displayEditName() {
     setState(() {
       _isEditingName = true;

@@ -3,6 +3,21 @@ import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/shared/widgets/selector/selector.dart';
 import 'package:flutter/material.dart';
 
+/// Localized label of a [RecurrenceType].
+String recurrenceLabel(AppLocalizations tr, RecurrenceType recurrence) {
+  return switch (recurrence) {
+    RecurrenceType.none => tr.recurrenceNone,
+    RecurrenceType.daily => tr.recurrenceDaily,
+    RecurrenceType.weekly => tr.recurrenceWeekly,
+    RecurrenceType.monthly => tr.recurrenceMonthly,
+    RecurrenceType.yearly => tr.recurrenceYearly,
+    RecurrenceType.bimonthly => tr.recurrenceBiMonthly,
+    RecurrenceType.trimonthly => tr.recurrenceTriMonthly,
+    RecurrenceType.halfyearly => tr.recurrenceHalfYearly,
+    RecurrenceType.biyearly => tr.recurrenceBiYearly,
+  };
+}
+
 class RecurrenceSelector extends StatelessWidget {
   final RecurrenceType selectedRecurrence;
   final ValueChanged<RecurrenceType> onRecurrenceChanged;
@@ -24,20 +39,9 @@ class RecurrenceSelector extends StatelessWidget {
       maxHeight: 300,
       onSelect: onRecurrenceChanged,
       itemBuilder: (context, recurrence) {
-        final label = switch (recurrence) {
-          RecurrenceType.none => tr.recurrenceNone,
-          RecurrenceType.daily => tr.recurrenceDaily,
-          RecurrenceType.weekly => tr.recurrenceWeekly,
-          RecurrenceType.monthly => tr.recurrenceMonthly,
-          RecurrenceType.yearly => tr.recurrenceYearly,
-          RecurrenceType.bimonthly => tr.recurrenceBiMonthly,
-          RecurrenceType.trimonthly => tr.recurrenceTriMonthly,
-          RecurrenceType.halfyearly => tr.recurrenceHalfYearly,
-          RecurrenceType.biyearly => tr.recurrenceBiYearly,
-        };
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-          child: Text(label),
+          child: Text(recurrenceLabel(tr, recurrence)),
         );
       },
     );

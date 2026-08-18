@@ -57,7 +57,7 @@ class Avatar extends StatelessWidget {
             ),
           ),
         ),
-        if (canRemove)
+        if (canRemove && onRemove != null)
           Positioned(
             top: -2,
             right: -2,
@@ -68,7 +68,7 @@ class Avatar extends StatelessWidget {
               shadowColor: Colors.black26,
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: onRemove!,
+                onTap: onRemove,
                 child: Padding(
                   padding: const EdgeInsets.all(6),
                   child: Icon(

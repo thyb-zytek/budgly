@@ -24,9 +24,27 @@ class CategoryView extends StatelessWidget {
     return Row(
       spacing: 16,
       children: [
-        CategoryIconView(icon: category.icon!, color: category.color!),
+        if (category.icon != null)
+          CategoryIconView(
+            icon: category.icon!,
+            color: category.color ?? Colors.grey,
+          )
+        else
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: category.color ?? Colors.grey,
+            ),
+            child: Icon(
+              Icons.category,
+              color: Theme.of(context).colorScheme.onPrimary,
+              size: 48 * 0.6,
+            ),
+          ),
         Expanded(
-          child: Text(category.name!, style: theme.textTheme.titleLarge),
+          child: Text(category.name ?? '', style: theme.textTheme.titleLarge),
         ),
         if (onEdit != null || onDelete != null)
           Row(
