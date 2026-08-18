@@ -6,9 +6,10 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/models/category/category_editing_data.dart';
 import 'package:budgly/src/services/categories.dart';
+import 'package:budgly/src/shared/view_models/category_form_view_model.dart';
 import 'package:flutter/material.dart';
 
-class CategoriesViewModel extends BaseViewModel {
+class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel {
   static const CategoryIcon _defaultIcon = CategoryIcon(
     iconName: 'category',
     iconPack: 'material',
@@ -62,7 +63,8 @@ class CategoriesViewModel extends BaseViewModel {
   bool get isCreatingCategory => _localCategories.isNotEmpty;
 
   Category? get editingCategory => _editingCategory;
-  CategoryEditingData get editingData => _editingData;
+  @override
+  CategoryEditingData get categoryEditingData => _editingData;
 
   set editingCategory(Category? category) {
     _editingCategory = category;
@@ -78,6 +80,7 @@ class CategoriesViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
   }
 
+  @override
   void cancelEdit() {
     _editingCategory = null;
     _nameController.clear();
@@ -94,19 +97,20 @@ class CategoriesViewModel extends BaseViewModel {
   Future<void> loadCategories({bool needLoading = true}) async {
     if (_account?.id == null) return;
     if (needLoading) setLoading(true);
-
-    await ProgressiveLoader.loadEssentialOnly(
-      essentialData: () async {
-        await _categoriesService.listCategoriesByAccount(_account!.id!);
-        await _categoriesService.loadAvailableIcons();
-        _editingData.availableIcons = _categoriesService.availableIcons;
-      },
-      secondaryData: () async {},
-      onProgress: (progress) {},
-    );
-
-    setLoading(false);
-    if (!isDisposed) notifyListeners();
+    try {
+      await ProgressiveLoader.loadEssentialOnly(
+        essentialData: () async {
+          await _categoriesService.listCategoriesByAccount(_account!.id!);
+          await _categoriesService.loadAvailableIcons();
+          _editingData.availableIcons = _categoriesService.availableIcons;
+        },
+        secondaryData: () async {},
+        onProgress: (progress) {},
+      );
+    } finally {
+      if (needLoading) setLoading(false);
+      if (!isDisposed) notifyListeners();
+    }
   }
 
   Future<void> addCategory() async {
@@ -139,18 +143,17 @@ class CategoriesViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
   }
 
+  @override
   Future<void> removeCategory(Category category) async {
     if (category.id != null) {
       await _categoriesService.deleteCategory(category.id!);
-      if (_account?.id != null) {
-        _categoriesService.invalidateAccountCache(_account!.id!);
-      }
     } else {
       _localCategories.removeWhere((c) => identical(c, category));
     }
     if (!isDisposed) notifyListeners();
   }
 
+  @override
   Future<void> createCategory(Category category) async {
     if (_account?.id == null) return;
     setLoading(true);
@@ -168,13 +171,10 @@ class CategoriesViewModel extends BaseViewModel {
       _editingCategory = null;
     } finally {
       setLoading(false);
-      await _categoriesService.listCategoriesByAccount(
-        _account!.id!,
-        forceRefresh: true,
-      );
     }
   }
 
+  @override
   Future<void> updateCategory(Category category) async {
     if (_account?.id == null) return;
     setLoading(true);
@@ -189,8 +189,6 @@ class CategoriesViewModel extends BaseViewModel {
       _editingCategory = null;
     } finally {
       setLoading(false);
-      _categoriesService.invalidateAccountCache(_account!.id!);
-      await _categoriesService.listCategoriesByAccount(_account!.id!);
     }
   }
 }

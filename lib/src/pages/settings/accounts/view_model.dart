@@ -7,6 +7,7 @@ import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts.dart';
 import 'package:budgly/src/services/image.dart';
 import 'package:budgly/src/models/account/account_editing_data.dart';
+import 'package:budgly/src/shared/view_models/account_form_view_model.dart';
 import 'package:flutter/material.dart';
 
 class _ImageProcessResult {
@@ -15,7 +16,7 @@ class _ImageProcessResult {
   _ImageProcessResult(this.fileName, this.file);
 }
 
-class AccountsViewModel extends BaseViewModel {
+class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
   final AccountsService _accountsService = AccountsService.instance;
 
   final List<Account> _localAccounts = [];
@@ -29,24 +30,24 @@ class AccountsViewModel extends BaseViewModel {
     picture: null,
   );
 
-  // Utilisation exclusive du service pour récupérer l'état
   List<Account> get accounts => [..._accountsService.accounts, ..._localAccounts];
   bool get hasAccountsLoaded => _accountsService.hasLoaded;
   bool get isCreatingAccount => _localAccounts.isNotEmpty;
 
   Account? get editingAccount => _editingAccount;
+  @override
   AccountEditingData get editingData => _editingData;
 
   set editingAccount(Account? account) {
     _editingAccount = account;
     _nameController.text = account?.name ?? '';
     _editingData.color = account?.color ?? Colors.primaries[Random().nextInt(Colors.primaries.length)];
-    // On privilégie l'URL distante si elle existe, sinon le nom du fichier local
     _editingData.picture = account?.pictureUrl ?? account?.picture;
 
     if (!isDisposed) notifyListeners();
   }
 
+  @override
   Future<String?> pickImage(BuildContext context) async {
     final path = await ImageService.pickAndCropImage(context);
     if (path != null) _editingData.picture = path;
@@ -61,27 +62,24 @@ class AccountsViewModel extends BaseViewModel {
 
   Future<void> loadAccounts({bool needLoading = true}) async {
     if (needLoading) setLoading(true);
-
-    await ProgressiveLoader.loadEssentialOnly(
-      essentialData: () async {
-        await _accountsService.loadAccounts();
-      },
-      secondaryData: () async {
-        for (final account in _accountsService.accounts) {
-          if (account.picture != null && account.id != null) {
-            try {
-              await refreshPictureUrl(account);
-            } catch (e) {
-              // Continue even if one fails
-            }
-          }
-        }
-      },
-      onProgress: (progress) {},
-    );
-
-    setLoading(false);
-    if (!isDisposed) notifyListeners();
+    try {
+      await ProgressiveLoader.loadEssentialOnly(
+        essentialData: () async {
+          await _accountsService.loadAccounts();
+        },
+        secondaryData: () async {
+          await Future.wait(
+            _accountsService.accounts
+                .where((account) => account.picture != null && account.id != null)
+                .map(refreshPictureUrl),
+          );
+        },
+        onProgress: (progress) {},
+      );
+    } finally {
+      if (needLoading) setLoading(false);
+      if (!isDisposed) notifyListeners();
+    }
   }
 
   Future<void> addAccount() async {
@@ -107,20 +105,20 @@ class AccountsViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
   }
 
+  @override
   Future<void> removeAccount(Account account) async {
     if (account.id != null) {
       if (account.picture != null) {
         await _accountsService.deletePicture(account.picture!, account.id!);
       }
-      // La méthode deleteAccount du service gère maintenant la suppression dans le store
       await _accountsService.deleteAccount(account.id!);
-      _accountsService.invalidateCache();
     } else {
       _localAccounts.removeWhere((a) => identical(a, account));
     }
     if (!isDisposed) notifyListeners();
   }
 
+  @override
   void cancelEdit() {
     _editingAccount = null;
     _nameController.clear();
@@ -136,11 +134,9 @@ class AccountsViewModel extends BaseViewModel {
           account.id!,
         );
         final updatedAccount = account.copyWith(pictureUrl: pictureUrl);
-        // On met à jour le compte localement via le service
         _accountsService.updateLocalAccount(updatedAccount);
-        _accountsService.invalidateCache();
       } catch (e) {
-        // Ignore errors when refreshing picture URL
+        // Signed URL refresh is best-effort
       }
     }
   }
@@ -164,6 +160,7 @@ class AccountsViewModel extends BaseViewModel {
     }
   }
 
+  @override
   Future<void> createAccount(Account account) async {
     setLoading(true);
     try {
@@ -175,7 +172,6 @@ class AccountsViewModel extends BaseViewModel {
         picture: imageToUpload?.fileName,
       );
 
-      // Le service crée le compte ET l'ajoute au store
       newAccount = await _accountsService.createAccount(newAccount);
 
       if (imageToUpload != null) {
@@ -187,10 +183,10 @@ class AccountsViewModel extends BaseViewModel {
       _editingAccount = null;
     } finally {
       setLoading(false);
-      _accountsService.invalidateCache();
     }
   }
 
+  @override
   Future<void> updateAccount(Account account) async {
     setLoading(true);
     try {
@@ -213,7 +209,6 @@ class AccountsViewModel extends BaseViewModel {
         picture: currentFileName,
       );
 
-      // Le service met à jour le compte côté API ET dans le store
       updatedAccount = await _accountsService.updateAccount(updatedAccount);
 
       if (imageToUpload != null) {
@@ -227,7 +222,6 @@ class AccountsViewModel extends BaseViewModel {
       _editingAccount = null;
     } finally {
       setLoading(false);
-      _accountsService.invalidateCache();
     }
   }
 }

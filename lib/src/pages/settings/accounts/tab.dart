@@ -1,7 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/pages/settings/accounts/view_model.dart';
-import 'package:budgly/src/pages/settings/accounts/widgets/account_form.dart';
+import 'package:budgly/src/shared/widgets/account_form/account_form.dart';
 import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
@@ -110,6 +110,8 @@ class _AccountsTabState extends State<AccountsTab>
                                             formKey: _formKey,
                                             viewModel: widget.accountsViewModel,
                                             account: account,
+                                            withPulse: true,
+                                            withHint: true,
                                           ),
                                   ),
                                 ),
