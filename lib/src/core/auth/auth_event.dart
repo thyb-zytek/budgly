@@ -19,7 +19,7 @@ class AuthEventParams {
   AuthEventParams({required this.type, this.formType, this.keepEmail});
 
   void when({
-    void Function()? submitForm,
+    void Function(bool isValid)? submitForm,
     void Function()? googleSignIn,
     void Function()? signOut,
     void Function()? reload,
@@ -32,7 +32,7 @@ class AuthEventParams {
           AuthEvent.resetPassword,
         ].any((e) => e == type) &&
         submitForm != null) {
-      submitForm();
+      submitForm(true);
     }
     if (type == AuthEvent.googleSignIn && googleSignIn != null) googleSignIn();
     if (type == AuthEvent.signOut && signOut != null) signOut();

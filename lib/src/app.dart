@@ -48,6 +48,7 @@ class _BudglyAppState extends State<BudglyApp> {
           debugShowCheckedModeBanner: false,
           onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
           restorationScopeId: 'budgly_app',
+          scrollBehavior: const _BounceScrollBehavior(),
           theme: theme.light(),
           darkTheme: theme.dark(),
           themeMode: _profileService.themeMode,
@@ -70,4 +71,12 @@ class _BudglyAppState extends State<BudglyApp> {
       },
     );
   }
+}
+
+class _BounceScrollBehavior extends ScrollBehavior {
+  const _BounceScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics();
 }
