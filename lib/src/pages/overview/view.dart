@@ -9,8 +9,8 @@ import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
 import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
 import 'package:budgly/src/pages/overview/widgets/summary.dart';
 import 'package:budgly/src/shared/widgets/categories/category_expenses.dart';
-import 'package:budgly/src/shared/widgets/empty_state/empty_state.dart';
-import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
+import 'package:budgly/src/shared/widgets/layout/empty_state.dart';
+import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -74,7 +74,6 @@ class _OverviewPageState extends State<OverviewPage> {
           body: RefreshIndicator(
             onRefresh: _viewModel.refreshAll,
             child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPersistentHeader(
                   pinned: true,

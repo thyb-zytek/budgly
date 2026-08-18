@@ -3,14 +3,15 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/pages/settings/accounts/view_model.dart';
 import 'package:budgly/src/pages/settings/categories/view_model.dart';
 import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
-import 'package:budgly/src/shared/widgets/category_form/category_form.dart';
+import 'package:budgly/src/shared/widgets/categories/category_form.dart';
 import 'package:budgly/src/pages/settings/categories/widgets/empty_categories.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
 import 'package:budgly/src/shared/widgets/accounts/selector.dart';
 import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:budgly/src/shared/widgets/categories/category_view.dart';
-import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
+import 'package:budgly/src/shared/widgets/layout/framed_container.dart';
+import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesTab extends StatefulWidget {
@@ -149,16 +150,7 @@ class _CategoriesTabState extends State<CategoriesTab>
                     child: Column(
                       spacing: 8,
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: theme.colorScheme.outlineVariant,
-                              width: 1,
-                            ),
-                          ),
-                          padding: const EdgeInsets.all(4),
+                        FramedContainer(
                           child: AccountSelector(
                             accounts: accounts,
                             selectedAccount: selectedAccount,

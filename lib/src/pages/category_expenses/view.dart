@@ -8,8 +8,8 @@ import 'package:budgly/src/pages/category_expenses/widgets/expense_edit_sheet.da
 import 'package:budgly/src/pages/category_expenses/widgets/expense_occurrence_tile.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/swipe_hint_wrapper.dart';
 import 'package:budgly/src/shared/widgets/categories/category_expenses.dart';
-import 'package:budgly/src/shared/widgets/empty_state/empty_state.dart';
-import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
+import 'package:budgly/src/shared/widgets/layout/empty_state.dart';
+import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 /// Lists every expense occurrence of a category (recurring ones expanded
@@ -100,7 +100,6 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
             title: Text(summary.category.name ?? ''),
           ),
           body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),

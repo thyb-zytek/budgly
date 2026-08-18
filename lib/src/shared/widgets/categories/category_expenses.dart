@@ -1,7 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
-import 'package:budgly/src/shared/widgets/categories/category_details.dart';
+import 'package:budgly/src/shared/widgets/categories/status_chip.dart';
 import 'package:budgly/src/shared/widgets/categories/category_view.dart';
 import 'package:flutter/material.dart';
 

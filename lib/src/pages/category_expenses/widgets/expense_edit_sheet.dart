@@ -1,13 +1,12 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/shared/widgets/categories/category_icon_view.dart';
-import 'package:budgly/src/shared/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/widgets/selector/recurrence_selector.dart';
+import 'package:budgly/src/shared/widgets/forms/expense_form_fields.dart';
+import 'package:budgly/src/shared/widgets/forms/form_actions.dart';
+import 'package:budgly/src/shared/widgets/layout/framed_container.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -26,17 +25,6 @@ class ExpenseEditSheet extends StatefulWidget {
 class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String? _errorMessage;
-
-  Future<void> _pickDebitDate() async {
-    final viewModel = widget.viewModel;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: viewModel.editingData.debitDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-    );
-    if (picked != null) viewModel.setDebitDate(picked);
-  }
 
   Future<void> _save() async {
     final tr = AppLocalizations.of(context)!;
@@ -105,18 +93,6 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
     );
   }
 
-  Widget _sectionLabel(BuildContext context, String text) {
-    final theme = Theme.of(context);
-    return Text(
-      text.toUpperCase(),
-      style: theme.textTheme.labelMedium?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
@@ -157,15 +133,8 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
                     ),
                   ),
                   if (category != null)
-                    Container(
+                    FramedContainer(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                      ),
                       child: Row(
                         spacing: 12,
                         children: [
@@ -206,125 +175,13 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
                         ],
                       ),
                     ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 12,
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: TextInput(
-                          controller: data.nameController,
-                          labelText: tr.activity,
-                          hotValidating: (v) => v == null || v.trim().isEmpty
-                              ? tr.nameRequired
-                              : null,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: TextInput(
-                          controller: data.amountController,
-                          labelText: tr.amount,
-                          type: InputType.currency,
-                          suffix: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Icon(
-                              viewModel.currencyCode.currencyIcon,
-                              size: 20,
-                              opticalSize: 14,
-                              color: theme.colorScheme.onSurface.withAlpha(155),
-                            ),
-                          ),
-                          textInputAction: TextInputAction.done,
-                          hotValidating: (v) {
-                            final amount = double.tryParse(
-                              (v ?? '').replaceAll(',', '.'),
-                            );
-                            if (amount == null || amount <= 0) {
-                              return tr.amountInvalid;
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: TextButton.icon(
-                      onPressed: viewModel.toggleAdvancedOptions,
-                      icon: Icon(
-                        data.showAdvancedOptions
-                            ? Icons.expand_less
-                            : Icons.expand_more,
-                      ),
-                      label: Text(tr.advancedOptions),
-                    ),
-                  ),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: !data.showAdvancedOptions
-                        ? const SizedBox(width: double.infinity)
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            spacing: 18,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                spacing: 8,
-                                children: [
-                                  _sectionLabel(context, tr.recurrence),
-                                  RecurrenceSelector(
-                                    selectedRecurrence: data.recurrence,
-                                    onRecurrenceChanged: (recurrence) {
-                                      viewModel.setRecurrence(recurrence);
-                                    },
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                spacing: 8,
-                                children: [
-                                  _sectionLabel(context, tr.debitDate),
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(16),
-                                    onTap: _pickDebitDate,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 16,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surface,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Row(
-                                        spacing: 8,
-                                        children: [
-                                          Icon(
-                                            Icons.event_outlined,
-                                            color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                            size: 28,
-                                          ),
-                                          Text(
-                                            DateFormat.yMMMMd(
-                                              viewModel.localeName,
-                                            ).format(data.debitDate),
-                                            style: theme.textTheme.bodyMedium,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                  ExpenseFormFields(
+                    editingData: data,
+                    currencyCode: viewModel.currencyCode,
+                    localeName: viewModel.localeName,
+                    onToggleAdvanced: viewModel.toggleAdvancedOptions,
+                    onDateChanged: viewModel.setDebitDate,
+                    onRecurrenceChanged: viewModel.setRecurrence,
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -371,30 +228,11 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
                     onPressed: viewModel.isSaving ? null : _delete,
                     child: Text(tr.deleteExpense),
                   ),
-                  Row(
-                    spacing: 12,
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          style: ButtonType.outlined.filledStyle(
-                            theme,
-                            dense: true,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(tr.cancel),
-                        ),
-                      ),
-                      Expanded(
-                        child: FilledButton(
-                          style: ButtonType.primary.filledStyle(
-                            theme,
-                            dense: true,
-                          ),
-                          onPressed: viewModel.isSaving ? null : _save,
-                          child: Text(tr.validate),
-                        ),
-                      ),
-                    ],
+                  FormActions(
+                    cancelType: ButtonType.outlined,
+                    onCancel: () => Navigator.pop(context),
+                    onSubmit: viewModel.isSaving ? () {} : _save,
+                    isLoading: viewModel.isSaving,
                   ),
                 ],
               ),
