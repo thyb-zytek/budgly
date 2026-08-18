@@ -44,10 +44,6 @@ class LoginForm extends StatelessWidget {
     }
   }
 
-  /// Traduit le code retourné par [validateEmail]/[validatePassword] en
-  /// message lisible. Avant, seul le cas "*Required" était traduit : une
-  /// adresse mal formée ou un mot de passe trop court affichaient le code
-  /// brut ("emailInvalid", "passwordTooShort") à l'utilisateur.
   String? _translateEmailError(AppLocalizations tr, String? code) {
     return switch (code) {
       'emailRequired' => tr.emailRequired,

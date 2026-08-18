@@ -32,7 +32,7 @@ class _VerifyEmailState extends State<VerifyEmail> {
   }
 
   void _startReloadTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
       widget.onReload();
     });
   }

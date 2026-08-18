@@ -168,7 +168,7 @@ class LoginViewModel extends BaseViewModel {
           );
           if (user.emailVerified) {
             await _profileService.loadUserProfile(forceRefresh: true);
-            onAuthenticated?.call(user);
+            if (!isDisposed) onAuthenticated?.call(user);
           } else if (!isDisposed) {
             _setState(
               isLoading: false,
