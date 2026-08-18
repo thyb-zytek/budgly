@@ -103,16 +103,18 @@ class ProfileViewModel extends BaseViewModel {
 
   Future<void> signOut() async {
     setLoading(true);
+    try {
+      await _profileService.signOut();
+      AccountsService.instance.clearLocalAccounts();
+      CategoriesService.instance.invalidateCache();
+      
+      _oldPasswordController.clear();
+      _passwordController.clear();
+      _confirmPasswordController.clear();
 
-    await _profileService.signOut();
-    AccountsService.instance.clearLocalAccounts();
-    CategoriesService.instance.invalidateCache();
-    
-    _oldPasswordController.clear();
-    _passwordController.clear();
-    _confirmPasswordController.clear();
-
-    await NavigationHelper.router.pushReplacement(NavigationHelper.loginPath);
-    setLoading(false);
+      await NavigationHelper.router.pushReplacement(NavigationHelper.loginPath);
+    } finally {
+      setLoading(false);
+    }
   }
 }
