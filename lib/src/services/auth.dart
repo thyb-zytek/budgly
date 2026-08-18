@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:budgly/src/core/auth/google_sign_in.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/models/user/user.dart';
@@ -50,7 +48,9 @@ class AuthService {
       UserProfile profile = await _userProfileSupabase.getOrCreateProfile(firebaseUser);
       return User.fromFirebaseUser(firebaseUser, profile: profile);
     } on fb.FirebaseAuthException catch (e) {
-      String message = e.code == 'requires-recent-login' ? e.message! : "An error occurred while changing password";
+      String message = e.code == 'requires-recent-login'
+          ? (e.message ?? 'Recent login required')
+          : "An error occurred while changing password";
       throw AuthenticationException(code: e.code, message: message);
     } catch (e) {
       throw AuthenticationException(code: 'password-change-failed', message: 'Failed to change password: $e');
@@ -108,15 +108,10 @@ class AuthService {
         throw const AuthenticationException(code: 'user-not-found', message: 'No user found');
       }
 
-      final UserProfile profile;
+      final UserProfile profile =
+          await _userProfileSupabase.getOrCreateProfile(fbUser);
       if (fbUser.emailVerified) {
-        final results = await Future.wait([
-          _userProfileSupabase.getOrCreateProfile(fbUser),
-          AccountsService.instance.loadAccounts(),
-        ]);
-        profile = results[0] as UserProfile;
-      } else {
-        profile = await _userProfileSupabase.getOrCreateProfile(fbUser);
+        await AccountsService.instance.loadAccounts();
       }
 
       return User.fromFirebaseUser(fbUser, profile: profile);
@@ -156,11 +151,8 @@ class AuthService {
       final userCredential = await _auth.signInWithCredential(credential);
       final fbUser = userCredential.user!;
 
-      final results = await Future.wait([
-        _userProfileSupabase.getOrCreateProfile(fbUser),
-        AccountsService.instance.loadAccounts(),
-      ]);
-      final profile = results[0] as UserProfile;
+      final profile = await _userProfileSupabase.getOrCreateProfile(fbUser);
+      await AccountsService.instance.loadAccounts();
 
       return User.fromFirebaseUser(fbUser, profile: profile);
     } on fb.FirebaseAuthException catch (e) {

@@ -142,10 +142,11 @@ class CategoryIconsService {
       await getIcons();
     }
 
-    try {
-      return _icons.firstWhere((icon) => icon.iconCode == int.parse(iconCode));
-    } catch (e) {
-      return null;
+    final code = int.tryParse(iconCode);
+    if (code == null) return null;
+    for (final icon in _icons) {
+      if (icon.iconCode == code) return icon;
     }
+    return null;
   }
 }

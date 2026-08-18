@@ -23,6 +23,8 @@ class AccountsService {
   final AccountsStore _store = AccountsStore.instance; 
 
   DateTime? _lastFetch;
+  Future<void>? _loadFuture;
+  int _sessionGeneration = 0;
   static const Duration _cacheValidity = AppConstants.cacheValidityMedium;
 
   AccountsService._();
@@ -32,7 +34,9 @@ class AccountsService {
   bool get hasLoaded => _store.hasLoaded;
 
   void invalidateCache() {
+    _sessionGeneration++;
     _lastFetch = null;
+    _store.setLoaded(false);
   }
 
   String get _currentUserId {
@@ -44,20 +48,33 @@ class AccountsService {
   }
 
   Future<void> loadAccounts({bool forceRefresh = false}) async {
-    if (_store.hasLoaded && !forceRefresh) {
-      return;
-    }
+    final cacheValid = !forceRefresh &&
+        _store.hasLoaded &&
+        _lastFetch != null &&
+        DateTime.now().difference(_lastFetch!) < _cacheValidity;
 
-    _store.setLoading(true);
+    if (cacheValid) return;
+    if (_loadFuture != null) return _loadFuture!;
 
+    final future = _loadAccounts(forceRefresh: forceRefresh);
+    _loadFuture = future;
     try {
-      final accounts = await _fetchAccountsWithSignedUrls(
-        forceRefresh: forceRefresh,
-      );
+      await future;
+    } finally {
+      if (identical(_loadFuture, future)) _loadFuture = null;
+    }
+  }
+
+  Future<void> _loadAccounts({required bool forceRefresh}) async {
+    final generation = _sessionGeneration;
+    _store.beginLoading();
+    try {
+      final accounts = await _fetchAccountsWithSignedUrls(forceRefresh: forceRefresh);
+      if (generation != _sessionGeneration) return;
       _store.setAccounts(accounts);
       _store.setLoaded(true);
     } finally {
-      _store.setLoading(false);
+      _store.endLoading();
     }
   }
 
@@ -107,27 +124,33 @@ class AccountsService {
   }
 
   Future<List<Account>> _loadSignedUrlsForCachedAccounts() async {
+    final accountsWithUrls = _store.accounts
+        .where((acc) => acc.picture == null || acc.pictureUrl != null)
+        .toList();
     final accountsWithoutUrls = _store.accounts
         .where((acc) => acc.picture != null && acc.pictureUrl == null)
         .toList();
-    return _withSignedUrls(accountsWithoutUrls);
+    final resolved = await _withSignedUrls(accountsWithoutUrls);
+    return [...accountsWithUrls, ...resolved];
   }
 
   Future<Account> createAccount(Account account) async {
+    final generation = _sessionGeneration;
     final created = await _accountSupabase.create(
       account.copyWith(userId: _currentUserId),
     );
     if (created != null) {
-      _store.addAccount(created);
+      if (generation == _sessionGeneration) _store.addAccount(created);
       return created;
     }
     throw Exception('Failed to create account');
   }
 
   Future<Account> updateAccount(Account account) async {
+    final generation = _sessionGeneration;
     final updated = await _accountSupabase.update(account);
     if (updated != null) {
-      _store.updateAccount(updated);
+      if (generation == _sessionGeneration) _store.updateAccount(updated);
       return updated;
     }
     throw Exception('Failed to update account');
@@ -138,9 +161,10 @@ class AccountsService {
   }
 
   Future<bool> deleteAccount(String accountId) async {
+    final generation = _sessionGeneration;
     final deleted = await _accountSupabase.delete(accountId);
     if (deleted) {
-      _store.removeAccount(accountId);
+      if (generation == _sessionGeneration) _store.removeAccount(accountId);
       return deleted;
     }
     throw Exception('Failed to delete account');
@@ -163,7 +187,7 @@ class AccountsService {
   Future<String?> getSignedUrl(String path, String accountId) async {
     final fullPath = '$_currentUserId/$accountId/$path';
     try {
-      return _storageSupabase.getSignedUrl(
+      return await _storageSupabase.getSignedUrl(
         bucketId: _bucketId,
         filePath: fullPath,
       );

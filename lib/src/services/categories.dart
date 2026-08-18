@@ -20,6 +20,8 @@ class CategoriesService {
   final CategoriesStore _store = CategoriesStore.instance;
 
   final Map<String, DateTime> _lastFetch = {};
+  final Map<String, Future<List<Category>>> _loadFutures = {};
+  int _sessionGeneration = 0;
   static const Duration _cacheValidity = AppConstants.cacheValidityShort;
 
   CategoriesService._();
@@ -39,11 +41,13 @@ class CategoriesService {
   }
 
   void invalidateCache() {
+    _sessionGeneration++;
     _lastFetch.clear();
     _store.clearAll();
   }
 
   void invalidateAccountCache(String accountId) {
+    _sessionGeneration++;
     _lastFetch.remove(accountId);
     _store.clearAccountCache(accountId);
   }
@@ -58,7 +62,10 @@ class CategoriesService {
     if (category.icon != null) return category;
 
     CategoryIcon? resolvedIcon;
-    final iconCode = int.tryParse(category.iconCode ?? '0') ?? 0;
+    final rawIconCode = category.iconCode ?? '0';
+    final iconCode = rawIconCode.toLowerCase().startsWith('0x')
+        ? int.tryParse(rawIconCode.substring(2), radix: 16) ?? 0
+        : int.tryParse(rawIconCode) ?? 0;
     
     try {
       if (iconCode != 0) {
@@ -88,56 +95,67 @@ class CategoriesService {
     if (hasValidCache && !forceRefresh) {
       return _store.getCategoriesForAccount(accountId);
     }
+    final inFlight = _loadFutures[accountId];
+    if (inFlight != null) return inFlight;
 
-    _store.setLoading(true);
-
+    final future = _loadCategories(accountId);
+    _loadFutures[accountId] = future;
     try {
-      if (!_store.iconsLoaded) {
-        await loadAvailableIcons();
+      return await future;
+    } finally {
+      if (identical(_loadFutures[accountId], future)) {
+        _loadFutures.remove(accountId);
       }
+    }
+  }
 
+  Future<List<Category>> _loadCategories(String accountId) async {
+    final generation = _sessionGeneration;
+    _store.beginLoading();
+    try {
+      if (!_store.iconsLoaded) await loadAvailableIcons();
       final freshCategories = await _categorySupabase.listByAccountId(accountId);
-      
-      final categoriesWithIcons = <Category>[];
-      for (final c in freshCategories) {
-        categoriesWithIcons.add(_hydrateCategoryIcon(c));
-      }
-
+      final categoriesWithIcons = freshCategories
+          .map(_hydrateCategoryIcon)
+          .toList(growable: false);
+      if (generation != _sessionGeneration) return categoriesWithIcons;
       _store.setCategoriesForAccount(accountId, categoriesWithIcons);
       _lastFetch[accountId] = DateTime.now();
-
       return categoriesWithIcons;
     } finally {
-      _store.setLoading(false);
+      _store.endLoading();
     }
   }
 
   Future<Category> createCategory(Category category) async {
+    final generation = _sessionGeneration;
     final created = await _categorySupabase.create(category);
 
     if (created != null) {
       final hydratedCategory = _hydrateCategoryIcon(created);
-      _store.addCategory(hydratedCategory);
+      if (generation == _sessionGeneration) _store.addCategory(hydratedCategory);
       return hydratedCategory;
     }
     throw Exception('Failed to create category');
   }
 
   Future<Category> updateCategory(Category category) async {
+    final generation = _sessionGeneration;
     final success = await _categorySupabase.update(category);
 
     if (success) {
       final hydratedCategory = _hydrateCategoryIcon(category);
-      _store.updateCategory(hydratedCategory);
+      if (generation == _sessionGeneration) _store.updateCategory(hydratedCategory);
       return hydratedCategory;
     }
     throw Exception('Failed to update category');
   }
 
   Future<bool> deleteCategory(String categoryId) async {
+    final generation = _sessionGeneration;
     final success = await _categorySupabase.delete(categoryId);
     if (success) {
-      _store.removeCategory(categoryId);
+      if (generation == _sessionGeneration) _store.removeCategory(categoryId);
       return true;
     }
     throw Exception('Failed to delete category');

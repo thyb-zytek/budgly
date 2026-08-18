@@ -4,6 +4,10 @@ import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/services/auth.dart';
 import 'package:budgly/src/stores/profile.dart';
 import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
+import 'package:budgly/src/services/accounts.dart';
+import 'package:budgly/src/services/categories.dart';
+import 'package:budgly/src/services/expenses.dart';
+import 'package:budgly/src/services/accounts_budget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
@@ -20,6 +24,8 @@ class ProfileService with ChangeNotifier {
   final UserProfileSupabase _profileSupabase = UserProfileSupabase();
 
   SharedPreferences? _prefs;
+  Future<void>? _loadProfileFuture;
+  int _sessionGeneration = 0;
   
   static const String _themeKey = AppConstants.themeKey;
   static const String _localeKey = AppConstants.localeKey;
@@ -87,21 +93,31 @@ class ProfileService with ChangeNotifier {
   }
 
   Future<void> loadUserProfile({bool forceRefresh = false}) async {
-    if (_store.hasLoaded && !forceRefresh && _store.currentUser != null) {
-      return;
-    }
+    if (_store.hasLoaded && !forceRefresh && _store.currentUser != null) return;
+    if (_loadProfileFuture != null) return _loadProfileFuture!;
 
-    _store.setLoading(true);
+    final future = _loadUserProfile();
+    _loadProfileFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_loadProfileFuture, future)) _loadProfileFuture = null;
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    final generation = _sessionGeneration;
+    _store.beginLoading();
     try {
       final user = await _authService.reloadCurrentUser();
-      if (user != null) {
+      if (user != null && generation == _sessionGeneration) {
         _store.setUser(user);
         await syncPreferencesWithServer(user);
       }
     } catch (e) {
-      // Garde l'état actuel si échec
+      AppLogger.error('Failed to load user profile', e);
     } finally {
-      _store.setLoading(false);
+      _store.endLoading();
     }
   }
 
@@ -175,6 +191,11 @@ class ProfileService with ChangeNotifier {
     _store.setLoading(true);
     try {
       await _authService.signOut();
+      _sessionGeneration++;
+      AccountsService.instance.clearLocalAccounts();
+      CategoriesService.instance.invalidateCache();
+      ExpensesService.instance.invalidateCache();
+      AccountBudgetsService.instance.invalidateCache();
       _store.clear();
     } finally {
       _store.setLoading(false);
