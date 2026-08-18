@@ -1,4 +1,3 @@
-import 'package:budgly/src/core/routers/navigation_helper.dart';
 import 'package:budgly/src/services/accounts.dart';
 import 'package:budgly/src/services/categories.dart';
 import 'package:budgly/src/services/profile.dart';
@@ -8,8 +7,9 @@ import 'package:flutter/material.dart';
 
 class ProfileViewModel extends BaseViewModel {
   final ProfileService _profileService = ProfileService.instance;
-  
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final AccountsService _accountsService = AccountsService.instance;
+  final CategoriesService _categoriesService = CategoriesService.instance;
+
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -26,7 +26,6 @@ class ProfileViewModel extends BaseViewModel {
 
   @override
   bool get isLoading => super.isLoading || _profileService.isLoading;
-  GlobalKey<FormState> get formKey => _formKey;
   TextEditingController get oldPasswordController => _oldPasswordController;
   TextEditingController get passwordController => _passwordController;
   TextEditingController get confirmPasswordController => _confirmPasswordController;
@@ -49,8 +48,8 @@ class ProfileViewModel extends BaseViewModel {
     return null;
   }
 
-  Future<void> changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> changePassword(bool isValid) async {
+    if (!isValid) return;
     
     setLoading(true);
     try {
@@ -79,17 +78,14 @@ class ProfileViewModel extends BaseViewModel {
   Future<void> refreshUser() async {
     setLoading(true);
     try {
-      final accountsService = AccountsService.instance;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        accountsService.invalidateCache();
-        CategoriesService.instance.invalidateCache();
-        final firstAccount = accountsService.accounts.isNotEmpty
-            ? accountsService.accounts.first.id
-            : null;
-        if (firstAccount != null) {
-          CategoriesService.instance.listCategoriesByAccount(firstAccount);
-        }
-      });
+      _accountsService.invalidateCache();
+      _categoriesService.invalidateCache();
+      final firstAccount = _accountsService.accounts.isNotEmpty
+          ? _accountsService.accounts.first.id
+          : null;
+      if (firstAccount != null) {
+        _categoriesService.listCategoriesByAccount(firstAccount);
+      }
 
       await _profileService.loadUserProfile(forceRefresh: true);
     } finally {
@@ -105,14 +101,12 @@ class ProfileViewModel extends BaseViewModel {
     setLoading(true);
     try {
       await _profileService.signOut();
-      AccountsService.instance.clearLocalAccounts();
-      CategoriesService.instance.invalidateCache();
+      _accountsService.clearLocalAccounts();
+      _categoriesService.invalidateCache();
       
       _oldPasswordController.clear();
       _passwordController.clear();
       _confirmPasswordController.clear();
-
-      await NavigationHelper.router.pushReplacement(NavigationHelper.loginPath);
     } finally {
       setLoading(false);
     }

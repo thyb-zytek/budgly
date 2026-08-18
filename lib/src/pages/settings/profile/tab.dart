@@ -8,7 +8,7 @@ import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/widgets/user/details.dart';
 import 'package:budgly/src/shared/widgets/user/view_card.dart';
 import 'package:budgly/src/shared/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
+import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -19,6 +19,7 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
+  final _formKey = GlobalKey<FormState>();
   late final ProfileViewModel _viewModel = ProfileViewModel();
   @override
   void initState() {
@@ -38,8 +39,10 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   void _onChangePassword() {
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) return;
     _viewModel
-        .changePassword()
+        .changePassword(true)
         .then((_) {
           if (mounted) {
             showAppSnackBar(
@@ -90,7 +93,7 @@ class _ProfileTabState extends State<ProfileTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: AutofillGroup(
                     child: Form(
-                      key: _viewModel.formKey,
+                      key: _formKey,
                       child: Column(
                         spacing: 8,
                         children: [
@@ -199,9 +202,11 @@ class _ProfileTabState extends State<ProfileTab> {
     return AnimatedBuilder(
       animation: _viewModel,
       builder: (context, child) {
-        if (_viewModel.isLoading) {
+        if (_viewModel.isLoading || _viewModel.currentUser == null) {
           return const AppLoadingIndicator();
         }
+
+        final user = _viewModel.currentUser!;
 
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -211,9 +216,9 @@ class _ProfileTabState extends State<ProfileTab> {
             mainAxisSize: MainAxisSize.max,
             spacing: 16,
             children: [
-              UserCard(user: _viewModel.currentUser!),
+              UserCard(user: user),
               UserDetails(
-                user: _viewModel.currentUser!,
+                user: user,
                 onChangeName: _onChangeName,
               ),
               FilledButton.icon(
@@ -229,7 +234,7 @@ class _ProfileTabState extends State<ProfileTab> {
                   style: ButtonType.primary.labelStyle(theme),
                 ),
               ),
-              if (!_viewModel.currentUser!.isGoogleUser)
+              if (!user.isGoogleUser)
                 FilledButton.icon(
                   style: ButtonType.tertiary.filledStyle(theme),
                   onPressed: _displayChangePasswordDialog,
