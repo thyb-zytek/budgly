@@ -11,11 +11,13 @@ import 'package:flutter/material.dart';
 class LoginFormSwitcher extends StatelessWidget {
   final LoginViewModel viewModel;
   final void Function(AuthEventParams) onEvent;
+  final GlobalKey<FormState> formKey;
 
   const LoginFormSwitcher({
     super.key,
     required this.viewModel,
     required this.onEvent,
+    required this.formKey,
   });
 
   @override
@@ -29,7 +31,7 @@ class LoginFormSwitcher extends StatelessWidget {
       children: [
         switch (formType) {
           AuthForm.signUp => SignUpForm(
-              formKey: viewModel.formKey,
+              formKey: formKey,
               emailController: viewModel.emailController,
               passwordController: viewModel.passwordController,
               password2Controller: viewModel.password2Controller,
@@ -39,10 +41,14 @@ class LoginFormSwitcher extends StatelessWidget {
               onSignInPressed: () => onEvent(
                 AuthEventParams(type: AuthEvent.changeFormType, formType: AuthForm.signIn),
               ),
-              onSubmitForm: () => onEvent(AuthEventParams(type: AuthEvent.signUp)),
+              onSubmitForm: () {
+                final isValid = formKey.currentState?.validate() ?? false;
+                if (!isValid) return;
+                onEvent(AuthEventParams(type: AuthEvent.signUp));
+              },
             ),
           AuthForm.signIn => LoginForm(
-              formKey: viewModel.formKey,
+              formKey: formKey,
               emailController: viewModel.emailController,
               passwordController: viewModel.passwordController,
               validateEmail: viewModel.validateEmail,
@@ -50,7 +56,11 @@ class LoginFormSwitcher extends StatelessWidget {
               onSignUpPressed: () => onEvent(
                 AuthEventParams(type: AuthEvent.changeFormType, formType: AuthForm.signUp),
               ),
-              onSubmitForm: () => onEvent(AuthEventParams(type: AuthEvent.signIn)),
+              onSubmitForm: () {
+                final isValid = formKey.currentState?.validate() ?? false;
+                if (!isValid) return;
+                onEvent(AuthEventParams(type: AuthEvent.signIn));
+              },
               onResetPassword: () => onEvent(
                 AuthEventParams(
                   type: AuthEvent.changeFormType,
@@ -60,10 +70,14 @@ class LoginFormSwitcher extends StatelessWidget {
               ),
             ),
           AuthForm.resetPassword => ResetPasswordForm(
-              formKey: viewModel.formKey,
+              formKey: formKey,
               emailController: viewModel.emailController,
               validateEmail: viewModel.validateEmail,
-              onSubmitForm: () => onEvent(AuthEventParams(type: AuthEvent.resetPassword)),
+              onSubmitForm: () {
+                final isValid = formKey.currentState?.validate() ?? false;
+                if (!isValid) return;
+                onEvent(AuthEventParams(type: AuthEvent.resetPassword));
+              },
               onSignInPressed: () => onEvent(
                 AuthEventParams(type: AuthEvent.changeFormType, formType: AuthForm.signIn),
               ),

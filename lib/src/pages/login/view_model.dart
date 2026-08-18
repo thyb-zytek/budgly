@@ -1,25 +1,21 @@
 import 'package:budgly/src/core/auth/auth_event.dart';
 import 'package:budgly/src/core/auth/auth_state.dart';
-import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/services/auth.dart';
 import 'package:budgly/src/services/profile.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginViewModel extends BaseViewModel {
   final AuthService _authService = AuthService.instance;
   final ProfileService _profileService = ProfileService.instance;
   
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _password2Controller = TextEditingController();
   final Function(User)? onAuthenticated;
 
-  static const String _formTypeKey = AppConstants.loginFormTypeKey;
   AuthState _state = AuthState();
 
   LoginViewModel({this.onAuthenticated}) {
@@ -27,7 +23,6 @@ class LoginViewModel extends BaseViewModel {
   }
 
   AuthState get state => _state;
-  GlobalKey<FormState> get formKey => _formKey;
   TextEditingController get emailController => _emailController;
   TextEditingController get passwordController => _passwordController;
   TextEditingController get password2Controller => _password2Controller;
@@ -54,25 +49,8 @@ class LoginViewModel extends BaseViewModel {
       return;
     }
 
-    final savedFormType = await _loadFormType();
     if (isDisposed) return;
-    _setState(formType: savedFormType, isLoading: false, isGoogleSignIn: false);
-  }
-
-  Future<AuthForm> _loadFormType() async {
-    final prefs = await SharedPreferences.getInstance();
-    final formTypeString = prefs.getString(_formTypeKey);
-    return formTypeString != null
-        ? AuthForm.values.firstWhere(
-            (e) => e.toString() == formTypeString,
-            orElse: () => AuthForm.signIn,
-          )
-        : AuthForm.signIn;
-  }
-
-  Future<void> _saveFormType(AuthForm formType) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_formTypeKey, formType.toString());
+    _setState(formType: AuthForm.signIn, isLoading: false, isGoogleSignIn: false);
   }
 
   void _setState({
@@ -108,7 +86,7 @@ class LoginViewModel extends BaseViewModel {
     event.when(
       resendEmailVerification: _handleResendEmailVerification,
       reload: _handleReload,
-      submitForm: _handleSubmitForm,
+      submitForm: (isValid) => _handleSubmitForm(isValid),
       googleSignIn: _handleGoogleSignIn,
       signOut: _handleSignOut,
       changeFormType: _handleChangeFormType,
@@ -138,8 +116,8 @@ class LoginViewModel extends BaseViewModel {
     }
   }
 
-  Future<void> _handleSubmitForm() async {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _handleSubmitForm(bool isValid) async {
+    if (!isValid) {
       _setState(isLoading: false, isGoogleSignIn: false);
       return;
     }
@@ -188,7 +166,6 @@ class LoginViewModel extends BaseViewModel {
 
         case AuthForm.verifyEmail:
           _clearForm(keepEmail: true);
-          await _saveFormType(AuthForm.signIn);
           _setState(formType: AuthForm.signIn, isGoogleSignIn: false);
           break;
       }
@@ -279,7 +256,6 @@ class LoginViewModel extends BaseViewModel {
   }
 
   void _clearForm({bool keepEmail = false}) {
-    _formKey.currentState?.reset();
     if (!keepEmail) _emailController.clear();
     _passwordController.clear();
     _password2Controller.clear();
