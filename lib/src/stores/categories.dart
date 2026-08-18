@@ -14,6 +14,7 @@ class CategoriesStore extends ChangeNotifier {
   Map<String, bool> _hasLoadedByAccount = {};
   List<CategoryIcon> _availableIcons = [];
   bool _isLoading = false;
+  int _loadingCount = 0;
   bool _iconsLoaded = false;
 
   Map<String, List<Category>> get categoriesByAccount =>
@@ -36,9 +37,32 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void beginLoading() {
+    _loadingCount++;
+    if (!_isLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
+  }
+
+  void endLoading() {
+    if (_loadingCount > 0) _loadingCount--;
+    if (_loadingCount == 0 && _isLoading) {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+    if (loading) {
+      beginLoading();
+    } else {
+      _loadingCount = 0;
+      if (_isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
   }
 
   bool hasLoadedAccount(String accountId) {
@@ -51,10 +75,8 @@ class CategoriesStore extends ChangeNotifier {
 
   Category? getCategoryById(String categoryId) {
     for (final categories in _categoriesByAccount.values) {
-      try {
-        return categories.firstWhere((c) => c.id == categoryId);
-      } catch (_) {
-        continue;
+      for (final c in categories) {
+        if (c.id == categoryId) return c;
       }
     }
     return null;

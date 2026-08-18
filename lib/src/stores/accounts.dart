@@ -11,6 +11,7 @@ class AccountsStore extends ChangeNotifier {
 
   List<Account> _accounts = [];
   bool _isLoading = false;
+  int _loadingCount = 0;
   bool _hasLoaded = false;
 
   List<Account> get accounts => List.unmodifiable(_accounts);
@@ -25,9 +26,32 @@ class AccountsStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void beginLoading() {
+    _loadingCount++;
+    if (!_isLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
+  }
+
+  void endLoading() {
+    if (_loadingCount > 0) _loadingCount--;
+    if (_loadingCount == 0 && _isLoading) {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+    if (loading) {
+      beginLoading();
+    } else {
+      _loadingCount = 0;
+      if (_isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
   }
 
   void setLoaded(bool loaded) {
@@ -36,11 +60,10 @@ class AccountsStore extends ChangeNotifier {
   }
 
   Account? getAccountById(String id) {
-    try {
-      return _accounts.firstWhere((account) => account.id == id);
-    } catch (_) {
-      return null;
+    for (final account in _accounts) {
+      if (account.id == id) return account;
     }
+    return null;
   }
 
   void addAccount(Account account) {
