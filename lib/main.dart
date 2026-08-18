@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:budgly/src/core/auth/google_sign_in.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 
 import 'src/app.dart';
 import 'src/core/auth/auth_session.dart';
@@ -93,6 +94,6 @@ Future<void> _hydrateProfile() async {
   try {
     await ProfileService.instance.loadUserProfile();
   } catch (_) {
-    print("Failed to load user profile");
+    AppLogger.error("Failed to load user profile");
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -45,7 +46,7 @@ class UserProfile {
           : UserProfile.generateRandomColor(),
       themeMode: json['theme_mode']?.toString() ?? 'system',
       currency: json['currency']?.toString() ?? 'EUR',
-      language: json['language']?.toString() ?? 'fr-FR',
+      language: json['language']?.toString() ?? AppConstants.defaultLocale,
       accounts: json['accounts'] != null
           ? (json['accounts'] as List)
               .map((account) => Account.fromJson(account))

@@ -28,5 +28,4 @@ class AppConstants {
   // Default values
   static const String defaultLocale = 'fr';
   static const String defaultCurrency = 'EUR';
-  static const int defaultIconCode = 0xf624;
 }

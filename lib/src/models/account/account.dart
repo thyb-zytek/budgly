@@ -36,7 +36,7 @@ class Account {
     'user_id': userId,
     'name': name,
     'picture': picture,
-    'color': color!.toHex(),
+    'color': color?.toHex(),
   };
 
   Account copyWith({

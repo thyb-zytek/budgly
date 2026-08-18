@@ -36,15 +36,20 @@ void showAppSnackBar(
   required String message,
   required SnackBarType type,
 }) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: Colors.transparent,
-      duration: const Duration(seconds: 3),
-      elevation: 0,
-      showCloseIcon: true,
-      content: _SnackBarContent(message: message, type: type),
-    ),
+  ScaffoldMessenger.of(context).showSnackBar(buildAppSnackBar(message, type));
+}
+
+/// Builds the app's floating snackbar. Useful to show a snackbar from a
+/// messenger captured before a route is popped (the builder does not need a
+/// still-mounted [BuildContext]).
+SnackBar buildAppSnackBar(String message, SnackBarType type) {
+  return SnackBar(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: Colors.transparent,
+    duration: const Duration(seconds: 3),
+    elevation: 0,
+    showCloseIcon: true,
+    content: _SnackBarContent(message: message, type: type),
   );
 }
 
