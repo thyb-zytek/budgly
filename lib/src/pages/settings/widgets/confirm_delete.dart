@@ -64,7 +64,7 @@ class ConfirmDelete extends StatelessWidget {
                         onPressed: () async {
                           await onConfirm();
                           if (context.mounted) {
-                            Navigator.pop(context);
+                            Navigator.pop(context, true);
                           }
                         },
                         child: Text(
@@ -83,16 +83,21 @@ class ConfirmDelete extends StatelessWidget {
 }
 
 
-void showConfirmDelete(BuildContext context, {required String title, required String content, required Future<void> Function() onConfirm}) {
-    final theme = Theme.of(context);
+Future<bool?> showConfirmDelete(
+  BuildContext context, {
+  required String title,
+  required String content,
+  required Future<void> Function() onConfirm,
+}) {
+  final theme = Theme.of(context);
 
-    showAppBottomSheet(
-      context,
-      backgroundColor: theme.colorScheme.surface,
-      builder: (context) => ConfirmDelete(
-          title: title,
-          content: content,
-          onConfirm: onConfirm,
-        ),
-    );
-  }
+  return showAppBottomSheet<bool>(
+    context,
+    backgroundColor: theme.colorScheme.surface,
+    builder: (context) => ConfirmDelete(
+      title: title,
+      content: content,
+      onConfirm: onConfirm,
+    ),
+  );
+}

@@ -19,7 +19,7 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  ProfileViewModel _viewModel = ProfileViewModel();
+  late final ProfileViewModel _viewModel = ProfileViewModel();
   @override
   void initState() {
     super.initState();
@@ -53,12 +53,14 @@ class _ProfileTabState extends State<ProfileTab> {
         })
         .onError((error, stackTrace) {
           if (!mounted) return;
-          final exception = error as AuthenticationException;
+          final message = error is AuthenticationException
+              ? (error.code == "password-change-failed"
+                  ? AppLocalizations.of(context)!.passwordChangeFailed
+                  : error.message)
+              : error.toString();
           showAppSnackBar(
             context,
-            message: exception.code == "password-change-failed"
-                ? AppLocalizations.of(context)!.passwordChangeFailed
-                : exception.message,
+            message: message,
             type: SnackBarType.error,
           );
         });

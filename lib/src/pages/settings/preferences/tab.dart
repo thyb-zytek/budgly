@@ -17,8 +17,6 @@ class _PreferencesTabState extends State<PreferencesTab> {
 
   @override
   void dispose() {
-    // Manquait : sans ça, le listener posé sur ProfileService dans le
-    // constructeur du view model n'était jamais retiré.
     _viewModel.dispose();
     super.dispose();
   }
@@ -43,9 +41,6 @@ class _PreferencesTabState extends State<PreferencesTab> {
               style: theme.textTheme.headlineLarge!,
             ),
           ),
-          // Écoute le view model : les 3 formulaires modifient l'état
-          // via ProfileService, donc il faut se reconstruire quand il
-          // notifie, sinon on affiche une valeur figée au premier build.
           ListenableBuilder(
             listenable: _viewModel,
             builder: (context, child) {
