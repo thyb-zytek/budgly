@@ -7,21 +7,21 @@ import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
-import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/services/accounts_budget.dart';
-import 'package:budgly/src/services/categories.dart';
-import 'package:budgly/src/services/expenses.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/budget/account_budgets_service.dart';
+import 'package:budgly/src/services/categories/categories_service.dart';
+import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:flutter/material.dart';
 
 class OverviewViewModel extends BaseViewModel {
-  final AccountsService _accountsService = AccountsService.instance;
-  final CategoriesService _categoriesService = CategoriesService.instance;
-  final ExpensesService _expensesService = ExpensesService.instance;
-  final AccountBudgetsService _accountBudgetsService = AccountBudgetsService.instance;
-  final ProfileService _profileService = ProfileService.instance;
+  final AccountsService _accountsService;
+  final CategoriesService _categoriesService;
+  final ExpensesService _expensesService;
+  final AccountBudgetsService _accountBudgetsService;
+  final ProfileService _profileService;
 
   Account? _account;
   bool _isSaving = false;
@@ -38,7 +38,18 @@ class OverviewViewModel extends BaseViewModel {
     amountController: TextEditingController(),
   );
 
-  OverviewViewModel() {
+  OverviewViewModel({
+    AccountsService? accountsService,
+    CategoriesService? categoriesService,
+    ExpensesService? expensesService,
+    AccountBudgetsService? accountBudgetsService,
+    ProfileService? profileService,
+  })  : _accountsService = accountsService ?? AccountsService.instance,
+        _categoriesService = categoriesService ?? CategoriesService.instance,
+        _expensesService = expensesService ?? ExpensesService.instance,
+        _accountBudgetsService =
+            accountBudgetsService ?? AccountBudgetsService.instance,
+        _profileService = profileService ?? ProfileService.instance {
     _accountsService.changeNotifier.addListener(_onServiceChanged);
     _categoriesService.addListener(_onServiceChanged);
     _expensesService.addListener(_onServiceChanged);
@@ -62,9 +73,23 @@ class OverviewViewModel extends BaseViewModel {
     if (accounts.isEmpty) return;
 
     final currentId = _account?.id;
-    final stillExists = currentId != null && accounts.any((a) => a.id == currentId);
-    if (!stillExists) {
+    Account? match;
+    if (currentId != null) {
+      for (final a in accounts) {
+        if (a.id == currentId) {
+          match = a;
+          break;
+        }
+      }
+    }
+
+    if (match == null) {
       account = accounts.first;
+    } else if (!identical(match, _account)) {
+      // Re-point to the latest store instance so color/picture edits
+      // propagate even though the id did not change.
+      _account = match;
+      _invalidatePeriodOccurrencesCache();
     }
 
     final formAccountId = editingData.account?.id;
