@@ -4,7 +4,7 @@ import 'package:budgly/src/pages/settings/accounts/tab.dart';
 import 'package:budgly/src/pages/settings/categories/tab.dart';
 import 'package:budgly/src/pages/settings/preferences/tab.dart';
 import 'package:budgly/src/pages/settings/profile/tab.dart';
-import 'package:budgly/src/shared/widgets/tabs/swipe_tabs.dart';
+import 'package:budgly/src/shared/ui/widgets/tabs/swipe_tabs.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/shared/widgets/categories/category_icon_view.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:flutter/material.dart';
 
 class CategoryView extends StatelessWidget {

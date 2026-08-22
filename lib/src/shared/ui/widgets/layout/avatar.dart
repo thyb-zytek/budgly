@@ -9,6 +9,8 @@ class Avatar extends StatelessWidget {
   final double size;
   final VoidCallback? onTap;
   final Color? backgroundColor;
+  final Color? borderColor;
+  final double borderWidth;
   final bool canRemove;
   final VoidCallback? onRemove;
 
@@ -20,6 +22,8 @@ class Avatar extends StatelessWidget {
     this.size = 45,
     this.onTap,
     this.backgroundColor,
+    this.borderColor,
+    this.borderWidth = 2.5,
     this.canRemove = false,
     this.onRemove,
   });
@@ -27,6 +31,40 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final effectiveBorderColor = borderColor ?? backgroundColor;
+    final innerRadius =
+        effectiveBorderColor == null ? size / 2 : size / 2 - borderWidth;
+
+    Widget avatar = CircleAvatar(
+      radius: innerRadius,
+      backgroundColor: backgroundColor,
+      foregroundImage: picture == null
+          ? null
+          : isLocalPicture
+          ? FileImage(File(picture!))
+          : NetworkImage(picture!),
+      child: Text(
+        initial,
+        style: size < 100
+            ? theme.textTheme.headlineMedium!.copyWith(
+                color: theme.colorScheme.onPrimary,
+              )
+            : theme.textTheme.displayLarge!.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
+      ),
+    );
+
+    if (effectiveBorderColor != null) {
+      avatar = Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: effectiveBorderColor,
+        ),
+        padding: EdgeInsets.all(borderWidth),
+        child: avatar,
+      );
+    }
 
     return Stack(
       clipBehavior: Clip.none,
@@ -36,25 +74,7 @@ class Avatar extends StatelessWidget {
           child: SizedBox(
             width: size,
             height: size,
-            child: CircleAvatar(
-              radius: size / 2,
-              backgroundColor: backgroundColor,
-              foregroundImage: picture == null
-                  ? null
-                  : isLocalPicture
-                  ? FileImage(File(picture!))
-                  : NetworkImage(picture!),
-              child: Text(
-                initial,
-                style: size < 100
-                    ? theme.textTheme.headlineMedium!.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                      )
-                    : theme.textTheme.displayLarge!.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                      ),
-              ),
-            ),
+            child: Center(child: avatar),
           ),
         ),
         if (canRemove && onRemove != null)

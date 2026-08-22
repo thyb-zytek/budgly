@@ -1,6 +1,6 @@
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/shared/widgets/categories/category_view.dart';
-import 'package:budgly/src/shared/widgets/selector/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_view.dart';
+import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
 
 class CategorySelector extends StatelessWidget {

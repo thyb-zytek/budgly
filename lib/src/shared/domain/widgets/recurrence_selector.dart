@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
-import 'package:budgly/src/shared/widgets/selector/selector.dart';
+import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
 
 /// Localized label of a [RecurrenceType].

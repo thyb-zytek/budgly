@@ -1,23 +1,16 @@
 import 'dart:math';
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/loading/progressive_loader.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/models/category/category_editing_data.dart';
-import 'package:budgly/src/services/categories.dart';
-import 'package:budgly/src/services/expenses.dart';
-import 'package:budgly/src/shared/view_models/category_form_view_model.dart';
+import 'package:budgly/src/services/categories/categories_service.dart';
+import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel {
-  static const CategoryIcon _defaultIcon = CategoryIcon(
-    iconName: 'category',
-    iconPack: 'material',
-    iconCode: 0xf624,
-    labels: {"en": "Category", "fr": "Catégorie"},
-  );
-
   final CategoriesService _categoriesService = CategoriesService.instance;
 
   Account? _account;
@@ -28,7 +21,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
   late final CategoryEditingData _editingData = CategoryEditingData(
     nameController: _nameController,
     color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
-    icon: _defaultIcon,
+    icon: AppConstants.defaultCategoryIcon,
     availableIcons: [],
   );
 
@@ -122,9 +115,10 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     await _categoriesService.loadAvailableIcons();
     _editingData.availableIcons = _categoriesService.availableIcons;
 
-    final defaultIcon = _editingData.availableIcons.isNotEmpty
-        ? _editingData.availableIcons.first
-        : _defaultIcon;
+    final defaultIcon = _editingData.availableIcons.firstWhere(
+      (i) => i.iconName == AppConstants.defaultCategoryIcon.iconName,
+      orElse: () => AppConstants.defaultCategoryIcon,
+    );
 
     final category = Category(
       id: null,

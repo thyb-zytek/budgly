@@ -1,16 +1,15 @@
-import 'dart:async';
-
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/pages/settings/widgets/customization_picker.dart';
-import 'package:budgly/src/pages/settings/widgets/entity_form.dart';
+import 'package:budgly/src/shared/ui/widgets/customization_picker.dart';
+import 'package:budgly/src/shared/ui/widgets/entity_form.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/shared/view_models/account_form_view_model.dart';
-import 'package:budgly/src/shared/widgets/avatar/avatar.dart';
-import 'package:budgly/src/shared/widgets/color_wheel/color_wheel.dart';
-import 'package:budgly/src/shared/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/widgets/tabs/tab.dart';
+import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
+import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
+import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
 
 class AccountForm extends StatefulWidget {
@@ -38,16 +37,17 @@ class AccountForm extends StatefulWidget {
 }
 
 class _AccountFormState extends State<AccountForm>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, PulseHintAnimationMixin {
   String? _tempPicture;
   late Color _tempColor;
   late final FocusNode _nameFocusNode;
-  AnimationController? _pulseController;
-  Animation<double>? _pulseAnimation;
 
-  AnimationController? _hintController;
-  Animation<double>? _hintAnimation;
-  Timer? _hintTimer;
+  @override
+  bool get withPulse => widget.withPulse;
+  @override
+  bool get withHint => widget.withHint;
+  @override
+  bool get hintEnabled => widget.enabled;
 
   @override
   void initState() {
@@ -56,26 +56,7 @@ class _AccountFormState extends State<AccountForm>
     _tempColor = widget.viewModel.editingData.color;
     _nameFocusNode = FocusNode();
 
-    if (widget.withPulse) {
-      _pulseController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1200),
-      )..repeat(reverse: true);
-      _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
-        CurvedAnimation(parent: _pulseController!, curve: Curves.easeInOut),
-      );
-    }
-
-    if (widget.withHint && widget.enabled) {
-      _hintController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 800),
-      );
-      _hintAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-        CurvedAnimation(parent: _hintController!, curve: Curves.easeInOut),
-      );
-      _scheduleHint();
-    }
+    initPulseHintAnimations();
 
     if (widget.account?.id == null) {
       Future.delayed(
@@ -83,14 +64,6 @@ class _AccountFormState extends State<AccountForm>
         () => _nameFocusNode.requestFocus(),
       );
     }
-  }
-
-  void _scheduleHint() {
-    _hintTimer?.cancel();
-    _hintTimer = Timer(const Duration(seconds: 5), () {
-      if (!mounted || !widget.enabled) return;
-      _hintController!.forward(from: 0).then((_) => _scheduleHint());
-    });
   }
 
   @override
@@ -102,19 +75,16 @@ class _AccountFormState extends State<AccountForm>
     if (newColor != _tempColor) _tempColor = newColor;
 
     if (widget.enabled && !oldWidget.enabled && widget.withHint) {
-      _scheduleHint();
+      onHintEnabled();
     }
     if (!widget.enabled) {
-      _hintTimer?.cancel();
-      _hintController?.value = 0;
+      onHintDisabled();
     }
   }
 
   @override
   void dispose() {
-    _hintTimer?.cancel();
-    _hintController?.dispose();
-    _pulseController?.dispose();
+    disposePulseHintAnimations();
     _nameFocusNode.dispose();
     super.dispose();
   }
@@ -126,8 +96,7 @@ class _AccountFormState extends State<AccountForm>
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
 
-    _hintTimer?.cancel();
-    _hintController?.value = 0;
+    cancelHint();
 
     showAppBottomSheet(
       context,
@@ -203,23 +172,16 @@ class _AccountFormState extends State<AccountForm>
   }
 
   Widget _buildAvatar(String initial) {
-    Widget avatar = Avatar(
-      initial: initial,
-      backgroundColor: _tempColor,
-      picture: _tempPicture,
-      isLocalPicture: _isTempLocalPicture,
-      size: 52,
-      onTap: widget.enabled ? () => _openAvatarPicker(context, initial) : null,
+    return wrapWithPulseHint(
+      Avatar(
+        initial: initial,
+        backgroundColor: _tempColor,
+        picture: _tempPicture,
+        isLocalPicture: _isTempLocalPicture,
+        size: 52,
+        onTap: widget.enabled ? () => _openAvatarPicker(context, initial) : null,
+      ),
     );
-
-    if (_pulseAnimation != null) {
-      avatar = ScaleTransition(scale: _pulseAnimation!, child: avatar);
-    }
-    if (_hintAnimation != null) {
-      avatar = ScaleTransition(scale: _hintAnimation!, child: avatar);
-    }
-
-    return avatar;
   }
 
   @override

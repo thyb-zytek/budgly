@@ -3,7 +3,7 @@ import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/pages/overview/widgets/donut_chart.dart';
 import 'package:budgly/src/pages/overview/widgets/summary_item.dart';
-import 'package:budgly/src/shared/widgets/accounts/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:flutter/material.dart';
 
 class SummaryCard extends StatelessWidget {

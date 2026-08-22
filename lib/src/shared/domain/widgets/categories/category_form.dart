@@ -1,15 +1,15 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/shared/widgets/forms/customization_picker.dart';
-import 'package:budgly/src/shared/widgets/forms/entity_form.dart';
+import 'package:budgly/src/shared/ui/widgets/customization_picker.dart';
+import 'package:budgly/src/shared/ui/widgets/entity_form.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/shared/view_models/category_form_view_model.dart';
-import 'package:budgly/src/shared/widgets/categories/category_icon_view.dart';
-import 'package:budgly/src/shared/widgets/layout/color_wheel.dart';
-import 'package:budgly/src/shared/widgets/mixins/pulse_hint_animation.dart';
-import 'package:budgly/src/shared/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/widgets/tabs/tab.dart';
+import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
+import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
+import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 

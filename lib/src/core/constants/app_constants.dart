@@ -1,3 +1,5 @@
+import 'package:budgly/src/models/category/category_icon.dart';
+
 class AppConstants {
   // Cache validity durations
   static const Duration cacheValidityShort = Duration(minutes: 5);
@@ -28,4 +30,10 @@ class AppConstants {
   // Default values
   static const String defaultLocale = 'fr';
   static const String defaultCurrency = 'EUR';
+  static const CategoryIcon defaultCategoryIcon = CategoryIcon(
+    iconName: 'category_rounded',
+    iconCode: 0xf624,
+    iconPack: 'MaterialIcons',
+    labels: {'en': 'Category', 'fr': 'Catégorie'},
+  );
 }

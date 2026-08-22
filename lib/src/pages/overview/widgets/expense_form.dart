@@ -1,10 +1,10 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/shared/widgets/accounts/selector.dart';
-import 'package:budgly/src/shared/widgets/categories/selector.dart';
-import 'package:budgly/src/shared/widgets/forms/expense_form_fields.dart';
-import 'package:budgly/src/shared/widgets/forms/form_actions.dart';
-import 'package:budgly/src/shared/widgets/layout/framed_container.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/expense_form_fields.dart';
+import 'package:budgly/src/shared/ui/widgets/form_actions.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:flutter/material.dart';
 
 class ExpenseForm extends StatefulWidget {

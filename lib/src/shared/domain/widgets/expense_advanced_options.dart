@@ -1,8 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
-import 'package:budgly/src/shared/widgets/inputs/date_field.dart';
-import 'package:budgly/src/shared/widgets/selector/recurrence_selector.dart';
+import 'package:budgly/src/shared/ui/widgets/inputs/date_field.dart';
+import 'package:budgly/src/shared/domain/widgets/recurrence_selector.dart';
 import 'package:flutter/material.dart';
 
 class ExpenseAdvancedOptions extends StatelessWidget {

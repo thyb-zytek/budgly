@@ -1,7 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/shared/widgets/tabs/tab.dart';
-import 'package:budgly/src/shared/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
+import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
 
 class CustomizationPicker extends StatefulWidget {

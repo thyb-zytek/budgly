@@ -1,5 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/routers/navigation_helper.dart';
+import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:budgly/src/models/budget/period.dart';
@@ -8,9 +8,9 @@ import 'package:budgly/src/pages/overview/widgets/expense_form.dart';
 import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
 import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
 import 'package:budgly/src/pages/overview/widgets/summary.dart';
-import 'package:budgly/src/shared/widgets/categories/category_expenses.dart';
-import 'package:budgly/src/shared/widgets/layout/empty_state.dart';
-import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_expenses.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
