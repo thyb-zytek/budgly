@@ -3,13 +3,13 @@ import 'dart:math';
 import 'package:budgly/src/core/loading/progressive_loader.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/services/accounts_budget.dart';
-import 'package:budgly/src/services/expenses.dart';
-import 'package:budgly/src/services/image.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/budget/account_budgets_service.dart';
+import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/image/image_service.dart';
 import 'package:budgly/src/models/account/account_editing_data.dart';
-import 'package:budgly/src/shared/services/account_image_helper.dart';
-import 'package:budgly/src/shared/view_models/account_form_view_model.dart';
+import 'package:budgly/src/services/image/account_image_helper.dart';
+import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
 import 'package:flutter/material.dart';
 
 class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
@@ -38,7 +38,8 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
     _editingAccount = account;
     _nameController.text = account?.name ?? '';
     _editingData.color = account?.color ?? Colors.primaries[Random().nextInt(Colors.primaries.length)];
-    _editingData.picture = account?.pictureUrl ?? account?.picture;
+    _editingData.picture = account?.pictureUrl;
+    _editingData.isLocalPicture = account?.pictureUrl == null;
 
     if (!isDisposed) notifyListeners();
   }
@@ -46,7 +47,10 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
   @override
   Future<String?> pickImage(BuildContext context) async {
     final path = await ImageService.pickAndCropImage(context);
-    if (path != null) _editingData.picture = path;
+    if (path != null) {
+      _editingData.picture = path;
+      _editingData.isLocalPicture = true;
+    }
     return path;
   }
 
@@ -181,7 +185,7 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
       String? currentFileName = account.picture;
       ImageProcessResult? imageToUpload;
 
-      if (_editingData.picture != account.pictureUrl && _editingData.picture != account.picture) {
+      if (_editingData.picture != account.pictureUrl) {
         if (account.picture != null) {
           await _accountsService.deletePicture(account.picture!, account.id!);
           currentFileName = null;
