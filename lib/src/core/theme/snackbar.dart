@@ -1,7 +1,7 @@
 import 'package:budgly/src/core/theme/material_theme.dart';
 import 'package:flutter/material.dart';
 
-enum SnackBarType { error, success, info }
+enum SnackBarType { error, success, info, pending }
 
 extension SnackBarTypeStyles on SnackBarType {
   Color backgroundColor(BuildContext context) {
@@ -12,6 +12,7 @@ extension SnackBarTypeStyles on SnackBarType {
           ? MaterialTheme.success.light.color
           : MaterialTheme.success.dark.color,
       SnackBarType.info => theme.colorScheme.tertiaryContainer,
+      SnackBarType.pending => theme.colorScheme.secondary,
     };
   }
 
@@ -21,6 +22,7 @@ extension SnackBarTypeStyles on SnackBarType {
       SnackBarType.error => theme.colorScheme.onErrorContainer,
       SnackBarType.success => theme.colorScheme.onPrimary,
       SnackBarType.info => theme.colorScheme.onTertiaryContainer,
+      SnackBarType.pending => theme.colorScheme.onSecondary,
     };
   }
 
@@ -28,6 +30,7 @@ extension SnackBarTypeStyles on SnackBarType {
     SnackBarType.error => Icons.error_outline_rounded,
     SnackBarType.success => Icons.check_circle_outline_rounded,
     SnackBarType.info => Icons.info_outline_rounded,
+    SnackBarType.pending => Icons.undo_rounded,
   };
 }
 
@@ -48,7 +51,7 @@ SnackBar buildAppSnackBar(String message, SnackBarType type) {
     backgroundColor: Colors.transparent,
     duration: const Duration(seconds: 3),
     elevation: 0,
-    showCloseIcon: true,
+    showCloseIcon: false,
     content: _SnackBarContent(message: message, type: type),
   );
 }
