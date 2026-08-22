@@ -1,6 +1,6 @@
-import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/services/categories.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/categories/categories_service.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:flutter/material.dart';

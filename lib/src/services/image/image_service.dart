@@ -66,8 +66,7 @@ class ImageService {
       if (path == null || !context.mounted) {
         return null;
       }
-
-      return _cropToCircle(context, path);
+      return await _cropToCircle(context, path);
     } catch (e) {
       return null;
     }

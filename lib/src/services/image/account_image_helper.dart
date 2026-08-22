@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/services/image.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/image/image_service.dart';
 
 class ImageProcessResult {
   final String fileName;
