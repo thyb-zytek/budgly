@@ -1,8 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
-import 'package:budgly/src/shared/widgets/categories/status_chip.dart';
-import 'package:budgly/src/shared/widgets/categories/category_view.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/status_chip.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_view.dart';
 import 'package:flutter/material.dart';
 
 /// One category row in the expense list: icon, name, total, and the

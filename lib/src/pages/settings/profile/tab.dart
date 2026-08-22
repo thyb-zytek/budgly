@@ -5,10 +5,10 @@ import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
-import 'package:budgly/src/shared/widgets/user/details.dart';
-import 'package:budgly/src/shared/widgets/user/view_card.dart';
-import 'package:budgly/src/shared/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/domain/widgets/user/details.dart';
+import 'package:budgly/src/shared/domain/widgets/user/view_card.dart';
+import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 class ProfileTab extends StatefulWidget {

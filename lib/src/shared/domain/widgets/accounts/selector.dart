@@ -1,6 +1,6 @@
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/shared/widgets/accounts/account_view.dart';
-import 'package:budgly/src/shared/widgets/selector/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/account_view.dart';
+import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
 
 class AccountSelector extends StatelessWidget {
@@ -29,9 +29,12 @@ class AccountSelector extends StatelessWidget {
       onSelect: onSelect,
       maxHeight: 300,
       backgroundColor: backgroundColor,
-      itemBuilder: (context, account) => AccountView(
-        account: account,
-        color: Colors.transparent,
+      itemBuilder: (context, account) => Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: AccountView(
+          account: account,
+          color: Colors.transparent,
+        ),
       ),
     );
   }

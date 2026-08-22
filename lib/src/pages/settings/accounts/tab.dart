@@ -1,13 +1,13 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/pages/settings/accounts/view_model.dart';
-import 'package:budgly/src/shared/widgets/accounts/account_form.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/account_form.dart';
 import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
 import 'package:budgly/src/core/theme/component_styles.dart';
-import 'package:budgly/src/shared/widgets/accounts/account_view.dart';
-import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/account_view.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 class AccountsTab extends StatefulWidget {

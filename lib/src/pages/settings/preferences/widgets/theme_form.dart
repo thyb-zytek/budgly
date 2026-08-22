@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/shared/widgets/layout/preference_section.dart';
-import 'package:budgly/src/shared/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/preference_section.dart';
+import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
 
 class ThemeForm extends StatelessWidget {
