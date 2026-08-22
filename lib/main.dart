@@ -4,9 +4,7 @@ import 'package:budgly/src/core/auth/google_sign_in.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 
 import 'src/app.dart';
-import 'src/core/auth/auth_session.dart';
-import 'src/core/routers/navigation_helper.dart';
-import 'src/services/profile.dart';
+import 'src/services/profile/profile_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -49,8 +47,6 @@ Future<void> main() async {
     ProfileService.instance.init(),
   ]);
 
-  AuthSessionNotifier.instance;
-  NavigationHelper.instance;
 
   runApp(const BudglyApp());
   unawaited(GoogleSignInInitializer.ensureInitialized());

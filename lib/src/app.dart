@@ -1,11 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/loading/progressive_loader.dart';
-import 'package:budgly/src/core/routers/navigation_helper.dart';
+import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/material_theme.dart';
 import 'package:budgly/src/pages/error/service_unavailable.dart';
-import 'package:budgly/src/services/category_icons.dart';
-import 'package:budgly/src/services/errors.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/services/categories/category_icons_service.dart';
+import 'package:budgly/src/services/errors/error_service.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
