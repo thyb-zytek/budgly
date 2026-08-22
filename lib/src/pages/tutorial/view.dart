@@ -1,11 +1,14 @@
-import 'dart:async';
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/routers/navigation_helper.dart';
+import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/pages/tutorial/view_model.dart';
-import 'package:budgly/src/shared/widgets/loading/loading_indicator.dart';
+import 'package:budgly/src/pages/tutorial/widgets/step_indicator.dart';
+import 'package:budgly/src/pages/tutorial/widgets/welcome_step.dart';
+import 'package:budgly/src/pages/tutorial/widgets/account_step.dart';
+import 'package:budgly/src/pages/tutorial/widgets/category_step.dart';
+import 'package:budgly/src/pages/tutorial/widgets/budget_step.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class TutorialPage extends StatefulWidget {
   TutorialPage({super.key});
@@ -16,23 +19,44 @@ class TutorialPage extends StatefulWidget {
 
 class _TutorialPageState extends State<TutorialPage> {
   late final TutorialViewModel _viewModel;
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _viewModel = TutorialViewModel();
+    _pageController = PageController();
   }
 
   @override
   void dispose() {
     _viewModel.dispose();
+    _pageController.dispose();
     super.dispose();
   }
-  
-  void _navigateToLogin() {
+
+  void _goToOverview() {
     if (mounted) {
-      context.go('/login');
+      context.go(NavigationHelper.overviewPath);
     }
+  }
+
+  void _onNextStep() {
+    _viewModel.nextStep();
+    _pageController.animateToPage(
+      _viewModel.currentStep,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _onPreviousStep() {
+    _viewModel.previousStep();
+    _pageController.animateToPage(
+      _viewModel.currentStep,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -41,59 +65,101 @@ class _TutorialPageState extends State<TutorialPage> {
       listenable: _viewModel,
       builder: (context, child) {
         final tr = AppLocalizations.of(context)!;
+        final theme = Theme.of(context);
 
-        if (_viewModel.isChecking) {
+        if (_viewModel.isInitializing) {
           return const Scaffold(body: AppLoadingIndicator());
         }
 
-        return Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  tr.tutorial,
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () async {
-                    print("Logging out...");
-                    await _viewModel.signOut();
-                    print("Navigating to login...");
-                    
-                    if (!mounted) return;
-                    
-                    // Listen to auth state changes to detect when user is truly logged out
-                    StreamSubscription? subscription;
-                    subscription = FirebaseAuth.instance.authStateChanges().listen((user) {
-                      print("Auth state changed, user is null: ${user == null}");
-                      if (user == null) {
-                        subscription?.cancel();
-                        _navigateToLogin();
-                      }
-                    });
-                    
-                    // Fallback: navigate after 2 seconds if auth state doesn't change
-                    await Future.delayed(const Duration(seconds: 2));
-                    subscription.cancel();
-                    print("Fallback: navigating to login");
-                    _navigateToLogin();
-                  },
-                  child: Text(tr.logout),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    context.go(NavigationHelper.settingsPath);
-                  },
-                  child: Text(tr.settingsDev),
-                ),
-              ],
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (_viewModel.canGoBack) {
+              _onPreviousStep();
+            } else {
+              _showLogoutDialog(tr);
+            }
+          },
+          child: Scaffold(
+            body: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: _viewModel.canGoBack
+                              ? IconButton(
+                                  style: IconButton.styleFrom(
+                                    backgroundColor:
+                                        theme.colorScheme.surfaceContainerHigh,
+                                    shape: const CircleBorder(),
+                                  ),
+                                  icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                                  onPressed: _onPreviousStep,
+                                )
+                              : null,
+                        ),
+                        Expanded(
+                          child: StepIndicator(
+                            currentStep: _viewModel.currentStep,
+                            totalSteps: _viewModel.totalSteps,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        WelcomeStep(onNext: _onNextStep),
+                        AccountStep(viewModel: _viewModel, onNext: _onNextStep),
+                        CategoryStep(viewModel: _viewModel, onNext: _onNextStep),
+                        BudgetStep(
+                          viewModel: _viewModel,
+                          onFinish: _goToOverview,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  void _showLogoutDialog(AppLocalizations tr) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(tr.logout),
+        content: Text(tr.tutorialLogoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(tr.cancel),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _viewModel.signOut();
+              if (mounted) {
+                context.go(NavigationHelper.loginPath);
+              }
+            },
+            child: Text(tr.logout),
+          ),
+        ],
+      ),
     );
   }
 }
