@@ -2,9 +2,10 @@ import 'dart:io';
 
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/services/cache/cache_controller.dart';
 import 'package:budgly/src/stores/accounts.dart';
-import 'providers/supabase/accounts.dart';
-import 'providers/supabase/storage.dart';
+import 'package:budgly/src/services/providers/supabase/accounts.dart';
+import 'package:budgly/src/services/providers/supabase/storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart';
 
@@ -16,19 +17,27 @@ class AccountsService {
     return _instance!;
   }
 
-  final AccountSupabase _accountSupabase = AccountSupabase();
-  final StorageSupabase _storageSupabase = StorageSupabase();
-  final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
+  final AccountSupabase _accountSupabase;
+  final StorageSupabase _storageSupabase;
+  final fb.FirebaseAuth _auth;
   final String _bucketId = AppConstants.bucketAccounts;
-  
-  final AccountsStore _store = AccountsStore.instance; 
 
-  DateTime? _lastFetch;
-  Future<void>? _loadFuture;
-  int _sessionGeneration = 0;
-  static const Duration _cacheValidity = AppConstants.cacheValidityMedium;
+  final CacheController<String> _cache =
+      CacheController<String>(ttl: AppConstants.cacheValidityMedium);
+  final AccountsStore _store;
+  static const String _cacheKey = 'accounts';
 
-  AccountsService._();
+  AccountsService({
+    AccountSupabase? accountSupabase,
+    StorageSupabase? storageSupabase,
+    fb.FirebaseAuth? auth,
+    AccountsStore? store,
+  })  : _accountSupabase = accountSupabase ?? AccountSupabase(),
+        _storageSupabase = storageSupabase ?? StorageSupabase(),
+        _auth = auth ?? fb.FirebaseAuth.instance,
+        _store = store ?? AccountsStore.instance;
+
+  AccountsService._() : this();
 
   Listenable get changeNotifier => _store;
   List<Account> get accounts => _store.accounts;
@@ -36,8 +45,7 @@ class AccountsService {
   bool get hasLoaded => _store.hasLoaded;
 
   void invalidateCache() {
-    _sessionGeneration++;
-    _lastFetch = null;
+    _cache.invalidate();
     _store.setLoaded(false);
   }
 
@@ -50,29 +58,26 @@ class AccountsService {
   }
 
   Future<void> loadAccounts({bool forceRefresh = false}) async {
-    final cacheValid = !forceRefresh &&
-        _store.hasLoaded &&
-        _lastFetch != null &&
-        DateTime.now().difference(_lastFetch!) < _cacheValidity;
+    if (!forceRefresh && _store.hasLoaded && _cache.isFresh(_cacheKey)) return;
 
-    if (cacheValid) return;
-    if (_loadFuture != null) return _loadFuture!;
+    final inFlight = _cache.inFlight(_cacheKey);
+    if (inFlight != null) return inFlight;
 
     final future = _loadAccounts(forceRefresh: forceRefresh);
-    _loadFuture = future;
+    _cache.track(_cacheKey, future);
     try {
       await future;
     } finally {
-      if (identical(_loadFuture, future)) _loadFuture = null;
+      _cache.untrack(_cacheKey, future);
     }
   }
 
   Future<void> _loadAccounts({required bool forceRefresh}) async {
-    final generation = _sessionGeneration;
+    final generation = _cache.generation;
     _store.beginLoading();
     try {
       final accounts = await _fetchAccountsWithSignedUrls(forceRefresh: forceRefresh);
-      if (generation != _sessionGeneration) return;
+      if (generation != _cache.generation) return;
       _store.setAccounts(accounts);
       _store.setLoaded(true);
     } finally {
@@ -85,8 +90,7 @@ class AccountsService {
   }) async {
     final cacheValid = !forceRefresh &&
         _store.accounts.isNotEmpty &&
-        _lastFetch != null &&
-        DateTime.now().difference(_lastFetch!) < _cacheValidity;
+        _cache.isFresh(_cacheKey);
 
     if (cacheValid) {
       if (_store.accounts.any(
@@ -100,7 +104,7 @@ class AccountsService {
     final userId = _currentUserId;
     final rows = await _accountSupabase.listByUserId(userId);
     final freshAccounts = await _withSignedUrls(rows);
-    _lastFetch = DateTime.now();
+    _cache.markFresh(_cacheKey);
     return freshAccounts;
   }
 
@@ -137,23 +141,29 @@ class AccountsService {
   }
 
   Future<Account> createAccount(Account account) async {
-    final generation = _sessionGeneration;
+    final generation = _cache.generation;
     final created = await _accountSupabase.create(
       account.copyWith(userId: _currentUserId),
     );
     if (created != null) {
-      if (generation == _sessionGeneration) _store.addAccount(created);
+      if (generation == _cache.generation) _store.addAccount(created);
       return created;
     }
     throw Exception('Failed to create account');
   }
 
   Future<Account> updateAccount(Account account) async {
-    final generation = _sessionGeneration;
+    final generation = _cache.generation;
     final updated = await _accountSupabase.update(account);
     if (updated != null) {
-      if (generation == _sessionGeneration) _store.updateAccount(updated);
-      return updated;
+      // The DB row carries no signed URL: preserve the existing one when
+      // the underlying picture file did not change.
+      final merged =
+          (updated.picture != null && updated.picture == account.picture)
+              ? updated.copyWith(pictureUrl: account.pictureUrl)
+              : updated;
+      if (generation == _cache.generation) _store.updateAccount(merged);
+      return merged;
     }
     throw Exception('Failed to update account');
   }
@@ -163,10 +173,10 @@ class AccountsService {
   }
 
   Future<bool> deleteAccount(String accountId) async {
-    final generation = _sessionGeneration;
+    final generation = _cache.generation;
     final deleted = await _accountSupabase.delete(accountId);
     if (deleted) {
-      if (generation == _sessionGeneration) _store.removeAccount(accountId);
+      if (generation == _cache.generation) _store.removeAccount(accountId);
       return deleted;
     }
     throw Exception('Failed to delete account');
@@ -219,7 +229,7 @@ class AccountsService {
   }
 
   void clearLocalAccounts() {
+    _cache.invalidate();
     _store.clearLocalAccounts();
-    invalidateCache();
   }
 }

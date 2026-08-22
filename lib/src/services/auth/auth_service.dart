@@ -2,8 +2,7 @@ import 'package:budgly/src/core/auth/google_sign_in.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
-import 'package:budgly/src/services/accounts.dart';
-import 'providers/supabase/user_profiles.dart';
+import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart'
     show
@@ -21,11 +20,19 @@ class AuthService {
     return _instance!;
   }
 
-  final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  final UserProfileSupabase _userProfileSupabase = UserProfileSupabase();
+  final fb.FirebaseAuth _auth;
+  final GoogleSignIn _googleSignIn;
+  final UserProfileSupabase _userProfileSupabase;
 
-  AuthService._();
+  AuthService({
+    fb.FirebaseAuth? auth,
+    GoogleSignIn? googleSignIn,
+    UserProfileSupabase? userProfileSupabase,
+  })  : _auth = auth ?? fb.FirebaseAuth.instance,
+        _googleSignIn = googleSignIn ?? GoogleSignIn.instance,
+        _userProfileSupabase = userProfileSupabase ?? UserProfileSupabase();
+
+  AuthService._() : this();
 
   User? get currentUser =>
       _auth.currentUser != null ? User.fromFirebaseUser(_auth.currentUser!) : null;
@@ -110,10 +117,6 @@ class AuthService {
 
       final UserProfile profile =
           await _userProfileSupabase.getOrCreateProfile(fbUser);
-      if (fbUser.emailVerified) {
-        await AccountsService.instance.loadAccounts();
-      }
-
       return User.fromFirebaseUser(fbUser, profile: profile);
     } on fb.FirebaseAuthException catch (e) {
       throw AuthenticationException(code: e.code, message: e.message ?? "An error occurred during sign in");
@@ -152,8 +155,6 @@ class AuthService {
       final fbUser = userCredential.user!;
 
       final profile = await _userProfileSupabase.getOrCreateProfile(fbUser);
-      await AccountsService.instance.loadAccounts();
-
       return User.fromFirebaseUser(fbUser, profile: profile);
     } on fb.FirebaseAuthException catch (e) {
       throw AuthenticationException(code: e.code, message: e.message ?? 'Google Sign-In Error');

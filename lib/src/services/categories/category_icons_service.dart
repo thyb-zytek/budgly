@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
+import 'package:budgly/src/services/cache/cache_controller.dart';
 import 'package:budgly/src/services/providers/supabase/storage.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,61 +16,79 @@ class CategoryIconsService {
     return _instance!;
   }
 
-  CategoryIconsService._();
-
-  final StorageSupabase _storage = StorageSupabase();
+  final StorageSupabase _storage;
+  final CacheController<String> _cache = CacheController<String>(
+    ttl: AppConstants.cacheValidityLong,
+  );
+  static const String _cacheKey = 'category-icons';
 
   static const String _bucketName = AppConstants.bucketConfig;
   static const String _iconsFileName = AppConstants.categoryIconsFileName;
-  static const String _cacheKey = AppConstants.cacheCategoryIcons;
-  static const Duration _cacheValidity = AppConstants.cacheValidityLong;
+  static const String _persistentCacheKey = AppConstants.cacheCategoryIcons;
 
   List<CategoryIcon> _icons = [];
-  DateTime? _lastFetch;
+
+  CategoryIconsService({StorageSupabase? storage})
+      : _storage = storage ?? StorageSupabase();
+
+  CategoryIconsService._() : this();
 
   Future<void> invalidateCache() async {
-    _icons.clear();
-    _lastFetch = null;
+    _icons = [];
+    _cache.invalidate();
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_cacheKey);
+    await prefs.remove(_persistentCacheKey);
   }
 
   Future<List<CategoryIcon>> getIcons() async {
-    if (_icons.isNotEmpty &&
-        _lastFetch != null &&
-        DateTime.now().difference(_lastFetch!) < _cacheValidity) {
+    if (_icons.isNotEmpty && _cache.isFresh(_cacheKey)) {
       return List.unmodifiable(_icons);
     }
 
+    final inFlight = _cache.inFlight(_cacheKey);
+    if (inFlight != null) {
+      await inFlight;
+      return List.unmodifiable(_icons);
+    }
+
+    final future = _loadIcons();
+    _cache.track(_cacheKey, future);
+    try {
+      await future;
+      return List.unmodifiable(_icons);
+    } finally {
+      _cache.untrack(_cacheKey, future);
+    }
+  }
+
+  Future<void> _loadIcons() async {
     final cached = await _getCachedIcons();
     if (cached != null) {
       _icons = cached;
-      return List.unmodifiable(_icons);
+      _cache.markFresh(_cacheKey);
+      return;
     }
 
     try {
       final fromSupabase = await _loadIconsFromSupabase();
       if (fromSupabase.isNotEmpty) {
         _icons = fromSupabase;
-        _lastFetch = DateTime.now();
+        _cache.markFresh(_cacheKey);
         await _cacheIcons(_icons);
-        return List.unmodifiable(_icons);
+        return;
       }
     } catch (e) {
       AppLogger.error('Erreur Supabase: $e', e);
     }
 
     try {
-      final fromAssets = await _loadIconsFromAssets();
-      _icons = fromAssets;
-      _lastFetch = DateTime.now();
-      return List.unmodifiable(_icons);
+      _icons = await _loadIconsFromAssets();
+      _cache.markFresh(_cacheKey);
     } catch (e) {
       AppLogger.error('Erreur assets: $e', e);
+      _icons = [];
     }
-
-    return [];
   }
 
   Future<List<CategoryIcon>> _loadIconsFromSupabase() async {
@@ -100,28 +119,29 @@ class CategoryIconsService {
 
   Future<void> _cacheIcons(List<CategoryIcon> icons) async {
     final prefs = await SharedPreferences.getInstance();
-    final cacheData = {
-      'last_updated': DateTime.now().toIso8601String(),
-      'icons': icons.map((i) => i.toJson()).toList(),
-    };
-
-    await prefs.setString(_cacheKey, json.encode(cacheData));
+    await prefs.setString(
+      _persistentCacheKey,
+      json.encode({
+        'last_updated': DateTime.now().toIso8601String(),
+        'icons': icons.map((i) => i.toJson()).toList(),
+      }),
+    );
   }
 
   Future<List<CategoryIcon>?> _getCachedIcons() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getString(_cacheKey);
+      final cached = prefs.getString(_persistentCacheKey);
       if (cached == null) return null;
 
       final data = json.decode(cached) as Map<String, dynamic>;
-      final lastUpdated = DateTime.parse(data['last_updated']);
-
-      if (DateTime.now().difference(lastUpdated) > _cacheValidity) {
+      final lastUpdated = DateTime.parse(data['last_updated'] as String);
+      if (DateTime.now().difference(lastUpdated) >
+          AppConstants.cacheValidityLong) {
         return null;
       }
 
-      final List<dynamic> iconsJson = data['icons'];
+      final iconsJson = data['icons'] as List<dynamic>;
       return iconsJson
           .map((json) => CategoryIcon.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -138,12 +158,11 @@ class CategoryIconsService {
 
   Future<CategoryIcon?> getIconByCode(String iconCode) async {
     if (iconCode.isEmpty) return null;
-    if (_icons.isEmpty) {
-      await getIcons();
-    }
+    if (_icons.isEmpty) await getIcons();
 
     final code = int.tryParse(iconCode);
     if (code == null) return null;
+
     for (final icon in _icons) {
       if (icon.iconCode == code) return icon;
     }

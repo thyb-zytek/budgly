@@ -1,6 +1,6 @@
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 
 class PreferencesViewModel extends BaseViewModel {

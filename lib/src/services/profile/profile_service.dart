@@ -1,17 +1,14 @@
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/user/user.dart';
-import 'package:budgly/src/services/auth.dart';
+import 'package:budgly/src/services/auth/auth_service.dart';
 import 'package:budgly/src/stores/profile.dart';
 import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
-import 'package:budgly/src/services/accounts.dart';
-import 'package:budgly/src/services/categories.dart';
-import 'package:budgly/src/services/expenses.dart';
-import 'package:budgly/src/services/accounts_budget.dart';
+import 'package:budgly/src/services/session/session_data_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
-class ProfileService with ChangeNotifier {
+class ProfileService implements Listenable {
   static ProfileService? _instance;
   
   static ProfileService get instance {
@@ -19,9 +16,10 @@ class ProfileService with ChangeNotifier {
     return _instance!;
   }
 
-  final ProfileStore _store = ProfileStore.instance;
-  final AuthService _authService = AuthService.instance;
-  final UserProfileSupabase _profileSupabase = UserProfileSupabase();
+  final ProfileStore _store;
+  final AuthService _authService;
+  final UserProfileSupabase _profileSupabase;
+  final SessionDataService _sessionDataService;
 
   SharedPreferences? _prefs;
   Future<void>? _loadProfileFuture;
@@ -31,7 +29,17 @@ class ProfileService with ChangeNotifier {
   static const String _localeKey = AppConstants.localeKey;
   static const String _currencyKey = AppConstants.currencyKey;
 
-  ProfileService._();
+  ProfileService({
+    ProfileStore? store,
+    AuthService? authService,
+    UserProfileSupabase? profileSupabase,
+    SessionDataService? sessionDataService,
+  })  : _store = store ?? ProfileStore.instance,
+        _authService = authService ?? AuthService.instance,
+        _profileSupabase = profileSupabase ?? UserProfileSupabase(),
+        _sessionDataService = sessionDataService ?? SessionDataService.instance;
+
+  ProfileService._() : this();
 
   User? get currentUser => _store.currentUser;
   ThemeMode get themeMode => _store.themeMode;
@@ -192,10 +200,7 @@ class ProfileService with ChangeNotifier {
     try {
       await _authService.signOut();
       _sessionGeneration++;
-      AccountsService.instance.clearLocalAccounts();
-      CategoriesService.instance.invalidateCache();
-      ExpensesService.instance.invalidateCache();
-      AccountBudgetsService.instance.invalidateCache();
+      _sessionDataService.clearUserData();
       _store.clear();
     } finally {
       _store.setLoading(false);
