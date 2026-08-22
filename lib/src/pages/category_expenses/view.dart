@@ -4,20 +4,19 @@ import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/pages/category_expenses/widgets/expense_card.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/expense_edit_sheet.dart';
-import 'package:budgly/src/pages/category_expenses/widgets/expense_occurrence_tile.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/swipe_hint_wrapper.dart';
-import 'package:budgly/src/shared/widgets/categories/category_expenses.dart';
-import 'package:budgly/src/shared/widgets/layout/empty_state.dart';
-import 'package:budgly/src/shared/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_expenses.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
 /// Lists every expense occurrence of a category (recurring ones expanded
-/// automatically): undebited first, then most recent first.
-///
-/// Rows can be tapped to open the edit sheet or swiped (left to toggle the
-/// debited state, right to edit). A periodic swipe hint animates over the
-/// first row until the user interacts with it.
+/// automatically): undebited first, then most recent first. Swipe actions
+/// adapt to the row state and a periodic hint animates over the first row
+/// until the user interacts with it.
 class CategoryExpensesPage extends StatefulWidget {
   final String accountId;
   final String categoryId;
@@ -77,7 +76,25 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
       message: wasDebited
           ? tr.expenseMarkedAsPending
           : tr.expenseMarkedAsDebited,
-      type: SnackBarType.success,
+      type: wasDebited ? SnackBarType.pending : SnackBarType.success,
+    );
+  }
+
+  /// Deletes the whole expense behind an occurrence after confirmation.
+  Future<void> _deleteOccurrence(ExpenseOccurrence occurrence) async {
+    final tr = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final deleted = await showConfirmDelete(
+      context,
+      title: tr.confirmDeleteExpense(occurrence.name),
+      content: tr.confirmDeleteExpenseMessage(occurrence.name),
+      onConfirm: () => _viewModel.deleteOccurrence(occurrence),
+    );
+    if (deleted != true || !mounted) return;
+
+    messenger.showSnackBar(
+      buildAppSnackBar(tr.expenseDeletedSuccessfully, SnackBarType.success),
     );
   }
 
@@ -93,7 +110,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
         }
 
         final occurrences = _viewModel.occurrences;
-        final summary = _viewModel.summary!;
+        final summary = _viewModel.summarize(occurrences);
 
         return Scaffold(
           appBar: AppBar(
@@ -128,19 +145,25 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final occurrence = occurrences[index];
-                      final tile = ExpenseOccurrenceTile(
+                      final card = ExpenseCard(
                         occurrence: occurrence,
                         currencyCode: _viewModel.currencyCode,
                         localeName: _viewModel.localeName,
+                        accountColor: _viewModel.accountColor,
                         onTap: () => _openEditSheet(occurrence),
                         onEdit: () => _openEditSheet(occurrence),
                         onToggleDebited: () => _toggleDebited(occurrence),
+                        onDelete: () => _deleteOccurrence(occurrence),
                         onUserInteracted: () =>
                             _swipeHintKey.currentState?.stop(),
                       );
                       return index == 0
-                          ? SwipeHintWrapper(key: _swipeHintKey, child: tile)
-                          : tile;
+                          ? SwipeHintWrapper(
+                              key: _swipeHintKey,
+                              isDebited: occurrence.isDebited,
+                              child: card,
+                            )
+                          : card;
                     },
                   ),
                 ),

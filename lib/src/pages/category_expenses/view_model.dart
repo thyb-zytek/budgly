@@ -6,17 +6,19 @@ import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
-import 'package:budgly/src/services/categories.dart';
-import 'package:budgly/src/services/expenses.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/categories/categories_service.dart';
+import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 
 /// Lists the expenses of a single category for a given period, and lets the
 /// user mark occurrences as debited, edit or delete them.
 class CategoryExpensesViewModel extends BaseViewModel {
-  final ExpensesService _expensesService = ExpensesService.instance;
-  final CategoriesService _categoriesService = CategoriesService.instance;
-  final ProfileService _profileService = ProfileService.instance;
+  final ExpensesService _expensesService;
+  final CategoriesService _categoriesService;
+  final ProfileService _profileService;
+  final AccountsService _accountsService;
 
   final String accountId;
   final String categoryId;
@@ -31,7 +33,14 @@ class CategoryExpensesViewModel extends BaseViewModel {
     required this.accountId,
     required this.categoryId,
     required this.period,
-  }) {
+    ExpensesService? expensesService,
+    CategoriesService? categoriesService,
+    ProfileService? profileService,
+    AccountsService? accountsService,
+  })  : _expensesService = expensesService ?? ExpensesService.instance,
+        _categoriesService = categoriesService ?? CategoriesService.instance,
+        _profileService = profileService ?? ProfileService.instance,
+        _accountsService = accountsService ?? AccountsService.instance {
     editingData = ExpenseEditingData(
       nameController: TextEditingController(),
       amountController: TextEditingController(),
@@ -60,6 +69,9 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   String get currencyCode => _profileService.currency;
   String get localeName => _profileService.locale.languageCode;
+
+  /// Color of the account behind this page, used to tint debited cards.
+  Color? get accountColor => _accountsService.getAccountById(accountId)?.color;
 
   bool get isSaving => _isSaving;
 
@@ -93,10 +105,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
         .toList();
     if (expenses.isEmpty) return const [];
 
-    // The category details page must use the exact period selected on the
-    // overview. Previously it expanded occurrences from the earliest expense
-    // through the current month, which made a category opened from (for
-    // example) March display April/current-month data instead.
     final start = period.startOfMonth;
     final end = period.endOfMonth;
 
@@ -113,15 +121,19 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   /// Summary of this category over the shown window.
   CategoryExpenseSummary? get summary {
-    final cat = category;
-    if (cat == null) return null;
+    if (category == null) return null;
+    return summarize(occurrences);
+  }
 
-    final occs = occurrences;
+  /// Aggregates already-expanded [occurrences], so callers that also need
+  /// the list avoid expanding it twice.
+  CategoryExpenseSummary summarize(List<ExpenseOccurrence> occurrences) {
+    final cat = category!;
     double total = 0;
     double debited = 0;
     double undebited = 0;
     int undebitedCount = 0;
-    for (final occurrence in occs) {
+    for (final occurrence in occurrences) {
       total += occurrence.amount;
       if (occurrence.isDebited) {
         debited += occurrence.amount;
@@ -216,6 +228,27 @@ class CategoryExpensesViewModel extends BaseViewModel {
     if (_isSaving) return false;
     final occurrence = _editingOccurrence;
     if (occurrence == null || occurrence.id.isEmpty) return false;
+
+    _isSaving = true;
+    if (!isDisposed) notifyListeners();
+
+    try {
+      return await _expensesService.deleteExpense(
+        occurrence.id,
+        accountId,
+      );
+    } catch (_) {
+      return false;
+    } finally {
+      _isSaving = false;
+      if (!isDisposed) notifyListeners();
+    }
+  }
+
+  /// Deletes the whole expense behind an occurrence (quick action).
+  Future<bool> deleteOccurrence(ExpenseOccurrence occurrence) async {
+    if (_isSaving) return false;
+    if (occurrence.id.isEmpty) return false;
 
     _isSaving = true;
     if (!isDisposed) notifyListeners();

@@ -3,10 +3,10 @@ import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
-import 'package:budgly/src/shared/widgets/categories/category_icon_view.dart';
-import 'package:budgly/src/shared/widgets/forms/expense_form_fields.dart';
-import 'package:budgly/src/shared/widgets/forms/form_actions.dart';
-import 'package:budgly/src/shared/widgets/layout/framed_container.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
+import 'package:budgly/src/shared/domain/widgets/expense_form_fields.dart';
+import 'package:budgly/src/shared/ui/widgets/form_actions.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -89,7 +89,7 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
     showAppSnackBar(
       context,
       message: isDebitedNow ? tr.expenseMarkedAsDebited : tr.expenseMarkedAsPending,
-      type: SnackBarType.success,
+      type: isDebitedNow ? SnackBarType.success : SnackBarType.pending,
     );
   }
 
@@ -185,25 +185,39 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 8,
+                    spacing: 10,
                     children: [
-                      FilledButton.icon(
-                        style: ButtonType.success.filledStyle(
-                          theme,
-                          dense: true,
-                        ),
-                        onPressed: viewModel.isSaving ? null : _toggleDebited,
-                        icon: Icon(
-                          isDebited
-                              ? Icons.undo_rounded
-                              : Icons.check_circle_rounded,
-                          size: 20,
-                        ),
-                        label: Text(
-                          isDebited
-                              ? tr.expenseMarkedAsPending
-                              : tr.markAsDebited,
-                        ),
+                      Row(
+                        spacing: 12,
+                        children: [
+                          Expanded(
+                            child: FilledButton(
+                              style:
+                                  (isDebited
+                                          ? ButtonType.secondary
+                                          : ButtonType.success)
+                                      .filledStyle(theme, dense: true),
+                              onPressed: viewModel.isSaving
+                                  ? null
+                                  : _toggleDebited,
+                              child: Text(
+                                isDebited
+                                    ? tr.expenseMarkedAsPending
+                                    : tr.markAsDebited,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: FilledButton(
+                              style: ButtonType.error.filledStyle(
+                                theme,
+                                dense: true,
+                              ),
+                              onPressed: viewModel.isSaving ? null : _delete,
+                              child: Text(tr.delete),
+                            ),
+                          ),
+                        ],
                       ),
                       if (isRecurring)
                         Text(
@@ -223,11 +237,6 @@ class _ExpenseEditSheetState extends State<ExpenseEditSheet> {
                       _errorMessage!,
                       style: TextStyle(color: theme.colorScheme.error),
                     ),
-                  FilledButton(
-                    style: ButtonType.error.filledStyle(theme, dense: true),
-                    onPressed: viewModel.isSaving ? null : _delete,
-                    child: Text(tr.deleteExpense),
-                  ),
                   FormActions(
                     cancelType: ButtonType.outlined,
                     onCancel: () => Navigator.pop(context),

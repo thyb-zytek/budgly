@@ -6,12 +6,19 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Wraps the first expense row and periodically plays a short animation
-/// (every few seconds) showing that a row can be swiped. The hint stops as
-/// soon as the user interacts with the row ([stop] is invoked by the tile).
+/// (every few seconds) showing that a row can be swiped. The travel
+/// direction follows [isDebited]: towards the right when pending (mark as
+/// debited), towards the left once debited (undo). The hint stops as soon
+/// as the user interacts with the row ([stop] is invoked by the tile).
 class SwipeHintWrapper extends StatefulWidget {
   final Widget child;
+  final bool isDebited;
 
-  const SwipeHintWrapper({super.key, required this.child});
+  const SwipeHintWrapper({
+    super.key,
+    required this.child,
+    required this.isDebited,
+  });
 
   @override
   SwipeHintWrapperState createState() => SwipeHintWrapperState();
@@ -64,16 +71,18 @@ class SwipeHintWrapperState extends State<SwipeHintWrapper>
     return Stack(
       children: [
         widget.child,
-        if (!_stopped)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) =>
-                    _SwipeHintContent(progress: _controller.value),
+          if (!_stopped)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) => _SwipeHintContent(
+                    progress: _controller.value,
+                    isDebited: widget.isDebited,
+                  ),
+                ),
               ),
             ),
-          ),
       ],
     );
   }
@@ -81,8 +90,9 @@ class SwipeHintWrapperState extends State<SwipeHintWrapper>
 
 class _SwipeHintContent extends StatelessWidget {
   final double progress;
+  final bool isDebited;
 
-  const _SwipeHintContent({required this.progress});
+  const _SwipeHintContent({required this.progress, required this.isDebited});
 
   /// Fades the pill in on the first fifth of the animation and out on the
   /// last fifth.
@@ -105,7 +115,9 @@ class _SwipeHintContent extends StatelessWidget {
           0.0,
           double.infinity,
         );
-        final left = (lerpDouble(0.78, 0.06, t) ?? 0) * constraints.maxWidth;
+        final start = isDebited ? 0.94 : 0.22;
+        final end = isDebited ? 0.06 : 0.78;
+        final left = (lerpDouble(start, end, t) ?? 0) * constraints.maxWidth;
         final opacity = _fade(t);
 
         return Stack(
@@ -139,7 +151,9 @@ class _SwipeHintContent extends StatelessWidget {
                       spacing: 4,
                       children: [
                         Icon(
-                          Icons.swipe_left_rounded,
+                          isDebited
+                              ? Icons.swipe_left_rounded
+                              : Icons.swipe_right_rounded,
                           size: 16,
                           color: theme.colorScheme.onInverseSurface,
                         ),

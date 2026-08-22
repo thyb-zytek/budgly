@@ -2,20 +2,36 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
-import 'package:budgly/src/shared/widgets/selector/recurrence_selector.dart';
+import 'package:budgly/src/pages/category_expenses/widgets/expense_quick_actions_sheet.dart';
+import 'package:budgly/src/pages/category_expenses/widgets/expense_status_avatar.dart';
+import 'package:budgly/src/pages/category_expenses/widgets/recurrence_badge.dart';
+import 'package:budgly/src/pages/category_expenses/widgets/swipe_action_background.dart';
+import 'package:budgly/src/shared/domain/widgets/recurrence_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-class ExpenseOccurrenceTile extends StatelessWidget {
+/// Flat-design expense card of the occurrences list.
+///
+/// Swipe behavior depends on [ExpenseOccurrence.isDebited]: pending rows
+/// mark as debited on right swipe and edit on left swipe or tap, while
+/// debited rows can only be undone (left swipe) or deleted (long press).
+class ExpenseCard extends StatelessWidget {
   final ExpenseOccurrence occurrence;
   final String currencyCode;
   final String localeName;
+
+  /// Accent color of the account behind this expense, tints the card when
+  /// debited. Falls back to the theme primary color.
+  final Color? accountColor;
+
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onToggleDebited;
+  final VoidCallback onDelete;
   final VoidCallback? onUserInteracted;
 
-  const ExpenseOccurrenceTile({
+  const ExpenseCard({
     super.key,
     required this.occurrence,
     required this.currencyCode,
@@ -23,6 +39,8 @@ class ExpenseOccurrenceTile extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     required this.onToggleDebited,
+    required this.onDelete,
+    this.accountColor,
     this.onUserInteracted,
   });
 
@@ -36,12 +54,24 @@ class ExpenseOccurrenceTile extends StatelessWidget {
 
   String _formatDate(DateTime date) => DateFormat.yMMMd(localeName).format(date);
 
+  void _showQuickActionsMenu(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    onUserInteracted?.call();
+
+    showExpenseQuickActionsSheet(
+      context,
+      onEdit: occurrence.isDebited ? null : onEdit,
+      onDelete: onDelete,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
     final isDebited = occurrence.isDebited;
     final isRecurring = occurrence.recurrence.isRecurring;
+    final accent = accountColor ?? theme.colorScheme.primary;
     final success = ButtonType.success.colors(theme);
 
     final displayDate = isRecurring
@@ -49,52 +79,69 @@ class ExpenseOccurrenceTile extends StatelessWidget {
         : (occurrence.expense.createdAt ?? occurrence.date);
     final dateLabel = isRecurring ? tr.debitedOnDate : tr.createdOnDate;
 
-    return Dismissible(
-      key: ValueKey(occurrence.key),
-      direction: DismissDirection.horizontal,
-      confirmDismiss: (direction) async {
-        onUserInteracted?.call();
-        if (direction == DismissDirection.startToEnd) {
-          onEdit();
-        } else {
-          onToggleDebited();
-        }
-        return false;
-      },
-      background: _SwipeActionBackground(
-        alignment: Alignment.centerLeft,
-        icon: Icons.edit_rounded,
-        color: theme.colorScheme.primaryContainer,
-        foregroundColor: theme.colorScheme.onPrimaryContainer,
-      ),
-      secondaryBackground: _SwipeActionBackground(
-        alignment: Alignment.centerRight,
-        icon: isDebited ? Icons.undo_rounded : Icons.check_rounded,
-        color: isDebited ? theme.colorScheme.tertiary : success.background,
-        foregroundColor: isDebited ? theme.colorScheme.onTertiary : success.foreground,
-      ),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 250),
-        opacity: isDebited ? 0.6 : 1.0,
+    return GestureDetector(
+      onLongPress: () => _showQuickActionsMenu(context),
+      child: Dismissible(
+        key: ValueKey(occurrence.key),
+        direction:
+            isDebited ? DismissDirection.endToStart : DismissDirection.horizontal,
+        confirmDismiss: (direction) async {
+          onUserInteracted?.call();
+          if (direction == DismissDirection.startToEnd) {
+            if (!isDebited) onToggleDebited();
+          } else if (isDebited) {
+            onToggleDebited();
+          } else {
+            onEdit();
+          }
+          // Swiping triggers an action, never removal.
+          return false;
+        },
+        background: SwipeActionBackground(
+          alignment: Alignment.centerLeft,
+          icon: isDebited ? Icons.undo_rounded : Icons.check_rounded,
+          color: isDebited
+              ? theme.colorScheme.secondary
+              : success.background,
+          foregroundColor: isDebited
+              ? theme.colorScheme.onSecondary
+              : success.foreground,
+        ),
+        secondaryBackground: SwipeActionBackground(
+          alignment: Alignment.centerRight,
+          icon: isDebited ? Icons.undo_rounded : Icons.edit_rounded,
+          color: isDebited
+              ? theme.colorScheme.secondary
+              : theme.colorScheme.primaryContainer,
+          foregroundColor: isDebited
+              ? theme.colorScheme.onSecondary
+              : theme.colorScheme.onPrimaryContainer,
+        ),
         child: InkWell(
           onTap: () {
             onUserInteracted?.call();
-            onTap();
+            if (!isDebited) onTap();
           },
           borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
+              boxShadow: const [],
+              color: isDebited
+                  ? accent.withValues(alpha: 0.08)
+                  : theme.colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: theme.colorScheme.outlineVariant.withAlpha(70),
+                color: isDebited
+                    ? accent.withValues(alpha: 0.25)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               spacing: 12,
               children: [
-                _StatusAvatar(isDebited: isDebited),
+                ExpenseStatusAvatar(color: accountColor, isDebited: isDebited),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,6 +152,7 @@ class ExpenseOccurrenceTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -127,7 +175,7 @@ class ExpenseOccurrenceTile extends StatelessWidget {
                             ),
                           ),
                           if (isRecurring)
-                            _RecurrenceBadge(
+                            RecurrenceBadge(
                               label: recurrenceLabel(tr, occurrence.recurrence),
                             ),
                         ],
@@ -135,7 +183,6 @@ class ExpenseOccurrenceTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 4),
                 Text(
                   _formatAmount(occurrence.amount),
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -150,101 +197,6 @@ class ExpenseOccurrenceTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Circular badge whose icon tells the debited state at a glance.
-class _StatusAvatar extends StatelessWidget {
-  final bool isDebited;
-
-  const _StatusAvatar({required this.isDebited});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDebited = this.isDebited;
-
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isDebited
-            ? theme.colorScheme.tertiaryContainer
-            : theme.colorScheme.primaryContainer,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        isDebited ? Icons.check_circle_rounded : Icons.schedule_rounded,
-        size: 24,
-        color: isDebited
-            ? theme.colorScheme.tertiary
-            : theme.colorScheme.primary,
-      ),
-    );
-  }
-}
-
-class _RecurrenceBadge extends StatelessWidget {
-  final String label;
-
-  const _RecurrenceBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 3,
-        children: [
-          Icon(
-            Icons.repeat_rounded,
-            size: 12,
-            color: theme.colorScheme.primary,
-          ),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwipeActionBackground extends StatelessWidget {
-  final Alignment alignment;
-  final IconData icon;
-  final Color color;
-  final Color foregroundColor;
-
-  const _SwipeActionBackground({
-    required this.alignment,
-    required this.icon,
-    required this.color,
-    required this.foregroundColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      alignment: alignment,
-      child: Icon(icon, color: foregroundColor, size: 24),
     );
   }
 }
