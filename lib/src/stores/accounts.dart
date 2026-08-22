@@ -1,7 +1,8 @@
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/material.dart';
 
-class AccountsStore extends ChangeNotifier {
+class AccountsStore extends ChangeNotifier with LoadingNotifier {
   static AccountsStore? _instance;
 
   static AccountsStore get instance {
@@ -10,12 +11,9 @@ class AccountsStore extends ChangeNotifier {
   }
 
   List<Account> _accounts = [];
-  bool _isLoading = false;
-  int _loadingCount = 0;
   bool _hasLoaded = false;
 
   List<Account> get accounts => List.unmodifiable(_accounts);
-  bool get isLoading => _isLoading;
   bool get hasLoaded => _hasLoaded;
 
   AccountsStore._();
@@ -26,35 +24,9 @@ class AccountsStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void beginLoading() {
-    _loadingCount++;
-    if (!_isLoading) {
-      _isLoading = true;
-      notifyListeners();
-    }
-  }
-
-  void endLoading() {
-    if (_loadingCount > 0) _loadingCount--;
-    if (_loadingCount == 0 && _isLoading) {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void setLoading(bool loading) {
-    if (loading) {
-      beginLoading();
-    } else {
-      _loadingCount = 0;
-      if (_isLoading) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
-  }
 
   void setLoaded(bool loaded) {
+    if (_hasLoaded == loaded) return;
     _hasLoaded = loaded;
     notifyListeners();
   }

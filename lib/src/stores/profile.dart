@@ -1,8 +1,9 @@
+import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/user/user.dart';
 
-class ProfileStore extends ChangeNotifier {
+class ProfileStore extends ChangeNotifier with LoadingNotifier {
   static ProfileStore? _instance;
   
   static ProfileStore get instance {
@@ -10,8 +11,6 @@ class ProfileStore extends ChangeNotifier {
     return _instance!;
   }
   User? _currentUser;
-  bool _isLoading = false;
-  int _loadingCount = 0;
   bool _hasLoaded = false;
 
   ThemeMode _themeMode = ThemeMode.system;
@@ -19,7 +18,6 @@ class ProfileStore extends ChangeNotifier {
   String _currency = AppConstants.defaultCurrency;
 
   User? get currentUser => _currentUser;
-  bool get isLoading => _isLoading;
   bool get hasLoaded => _hasLoaded;
   ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
@@ -33,33 +31,6 @@ class ProfileStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void beginLoading() {
-    _loadingCount++;
-    if (!_isLoading) {
-      _isLoading = true;
-      notifyListeners();
-    }
-  }
-
-  void endLoading() {
-    if (_loadingCount > 0) _loadingCount--;
-    if (_loadingCount == 0 && _isLoading) {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void setLoading(bool loading) {
-    if (loading) {
-      beginLoading();
-    } else {
-      _loadingCount = 0;
-      if (_isLoading) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
-  }
 
   void setPreferences({ThemeMode? themeMode, Locale? locale, String? currency}) {
     if (themeMode != null) _themeMode = themeMode;

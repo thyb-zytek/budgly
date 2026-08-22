@@ -1,8 +1,9 @@
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
+import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/material.dart';
 
-class CategoriesStore extends ChangeNotifier {
+class CategoriesStore extends ChangeNotifier with LoadingNotifier {
   static CategoriesStore? _instance;
 
   static CategoriesStore get instance {
@@ -13,14 +14,11 @@ class CategoriesStore extends ChangeNotifier {
   Map<String, List<Category>> _categoriesByAccount = {};
   Map<String, bool> _hasLoadedByAccount = {};
   List<CategoryIcon> _availableIcons = [];
-  bool _isLoading = false;
-  int _loadingCount = 0;
   bool _iconsLoaded = false;
 
   Map<String, List<Category>> get categoriesByAccount =>
       Map.unmodifiable(_categoriesByAccount);
   List<CategoryIcon> get availableIcons => List.unmodifiable(_availableIcons);
-  bool get isLoading => _isLoading;
   bool get iconsLoaded => _iconsLoaded;
 
   CategoriesStore._();
@@ -37,33 +35,6 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void beginLoading() {
-    _loadingCount++;
-    if (!_isLoading) {
-      _isLoading = true;
-      notifyListeners();
-    }
-  }
-
-  void endLoading() {
-    if (_loadingCount > 0) _loadingCount--;
-    if (_loadingCount == 0 && _isLoading) {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void setLoading(bool loading) {
-    if (loading) {
-      beginLoading();
-    } else {
-      _loadingCount = 0;
-      if (_isLoading) {
-        _isLoading = false;
-        notifyListeners();
-      }
-    }
-  }
 
   bool hasLoadedAccount(String accountId) {
     return _hasLoadedByAccount[accountId] == true;
