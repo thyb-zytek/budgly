@@ -108,6 +108,7 @@
   "userCreatedOn": "Created on",
   "nameChangedSuccessfully": "Name changed successfully",
   "accountCreatedSuccessfully": "Account created successfully",
+  "accountUpdatedSuccessfully": "Account updated successfully",
   "logout": "Logout",
   "refreshProfile": "Refresh profile",
   "changePassword": "Change password",
@@ -178,7 +179,7 @@
       }
     }
   },
-  "markAsDebited": "Mark as debited",
+  "markAsDebited": "Debited",
   "expenseMarkedAsDebited": "Expense marked as debited",
   "expenseMarkedAsPending": "Expense marked as pending",
   "markDebitedOccurrence": "Only marks the {date} occurrence",
@@ -191,7 +192,8 @@
   },
   "createdOnDate": "Created on",
   "debitedOnDate": "Debited on",
-  "deleteExpense": "Delete expense",
+  "edit": "Edit",
+  "delete": "Delete",
   "noExpensesForCategory": "No expenses for this category yet",
   "noExpensesForCategoryHint": "Add an expense with this category from the overview to see it here.",
   "swipeHint": "Swipe",
@@ -214,8 +216,6 @@
   "expenseDeletedSuccessfully": "Expense deleted successfully",
   "expenseUpdatedSuccessfully": "Expense updated successfully",
   "expenseUpdateFailed": "Expense update failed",
-  "tutorial": "Tutorial",
-  "settingsDev": "Settings (Dev)",
   "tutorialWelcome": "Welcome to Budgly!",
   "tutorialWelcomeDescription": "Set up your first account to start tracking your expenses.",
   "tutorialStepAccounts": "Create an account",
@@ -228,7 +228,12 @@
   "tutorialNext": "Next",
   "tutorialSkip": "Skip",
   "tutorialFinish": "Let's go!",
-  "tutorialDefaultAccountName": "Main account",
-  "tutorialDefaultCategoryName": "Category name",
-  "tutorialLogoutConfirm": "Are you sure you want to log out? Your setup progress will be lost."
+  "tutorialLogoutConfirm": "Are you sure you want to log out? Your setup progress will be lost.",
+  "tutorialStepProgress": "Step {current} of {total}",
+  "@tutorialStepProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }

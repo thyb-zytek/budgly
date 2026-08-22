@@ -108,6 +108,7 @@
   "userCreatedOn": "Créé le",
   "nameChangedSuccessfully": "Nom changé avec succès",
   "accountCreatedSuccessfully": "Compte créé avec succès",
+  "accountUpdatedSuccessfully": "Compte mis à jour avec succès",
   "logout": "Se déconnecter",
   "refreshProfile": "Actualiser le profil",
   "changePassword": "Changer le mot de passe",
@@ -178,9 +179,9 @@
       }
     }
   },
-  "markAsDebited": "Marquer comme débité",
+  "markAsDebited": "Débité",
   "expenseMarkedAsDebited": "Dépense marquée comme débitée",
-  "expenseMarkedAsPending": "Dépense remise en attente",
+  "expenseMarkedAsPending": "Remise en attente",
   "markDebitedOccurrence": "Marque uniquement l'échéance du {date}",
   "@markDebitedOccurrence": {
     "placeholders": {
@@ -191,7 +192,8 @@
   },
   "createdOnDate": "Créée le",
   "debitedOnDate": "Débité le",
-  "deleteExpense": "Supprimer la dépense",
+  "edit": "Modifier",
+  "delete": "Supprimer",
   "noExpensesForCategory": "Aucune dépense pour cette catégorie pour le moment",
   "noExpensesForCategoryHint": "Ajoutez une dépense avec cette catégorie depuis la page Budget pour la voir ici.",
   "swipeHint": "Glissez",
@@ -214,8 +216,6 @@
   "expenseDeletedSuccessfully": "Dépense supprimée avec succès",
   "expenseUpdatedSuccessfully": "Dépense mise à jour avec succès",
   "expenseUpdateFailed": "Échec de la mise à jour de la dépense",
-  "tutorial": "Tutoriel",
-  "settingsDev": "Paramètres (Dev)",
   "tutorialWelcome": "Bienvenue sur Budgly !",
   "tutorialWelcomeDescription": "Configure ton premier compte pour commencer à suivre tes dépenses.",
   "tutorialStepAccounts": "Créer un compte",
@@ -228,7 +228,12 @@
   "tutorialNext": "Suivant",
   "tutorialSkip": "Passer",
   "tutorialFinish": "C'est parti !",
-  "tutorialDefaultAccountName": "Compte principal",
-  "tutorialDefaultCategoryName": "Nom de la catégorie",
-  "tutorialLogoutConfirm": "Es-tu sûr de vouloir te déconnecter ? Ta progression sera perdue."
+  "tutorialLogoutConfirm": "Es-tu sûr de vouloir te déconnecter ? Ta progression sera perdue.",
+  "tutorialStepProgress": "Étape {current} sur {total}",
+  "@tutorialStepProgress": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }
