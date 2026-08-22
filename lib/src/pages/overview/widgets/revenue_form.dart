@@ -1,7 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/shared/widgets/forms/form_actions.dart';
-import 'package:budgly/src/shared/widgets/inputs/currency_input.dart';
+import 'package:budgly/src/shared/ui/widgets/form_actions.dart';
+import 'package:budgly/src/shared/ui/widgets/inputs/currency_input.dart';
 import 'package:flutter/material.dart';
 
 class RevenueForm extends StatefulWidget {
@@ -37,9 +37,9 @@ class _RevenueFormState extends State<RevenueForm> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final value = double.tryParse(_controller.text.replaceAll(',', '.')) ?? 0;
-    widget.viewModel.setRevenue(value);
+    await widget.viewModel.setRevenue(value);
     widget.onClose();
   }
 

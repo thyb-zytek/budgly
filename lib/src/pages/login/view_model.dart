@@ -3,13 +3,13 @@ import 'package:budgly/src/core/auth/auth_state.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/user/user.dart';
-import 'package:budgly/src/services/auth.dart';
-import 'package:budgly/src/services/profile.dart';
+import 'package:budgly/src/services/auth/auth_service.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 
 class LoginViewModel extends BaseViewModel {
-  final AuthService _authService = AuthService.instance;
-  final ProfileService _profileService = ProfileService.instance;
+  final AuthService _authService;
+  final ProfileService _profileService;
   
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -18,7 +18,12 @@ class LoginViewModel extends BaseViewModel {
 
   AuthState _state = AuthState();
 
-  LoginViewModel({this.onAuthenticated}) {
+  LoginViewModel({
+    this.onAuthenticated,
+    AuthService? authService,
+    ProfileService? profileService,
+  })  : _authService = authService ?? AuthService.instance,
+        _profileService = profileService ?? ProfileService.instance {
     _initialize();
   }
 
