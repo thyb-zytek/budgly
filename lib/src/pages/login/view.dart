@@ -1,12 +1,12 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/auth/auth_event.dart';
 import 'package:budgly/src/core/auth/auth_state.dart';
-import 'package:budgly/src/core/routers/navigation_helper.dart';
+import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/pages/login/view_model.dart';
 import 'package:budgly/src/pages/login/widgets/login_appbar.dart';
 import 'package:budgly/src/pages/login/widgets/login_form_switcher.dart';
 import 'package:budgly/src/pages/login/widgets/login_loading_page.dart';
-import 'package:budgly/src/services/accounts.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
