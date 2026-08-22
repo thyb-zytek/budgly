@@ -8,16 +8,34 @@ Utilisez les gitmojis du projet [carloscuesta/gitmoji](https://github.com/carlos
 
 | Emoji | Nom | Utilisation |
 |-------|-----|-------------|
-| ✨ | sparkles | Nouvelles fonctionnalités |
-| ♻️ | recycle | Refactoring du code |
-| 🔧 | wrench | Corrections de bugs |
-| 📦 | package | Mises à jour de dépendances/imports |
-| 🗑️ | wastebasket | Suppression de code/fichiers |
-| ➕ | heavy_plus_sign | Ajout de dépendances |
-| 🔨 | hammer | Mises à jour de configuration/scripts |
-| ✅ | white_check_mark | Tests et qualité |
-| 🎨 | art | Améliorations UI/UX |
-| ♿ | wheelchair | Accessibilité |
+| ✨ | sparkles | Introduce new features |
+| 🐛 | bug | Fix a bug |
+| ♻️ | recycle | Refactor code |
+| 🎨 | art | Improve structure / format of the code |
+| � | lipstick | Add or update the UI and style files |
+| �🔧 | wrench | Add or update configuration files |
+| 📦 | package | Add or update compiled files or packages |
+| 🔥 | fire | Remove code or files |
+| ➕ | heavy_plus_sign | Add a dependency |
+| ➖ | heavy_minus_sign | Remove a dependency |
+| ⬆️ | arrow_up | Upgrade dependencies |
+| ⬇️ | arrow_down | Downgrade dependencies |
+| ✅ | white_check_mark | Add, update, or pass tests |
+| 🌐 | globe_with_meridians | Internationalization and localization |
+| ♿ | wheelchair | Improve accessibility |
+| 🚸 | children_crossing | Improve user experience / usability |
+| 🗑️ | wastebasket | Deprecate code that needs to be cleaned up |
+| � | truck | Move or rename resources (e.g.: files, paths, routes) |
+| 🩹 | adhesive_bandage | Simple fix for a non-critical issue |
+| 🛂 | passport_control | Work on code related to authorization, roles and permissions |
+| 🗃️ | card_file_box | Perform database related changes |
+| 👔 | necktie | Add or update business logic |
+| �️ | label | Add or update types |
+| 🦺 | safety_vest | Add or update code related to validation |
+| 💥 | boom | Introduce breaking changes |
+| 🚑️ | ambulance | Critical hotfix |
+| ⚡️ | zap | Improve performance |
+| 🔒️ | lock | Fix security or privacy issues |
 
 ### Format de Commit
 
@@ -57,14 +75,8 @@ Utilisez les gitmojis du projet [carloscuesta/gitmoji](https://github.com/carlos
 
 ### Règles Importantes
 
-1. **Jamais** utiliser ➕ pour des nouvelles fonctionnalités (réservé aux dépendances)
-2. Utiliser ✨ pour l'ajout de nouvelles fonctionnalités
-3. Utiliser ♻️ pour le refactoring (changement de structure sans changement de comportement)
-4. Utiliser 📦 pour les mises à jour d'imports et de dépendances existantes
-5. Utiliser 🗑️ pour la suppression de code/fichiers
-6. Utiliser 🔧 pour les corrections de bugs
-7. Les commits doivent être **atomiques** (une seule fonctionnalité par commit)
-8. Ne **jamais** inclure les signatures Devin dans les messages de commit
+1. Les commits doivent être **atomiques** (une seule fonctionnalité par commit)
+2. Ne **jamais** inclure les signatures Devin dans les messages de commit
 
 ## 🧪 Qualité du Code - Flutter Analyze
 
