@@ -1,15 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/shared/ui/widgets/customization_picker.dart';
 import 'package:budgly/src/shared/ui/widgets/entity_form.dart';
-import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/avatar_customization_sheet.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
 
 class AccountForm extends StatefulWidget {
@@ -93,82 +89,24 @@ class _AccountFormState extends State<AccountForm>
       _tempPicture != null && !_tempPicture!.startsWith('http');
 
   void _openAvatarPicker(BuildContext context, String initial) {
-    final theme = Theme.of(context);
-    final tr = AppLocalizations.of(context)!;
-
     cancelHint();
 
-    showAppBottomSheet(
+    showAvatarCustomizationSheet(
       context,
-      backgroundColor: theme.colorScheme.surface,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                child: CustomizationPicker(
-                  title: tr.avatarCustomization,
-                  previewWidget: Avatar(
-                    initial: initial,
-                    picture: _tempPicture,
-                    isLocalPicture: _isTempLocalPicture,
-                    backgroundColor: _tempColor,
-                    size: 88,
-                    canRemove: _tempPicture != null,
-                    onRemove: () => setModalState(() => _tempPicture = null),
-                  ),
-                  tabTitles: [
-                    TabTitle(
-                        icon: Icons.photo_library_rounded, title: tr.picture),
-                    TabTitle(
-                        icon: Icons.palette_rounded, title: tr.color),
-                  ],
-                  tabs: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        style: ButtonType.outlined.filledStyle(theme),
-                        onPressed: () => widget.viewModel
-                            .pickImage(context)
-                            .then((path) {
-                          if (path != null) {
-                            setModalState(() => _tempPicture = path);
-                          }
-                        }),
-                        iconAlignment: IconAlignment.start,
-                        icon: Icon(
-                          Icons.upload_rounded,
-                          color:
-                              ButtonType.outlined.colors(theme).foreground,
-                        ),
-                        label: Text(
-                          tr.pickImage,
-                          style: ButtonType.outlined.labelStyle(theme),
-                        ),
-                      ),
-                    ),
-                    ColorWheel(
-                      key: const ValueKey('color'),
-                      color: _tempColor,
-                      onChanged: (color) =>
-                          setModalState(() => _tempColor = color),
-                    ),
-                  ],
-                  onValidate: () {
-                    widget.viewModel.editingData.picture = _tempPicture;
-                    widget.viewModel.editingData.color = _tempColor;
-                    setState(() {});
-                    Navigator.pop(context);
-                  },
-                  onCancel: () => Navigator.pop(context),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+      initial: initial,
+      initialPicture: _tempPicture,
+      initialColor: _tempColor,
+      pickImage: () => widget.viewModel.pickImage(context),
+      onPictureChanged: (picture) => _tempPicture = picture,
+      onColorChanged: (color) => _tempColor = color,
+    ).then((confirmed) {
+      if (confirmed) {
+        widget.viewModel.editingData.picture = _tempPicture;
+        widget.viewModel.editingData.color = _tempColor;
+      }
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   Widget _buildAvatar(String initial) {
