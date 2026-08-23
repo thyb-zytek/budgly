@@ -11,6 +11,7 @@ import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
 import 'package:budgly/src/pages/overview/widgets/period_slide_switcher.dart';
 import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_expenses.dart';
+import 'package:budgly/src/shared/ui/widgets/gestures/horizontal_swipe_detector.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
@@ -27,9 +28,6 @@ class _OverviewPageState extends State<OverviewPage> {
   final OverviewViewModel _viewModel = OverviewViewModel();
 
   int _slideDirection = 1;
-
-  Offset? _swipeOrigin;
-  Duration _swipeStartedAt = Duration.zero;
 
   @override
   void initState() {
@@ -82,27 +80,6 @@ class _OverviewPageState extends State<OverviewPage> {
     _onPeriodChanged(target);
   }
 
-  void _onPointerDown(PointerDownEvent event) {
-    _swipeOrigin = event.position;
-    _swipeStartedAt = event.timeStamp;
-  }
-
-  void _onPointerUp(PointerUpEvent event) {
-    final origin = _swipeOrigin;
-    _swipeOrigin = null;
-    if (origin == null) return;
-
-    final delta = event.position - origin;
-
-    if (delta.dx.abs() < delta.dy.abs() * 1.2) return;
-    if (delta.dx.abs() < 56) return;
-
-    final elapsed = (event.timeStamp - _swipeStartedAt).inMilliseconds;
-    if (elapsed > 700 && delta.dx.abs() < 140) return;
-
-    _changePeriodBySwipe(delta.dx < 0);
-  }
-
   void _openCategoryDetails(String categoryId) {
     final accountId = _viewModel.account?.id;
     if (accountId == null) return;
@@ -141,11 +118,9 @@ class _OverviewPageState extends State<OverviewPage> {
         final summaries = _viewModel.categorySummaries;
 
         return Scaffold(
-          body: Listener(
-            onPointerDown: _onPointerDown,
-            onPointerUp: _onPointerUp,
-            onPointerCancel: (_) => _swipeOrigin = null,
-            behavior: HitTestBehavior.translucent,
+          body: HorizontalSwipeDetector(
+            onSwipe: (direction) =>
+                _changePeriodBySwipe(direction == SwipeDirection.forward),
             child: RefreshIndicator(
               onRefresh: _viewModel.refreshAll,
               child: CustomScrollView(
