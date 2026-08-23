@@ -253,6 +253,7 @@ class OverviewSummaryStats {
     final hasRevenue = viewModel.hasRevenue;
     final isEstimated = viewModel.isRevenueEstimated;
     final isOverBudget = viewModel.remaining < 0;
+    final hasPending = viewModel.pendingExpenses > 0;
 
     return OverviewSummaryStats(
       revenue: OverviewStatItem(
@@ -270,9 +271,20 @@ class OverviewSummaryStats {
       ),
       expenses: OverviewStatItem(
         icon: Icons.trending_down_rounded,
-        label: tr.expenses,
+        // The label spells out what the parenthesized figure means:
+        // "Expenses (upcoming)" — the detail is the not-yet-debited part.
+        label: hasPending
+            ? '${tr.expenses} (${tr.pendingExpenses.toLowerCase()})'
+            : tr.expenses,
         value: formatAmount(viewModel.totalExpenses),
+        detail: hasPending ? formatAmount(viewModel.pendingExpenses) : null,
         color: theme.colorScheme.tertiary,
+        // Pending amounts use the error/pending accent so they stand
+        // out from the debited total, matching the pending chips.
+        detailColor: theme.colorScheme.error,
+        tooltip: hasPending
+            ? tr.expensesUpcomingHint(formatAmount(viewModel.pendingExpenses))
+            : null,
       ),
       remaining: OverviewStatItem(
         icon: Icons.savings_rounded,

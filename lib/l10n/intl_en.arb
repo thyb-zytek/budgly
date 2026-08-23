@@ -157,6 +157,15 @@
   "remaining": "Remaining",
   "remainingBasedOnRevenueHint": "Based on your revenue for this period",
   "expenses": "Expenses",
+  "pendingExpenses": "Upcoming",
+  "expensesUpcomingHint": "Including {amount} not yet debited.",
+  "@expensesUpcomingHint": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "expensesByCategory": "Expenses by category",
   "noExpensesForPeriod": "No expenses for this period",
   "addFirstExpenseHint": "Tap + to add your first expense.",
