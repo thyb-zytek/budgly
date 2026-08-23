@@ -64,7 +64,11 @@ class CategoryIconsService {
 
   Future<void> _loadIcons() async {
     final cached = await _getCachedIcons();
-    if (cached != null) {
+    // An empty persistent cache is not a valid icon catalogue. This can
+    // happen when the first login occurs while Supabase is unavailable.
+    // Do not treat it as a successful load: continue to the remote source
+    // and, if needed, the bundled JSON fallback.
+    if (cached != null && cached.isNotEmpty) {
       _icons = cached;
       _cache.markFresh(_cacheKey);
       return;
@@ -78,13 +82,20 @@ class CategoryIconsService {
         await _cacheIcons(_icons);
         return;
       }
+      AppLogger.warning(
+        'Supabase returned an empty category icon catalogue; using asset fallback.',
+      );
     } catch (e) {
       AppLogger.error('Erreur Supabase: $e', e);
     }
 
     try {
       _icons = await _loadIconsFromAssets();
+      if (_icons.isEmpty) {
+        throw StateError('Bundled category icon JSON is empty');
+      }
       _cache.markFresh(_cacheKey);
+      await _cacheIcons(_icons);
     } catch (e) {
       AppLogger.error('Erreur assets: $e', e);
       _icons = [];
