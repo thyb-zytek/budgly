@@ -99,21 +99,13 @@ class _CreationRecap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // La Card qui fait ressortir le Compte
         Card(
-          elevation: 4,
-          shadowColor: theme.colorScheme.shadow.withAlpha(40),
           margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: theme.colorScheme.outlineVariant.withAlpha(80),
-            ),
-          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -139,9 +131,9 @@ class _CreationRecap extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        viewModel.createdCategories.length <= 1
-                            ? '${viewModel.createdCategories.length} catégorie'
-                            : '${viewModel.createdCategories.length} catégories',
+                        tr.tutorialCategoryCount(
+                          viewModel.createdCategories.length,
+                        ),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -153,8 +145,7 @@ class _CreationRecap extends StatelessWidget {
             ),
           ),
         ),
-        
-        // La hiérarchie pour les catégories avec un Padding left accentué
+
         if (viewModel.createdCategories.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 32, top: 12),

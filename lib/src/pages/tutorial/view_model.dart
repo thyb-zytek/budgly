@@ -15,6 +15,7 @@ import 'package:budgly/src/services/image/account_image_helper.dart';
 import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
 import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, CategoryFormViewModel {
   final AuthService _authService;
@@ -25,6 +26,15 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   int _currentStep = 0;
   bool _isInitializing = true;
+
+  SharedPreferences? _prefs;
+
+  /// Storage key for this user's saved tutorial step. Falls back to a
+  /// shared "anonymous" bucket in the unlikely case this is read before
+  /// Firebase has a current user, so a resume attempt never crashes —
+  /// worst case it just doesn't find a saved step and starts fresh.
+  String get _stepStorageKey =>
+      AppConstants.tutorialStepKey(_authService.currentUser?.id ?? 'anonymous');
 
   late final TextEditingController accountNameController;
   late final TextEditingController categoryNameController;
@@ -101,32 +111,68 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   Future<void> _loadInitialData() async {
     try {
+      _prefs ??= await SharedPreferences.getInstance();
       await _authService.reloadCurrentUser();
+
+      var hasExistingAccount = false;
       try {
         await _accountsService.loadAccounts();
-        if (_accountsService.accounts.isNotEmpty) return;
+        if (_accountsService.accounts.isNotEmpty) {
+          hasExistingAccount = true;
+          await _adoptExistingAccount(_accountsService.accounts.first);
+        }
       } catch (_) {
         // The tutorial can still be displayed if account loading fails.
       }
 
       await _categoriesService.loadAvailableIcons();
       if (_categoriesService.availableIcons.isNotEmpty) {
-        _categoryIcon = _categoriesService.availableIcons.firstWhere(
+        _categoryIcon = _categoryIcon ?? _categoriesService.availableIcons.firstWhere(
           (i) => i.iconName == AppConstants.defaultCategoryIcon.iconName,
           orElse: () => AppConstants.defaultCategoryIcon,
         );
         _categoryEditingData.icon = _categoryIcon!;
       }
       _categoryEditingData.availableIcons = _categoriesService.availableIcons;
+
+      // Only trust a saved step when there's an account to resume onto —
+      // a saved step with no matching account means it was deleted since
+      // (or the save is stale), so start fresh from Welcome instead.
+      if (hasExistingAccount) {
+        final savedStep = _prefs?.getInt(_stepStorageKey);
+        _currentStep = (savedStep ?? 1).clamp(1, totalSteps - 1).toInt();
+      }
     } finally {
       _isInitializing = false;
       if (!isDisposed) notifyListeners();
     }
   }
 
+  Future<void> _adoptExistingAccount(Account account) async {
+    _createdAccount = account;
+    accountNameController.text = account.name;
+
+    if (account.id == null) return;
+    try {
+      final existingCategories = await _categoriesService.listCategoriesByAccount(account.id!);
+      _createdCategories
+        ..clear()
+        ..addAll(existingCategories);
+      if (_createdCategories.isNotEmpty) _cycleCategoryDefaults();
+
+      final now = DateTime.now();
+      await _budgetService.loadRevenue(account.id!, now.year, now.month);
+      _hasRevenue = _budgetService.getRevenue(account.id!, now.year, now.month) > 0;
+    } catch (_) {
+      // Non-fatal: the Category step still works, it'll just look empty
+      // even though categories exist server-side, until the next refresh.
+    }
+  }
+
   void nextStep() {
     if (_currentStep < totalSteps - 1) {
       _currentStep++;
+      _persistStep();
       notifyListeners();
     }
   }
@@ -134,6 +180,7 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
   void previousStep() {
     if (_currentStep > 0) {
       _currentStep--;
+      _persistStep();
       notifyListeners();
     }
   }
@@ -141,8 +188,28 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
   void goToStep(int step) {
     if (step >= 0 && step < totalSteps) {
       _currentStep = step;
+      _persistStep();
       notifyListeners();
     }
+  }
+
+  Future<void> _persistStep() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setInt(_stepStorageKey, _currentStep);
+  }
+
+  /// Clears the saved step once the tutorial is actually finished, so a
+  /// later re-run (e.g. a second account down the line, if that's ever
+  /// supported) doesn't wrongly resume mid-way through. Also marks this
+  /// user as having completed onboarding, which RouteGuards checks to
+  /// decide whether to route back into the tutorial or straight to
+  /// Overview on the next app launch.
+  Future<void> completeTutorial() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    final uid = _authService.currentUser?.id ?? 'anonymous';
+    await _prefs!.remove(AppConstants.tutorialStepKey(uid));
+    await _prefs!.setBool(AppConstants.tutorialCompletedKey(uid), true);
+    await ProfileService.instance.completeOnboarding();
   }
 
   void setAccountColor(Color color) {
@@ -222,6 +289,7 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
         _createdAccount = await _uploadAndLinkImage(_createdAccount!, imageToUpload);
         _accountsService.updateLocalAccount(_createdAccount!);
       }
+      if (_createdAccount != null) await _persistStep();
     } finally {
       setLoading(false);
     }

@@ -115,12 +115,14 @@ class _AccountStepState extends State<AccountStep> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: _isSubmitting
-                        ? const SizedBox(
-                            key: ValueKey('loading'),
+                        ? SizedBox(
+                            key: const ValueKey('loading'),
                             width: 20,
                             height: 20,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.onPrimary,
+                            ),
                           )
                         : Text(
                             tr.tutorialNext,

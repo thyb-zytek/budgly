@@ -68,6 +68,7 @@ class UserProfileSupabase {
       fullName: firebaseUser.displayName ??
           firebaseUser.email?.split('@').first ??
           'User',
+      onboardingCompleted: false,
     ).toJson();
 
     try {
