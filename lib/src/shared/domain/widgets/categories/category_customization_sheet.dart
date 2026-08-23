@@ -6,7 +6,6 @@ import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 
 typedef CategoryPreviewBuilder = Widget Function(
   BuildContext context,
@@ -151,11 +150,7 @@ class _IconGridTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Icon(
-          IconPickerIcon(
-            name: icon.iconName,
-            data: icon.toIconData(),
-            pack: icon.iconPack,
-          ).data,
+          icon.toIconData(),
           size: 32,
           color: isSelected
               ? theme.colorScheme.primary
