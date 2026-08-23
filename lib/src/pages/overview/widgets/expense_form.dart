@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
@@ -33,9 +34,13 @@ class _ExpenseFormState extends State<ExpenseForm> {
     }
 
     setState(() => _errorMessage = null);
+    final messenger = ScaffoldMessenger.of(context);
     final success = await viewModel.createExpense();
     if (success && mounted) {
       Navigator.pop(context);
+      messenger.showSnackBar(
+        buildAppSnackBar(tr.expenseCreatedSuccessfully, SnackBarType.success),
+      );
     }
   }
 
