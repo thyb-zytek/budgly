@@ -3,14 +3,13 @@ import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:budgly/src/models/budget/period.dart';
-import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/pages/overview/widgets/collapsing_summary_header.dart';
 import 'package:budgly/src/pages/overview/widgets/expense_form.dart';
 import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
 import 'package:budgly/src/pages/overview/widgets/period_slide_switcher.dart';
 import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
-import 'package:budgly/src/shared/domain/widgets/categories/category_expenses.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_expense_list.dart';
 import 'package:budgly/src/shared/ui/widgets/gestures/horizontal_swipe_detector.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
@@ -89,18 +88,6 @@ class _OverviewPageState extends State<OverviewPage> {
         categoryId,
         _viewModel.selectedPeriod,
       ),
-    );
-  }
-
-  Widget _categoryTile(CategoryExpenseSummary summary) {
-    final categoryId = summary.category.id;
-    return CategoryExpenses(
-      summary: summary,
-      currencyCode: _viewModel.currencyCode,
-      localeName: _viewModel.localeName,
-      onTap: categoryId == null || _viewModel.account?.id == null
-          ? null
-          : () => _openCategoryDetails(categoryId),
     );
   }
 
@@ -194,13 +181,18 @@ class _OverviewPageState extends State<OverviewPage> {
                         child: PeriodSlideSwitcher(
                           period: _viewModel.selectedPeriod,
                           direction: _slideDirection,
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < summaries.length; i++) ...[
-                                if (i > 0) const SizedBox(height: 10),
-                                _categoryTile(summaries[i]),
-                              ],
-                            ],
+                          child: CategoryExpenseList(
+                            summaries: summaries,
+                            currencyCode: _viewModel.currencyCode,
+                            localeName: _viewModel.localeName,
+                            onTapCategory: (summary) {
+                              final categoryId = summary.category.id;
+                              if (categoryId == null ||
+                                  _viewModel.account?.id == null) {
+                                return;
+                              }
+                              _openCategoryDetails(categoryId);
+                            },
                           ),
                         ),
                       ),
