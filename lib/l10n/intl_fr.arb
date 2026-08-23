@@ -155,11 +155,13 @@
   "debitDate": "Date de débit",
   "revenue": "Revenue",
   "remaining": "Restant",
+  "remainingBasedOnRevenueHint": "Basé sur ton revenu pour cette période",
   "expenses": "Dépenses",
   "expensesByCategory": "Dépenses par catégorie",
   "noExpensesForPeriod": "Aucune dépense pour cette période",
   "addFirstExpenseHint": "Appuyez sur + pour ajouter votre première dépense.",
   "remainingWeekend": "Budget/semaines",
+  "revenueEstimatedHint": "Aucun revenu défini pour cette période — le plus récent est utilisé comme estimation",
   "debited": "Débité {amount}",
   "@debited": {
     "placeholders": {

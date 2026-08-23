@@ -55,6 +55,22 @@ class Period {
     return count;
   }
 
+  /// Total number of Saturdays across the whole month, regardless of
+  /// today's date. Used for forward planning on future periods, where
+  /// "remaining" doesn't apply yet — nothing has happened in that month
+  /// so the whole month is still ahead.
+  int totalWeekends() {
+    int count = 0;
+    DateTime current = startOfMonth;
+    while (!current.isAfter(endOfMonth)) {
+      if (current.weekday == DateTime.saturday) {
+        count++;
+      }
+      current = current.add(const Duration(days: 1));
+    }
+    return count;
+  }
+
   @override
   bool operator ==(Object other) => other is Period && other.year == year && other.month == month;
 

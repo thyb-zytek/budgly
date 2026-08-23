@@ -36,6 +36,22 @@ class AccountBudgetsService {
     return _store.get(_key(accountId, year, month))?.revenue ?? 0;
   }
 
+  final Map<String, double?> _mostRecentRevenueCache = {};
+
+  /// Most recent month's revenue for this account (across all months,
+  /// not just the currently selected one), or null if the account has
+  /// never had a revenue set. Cached in memory per account since it
+  /// only changes when setRevenue is called.
+  Future<double?> getMostRecentRevenue(String accountId) async {
+    if (_mostRecentRevenueCache.containsKey(accountId)) {
+      return _mostRecentRevenueCache[accountId];
+    }
+    final budget = await _provider.getMostRecentWithRevenue(accountId);
+    final value = budget?.revenue;
+    _mostRecentRevenueCache[accountId] = value;
+    return value;
+  }
+
   bool hasLoaded(String accountId, int year, int month) =>
       _store.hasLoaded(_key(accountId, year, month));
 
@@ -78,6 +94,7 @@ class AccountBudgetsService {
   void invalidateCache() {
     _cache.invalidate();
     _store.clearAll();
+    _mostRecentRevenueCache.clear();
   }
 
   Future<void> setRevenue(
@@ -93,11 +110,13 @@ class AccountBudgetsService {
       _store.set(key, updated);
       _cache.markFresh(key);
     }
+    _mostRecentRevenueCache.remove(accountId);
   }
 
   Future<void> deleteByAccountId(String accountId) async {
     await _provider.deleteByAccountId(accountId);
     _store.clearByAccountId(accountId);
     _cache.invalidate();
+    _mostRecentRevenueCache.remove(accountId);
   }
 }
