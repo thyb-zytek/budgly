@@ -25,7 +25,9 @@ class AccountsService {
   final CacheController<String> _cache =
       CacheController<String>(ttl: AppConstants.cacheValidityMedium);
   final AccountsStore _store;
-  static const String _cacheKey = 'accounts';
+  String? _loadedUserId;
+
+  String get _cacheKey => 'accounts_$_currentUserId';
 
   AccountsService({
     AccountSupabase? accountSupabase,
@@ -58,6 +60,13 @@ class AccountsService {
   }
 
   Future<void> loadAccounts({bool forceRefresh = false}) async {
+    final userId = _currentUserId;
+    if (_loadedUserId != null && _loadedUserId != userId) {
+      _cache.invalidate();
+      _store.clearLocalAccounts();
+    }
+    _loadedUserId = userId;
+
     if (!forceRefresh && _store.hasLoaded && _cache.isFresh(_cacheKey)) return;
 
     final inFlight = _cache.inFlight(_cacheKey);
@@ -230,6 +239,7 @@ class AccountsService {
 
   void clearLocalAccounts() {
     _cache.invalidate();
+    _loadedUserId = null;
     _store.clearLocalAccounts();
   }
 }
