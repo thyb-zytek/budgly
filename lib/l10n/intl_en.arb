@@ -235,5 +235,11 @@
       "current": { "type": "int" },
       "total": { "type": "int" }
     }
+  },
+  "tutorialCategoryCount": "{count, plural, =1{1 category} other{{count} categories}}",
+  "@tutorialCategoryCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   }
 }

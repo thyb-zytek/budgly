@@ -14,44 +14,58 @@ class StepIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tr = AppLocalizations.of(context)!;
 
     return Semantics(
-      label: AppLocalizations.of(context)!
-          .tutorialStepProgress(currentStep + 1, totalSteps),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(totalSteps, (index) {
-          final isActive = index == currentStep;
-          final isPast = index < currentStep;
-
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            // L'étape active s'allonge élégamment en pilule, dans le même
-            // tempo que la transition du PageView pour un mouvement cohérent.
-            width: isActive ? 28 : 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isActive
-                  ? theme.colorScheme.primary
-                  : isPast
-                      ? theme.colorScheme.primary.withAlpha(120)
-                      : theme.colorScheme.outlineVariant,
-              borderRadius: BorderRadius.circular(4),
-              // Halo discret sous la pilule active : attire l'œil sans bruit.
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withAlpha(70),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
+      label: tr.tutorialStepProgress(currentStep + 1, totalSteps),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 6,
+        children: [
+          ExcludeSemantics(
+            child: Text(
+              tr.tutorialStepProgress(currentStep + 1, totalSteps),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          );
-        }),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(totalSteps, (index) {
+              final isActive = index == currentStep;
+              final isPast = index < currentStep;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                // L'étape active s'allonge élégamment en pilule, dans le même
+                // tempo que la transition du PageView pour un mouvement cohérent.
+                width: isActive ? 28 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : isPast
+                          ? theme.colorScheme.primary.withAlpha(120)
+                          : theme.colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withAlpha(70),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }

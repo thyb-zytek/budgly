@@ -15,6 +15,7 @@ class UserProfile {
   final String currency;
   final String language;
   final List<Account> accounts;
+  final bool onboardingCompleted;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -28,10 +29,12 @@ class UserProfile {
     this.currency = 'EUR',
     this.language = 'fr',
     List<Account>? accounts,
+    bool? onboardingCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : color = color ?? UserProfile.generateRandomColor(),
        accounts = accounts ?? [],
+       onboardingCompleted = onboardingCompleted ?? false,
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -47,6 +50,7 @@ class UserProfile {
       themeMode: json['theme_mode']?.toString() ?? 'system',
       currency: json['currency']?.toString() ?? 'EUR',
       language: json['language']?.toString() ?? AppConstants.defaultLocale,
+      onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       accounts: json['accounts'] != null
           ? (json['accounts'] as List)
               .map((account) => Account.fromJson(account))
@@ -72,6 +76,7 @@ class UserProfile {
       'currency': currency,
       'language': language,
       'accounts': accounts.map((account) => account.toJson()).toList(),
+      'onboarding_completed': onboardingCompleted,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -87,6 +92,7 @@ class UserProfile {
     String? currency,
     String? language,
     List<Account>? accounts,
+    bool? onboardingCompleted,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -98,6 +104,7 @@ class UserProfile {
       currency: currency ?? this.currency,
       language: language ?? this.language,
       accounts: accounts ?? this.accounts,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

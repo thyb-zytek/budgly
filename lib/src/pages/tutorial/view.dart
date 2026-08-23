@@ -19,31 +19,34 @@ class TutorialPage extends StatefulWidget {
 
 class _TutorialPageState extends State<TutorialPage> {
   late final TutorialViewModel _viewModel;
-  late final PageController _pageController;
+  PageController? _pageController;
 
   @override
   void initState() {
     super.initState();
     _viewModel = TutorialViewModel();
-    _pageController = PageController();
   }
 
   @override
   void dispose() {
     _viewModel.dispose();
-    _pageController.dispose();
+    _pageController?.dispose();
     super.dispose();
   }
 
-  void _goToOverview() {
+  Future<void> _goToOverview() async {
+    await _viewModel.completeTutorial();
     if (mounted) {
       context.go(NavigationHelper.overviewPath);
     }
   }
 
+  // Seul point d'entrée pour avancer d'une étape : met à jour le view model
+  // ET anime le PageController. Avant, les étapes appelaient nextStep()
+  // seul, ce qui changeait l'état sans faire tourner la page.
   void _onNextStep() {
     _viewModel.nextStep();
-    _pageController.animateToPage(
+    _pageController?.animateToPage(
       _viewModel.currentStep,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
@@ -52,7 +55,7 @@ class _TutorialPageState extends State<TutorialPage> {
 
   void _onPreviousStep() {
     _viewModel.previousStep();
-    _pageController.animateToPage(
+    _pageController?.animateToPage(
       _viewModel.currentStep,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
@@ -71,6 +74,11 @@ class _TutorialPageState extends State<TutorialPage> {
           return const Scaffold(body: AppLoadingIndicator());
         }
 
+        // Created lazily here rather than in initState: by this point
+        // currentStep already reflects a resumed step (if any), whereas
+        // initState runs before that async restore completes.
+        _pageController ??= PageController(initialPage: _viewModel.currentStep);
+
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, _) {
@@ -78,7 +86,7 @@ class _TutorialPageState extends State<TutorialPage> {
             if (_viewModel.canGoBack) {
               _onPreviousStep();
             } else {
-              _showLogoutDialog(tr);
+              _showLogoutDialog(context, tr);
             }
           },
           child: Scaffold(
@@ -86,41 +94,47 @@ class _TutorialPageState extends State<TutorialPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    child: Row(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: _viewModel.canGoBack
-                              ? IconButton(
-                                  style: IconButton.styleFrom(
-                                    backgroundColor:
-                                        theme.colorScheme.surfaceContainerHigh,
-                                    shape: const CircleBorder(),
-                                  ),
-                                  icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                                  onPressed: _onPreviousStep,
-                                )
-                              : null,
+                        StepIndicator(
+                          currentStep: _viewModel.currentStep,
+                          totalSteps: _viewModel.totalSteps,
                         ),
-                        Expanded(
-                          child: StepIndicator(
-                            currentStep: _viewModel.currentStep,
-                            totalSteps: _viewModel.totalSteps,
+                        if (_viewModel.canGoBack)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              style: IconButton.styleFrom(
+                                backgroundColor:
+                                    theme.colorScheme.surfaceContainerHigh,
+                                shape: const CircleBorder(),
+                              ),
+                              icon: const Icon(
+                                Icons.arrow_back_rounded,
+                                size: 20,
+                              ),
+                              onPressed: _onPreviousStep,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
                   Expanded(
                     child: PageView(
-                      controller: _pageController,
+                      controller: _pageController!,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         WelcomeStep(onNext: _onNextStep),
                         AccountStep(viewModel: _viewModel, onNext: _onNextStep),
-                        CategoryStep(viewModel: _viewModel, onNext: _onNextStep),
+                        CategoryStep(
+                          viewModel: _viewModel,
+                          onNext: _onNextStep,
+                        ),
                         BudgetStep(
                           viewModel: _viewModel,
                           onFinish: _goToOverview,
@@ -137,7 +151,7 @@ class _TutorialPageState extends State<TutorialPage> {
     );
   }
 
-  void _showLogoutDialog(AppLocalizations tr) {
+  void _showLogoutDialog(BuildContext context, AppLocalizations tr) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -152,7 +166,7 @@ class _TutorialPageState extends State<TutorialPage> {
             onPressed: () async {
               Navigator.pop(dialogContext);
               await _viewModel.signOut();
-              if (mounted) {
+              if (context.mounted) {
                 context.go(NavigationHelper.loginPath);
               }
             },

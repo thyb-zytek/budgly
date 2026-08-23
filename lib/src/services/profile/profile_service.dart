@@ -45,6 +45,7 @@ class ProfileService implements Listenable {
   ThemeMode get themeMode => _store.themeMode;
   Locale get locale => _store.locale;
   String get currency => _store.currency;
+  bool get onboardingCompleted => _store.currentUser?.profile?.onboardingCompleted ?? false;
   bool get isLoading => _store.isLoading;
 
   @override
@@ -193,6 +194,18 @@ class ProfileService implements Listenable {
         rethrow;
       }
     }
+  }
+
+  Future<void> completeOnboarding() async {
+    final user = _store.currentUser;
+    if (user == null || user.profile?.onboardingCompleted == true) return;
+
+    await _profileSupabase.updateProfile(user.id, {
+      'onboarding_completed': true,
+    });
+
+    final updatedUser = await _authService.reloadCurrentUser();
+    if (updatedUser != null) _store.setUser(updatedUser);
   }
 
   Future<void> signOut() async {
