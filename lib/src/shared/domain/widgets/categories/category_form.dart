@@ -1,17 +1,13 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/shared/ui/widgets/customization_picker.dart';
 import 'package:budgly/src/shared/ui/widgets/entity_form.dart';
-import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 
 class CategoryForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
@@ -91,131 +87,28 @@ class _CategoryFormState extends State<CategoryForm>
   }
 
   void _openCustomizationPicker(BuildContext context) {
-    final theme = Theme.of(context);
-    final tr = AppLocalizations.of(context)!;
-    final searchController = TextEditingController();
-    List<CategoryIcon> filteredIcons =
-        widget.viewModel.categoryEditingData.availableIcons;
-
     cancelHint();
 
-    showAppBottomSheet(
+    showCategoryCustomizationSheet(
       context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            void filterIcons(String query) {
-              final locale = tr.localeName;
-              setModalState(() {
-                filteredIcons =
-                    widget.viewModel.categoryEditingData.availableIcons.where((icon) {
-                  final label = icon.labels[locale] ?? icon.iconName;
-                  return label.toLowerCase().contains(query.toLowerCase());
-                }).toList();
-              });
-            }
-
-            return SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                child: CustomizationPicker(
-                  title: tr.categoryCustomization,
-                  previewWidget: CategoryIconView(
-                    icon: _tempIcon,
-                    color: _tempColor,
-                    size: 80,
-                  ),
-                  tabTitles: [
-                    TabTitle(icon: Icons.category_rounded, title: tr.icon),
-                    TabTitle(icon: Icons.palette_rounded, title: tr.color),
-                  ],
-                  tabs: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 16,
-                      children: [
-                        TextInput(
-                          controller: searchController,
-                          labelText: tr.searchIcon,
-                          onChange: filterIcons,
-                          onFieldSubmitted: (v) {
-                            if (filteredIcons.isNotEmpty) {
-                              setModalState(
-                                  () => _tempIcon = filteredIcons.first);
-                            }
-                          },
-                        ),
-                        SizedBox(
-                          height: 220,
-                          child: GridView.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 6,
-                              mainAxisSpacing: 4,
-                              crossAxisSpacing: 4,
-                              childAspectRatio: 1,
-                            ),
-                            itemCount: filteredIcons.length,
-                            itemBuilder: (context, index) {
-                              final iconItem = filteredIcons[index];
-                              final isSelected =
-                                  _tempIcon.iconName == iconItem.iconName;
-
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: theme
-                                      .colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? theme.colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () => setModalState(
-                                      () => _tempIcon = iconItem),
-                                  child: Icon(
-                                    IconPickerIcon(
-                                      name: iconItem.iconName,
-                                      data: iconItem.toIconData(),
-                                      pack: iconItem.iconPack,
-                                    ).data,
-                                    size: 32,
-                                    color: isSelected
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    ColorWheel(
-                      key: const ValueKey('category_color_wheel'),
-                      color: _tempColor,
-                      onChanged: (color) =>
-                          setModalState(() => _tempColor = color),
-                    ),
-                  ],
-                  onValidate: () {
-                    widget.viewModel.categoryEditingData.icon = _tempIcon;
-                    widget.viewModel.categoryEditingData.color = _tempColor;
-                    setState(() {});
-                    Navigator.pop(context);
-                  },
-                  onCancel: () => Navigator.pop(context),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ).then((_) => searchController.dispose());
+      availableIcons: widget.viewModel.categoryEditingData.availableIcons,
+      initialIcon: _tempIcon,
+      initialColor: _tempColor,
+      previewBuilder: (context, icon, color) => CategoryIconView(
+        icon: icon,
+        color: color,
+        size: 80,
+      ),
+      onIconChanged: (icon) => _tempIcon = icon,
+      onColorChanged: (color) => _tempColor = color,
+    ).then((confirmed) {
+      if (confirmed) {
+        widget.viewModel.categoryEditingData.icon = _tempIcon;
+        widget.viewModel.categoryEditingData.color = _tempColor;
+      }
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   Widget _buildCategoryIcon() {
