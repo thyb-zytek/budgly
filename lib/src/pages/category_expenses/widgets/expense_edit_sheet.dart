@@ -10,9 +10,6 @@ import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Bottom sheet to manage an expense occurrence: edit its info, delete it or
-/// toggle its debited state. For recurring expenses, edits apply to the whole
-/// template while the debited state only concerns the tapped occurrence.
 class ExpenseEditSheet extends StatefulWidget {
   final CategoryExpensesViewModel viewModel;
 

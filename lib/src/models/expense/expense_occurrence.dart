@@ -2,12 +2,6 @@ import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 
-/// A concrete occurrence of an expense inside a period.
-///
-/// One-off expenses produce a single occurrence at their debit date, while
-/// recurring expenses are expanded on the fly from their anchor date
-/// (`Expense.debitDate`) so every period — past, current or future — is
-/// populated automatically, without duplicating documents.
 class ExpenseOccurrence {
   final Expense expense;
   final DateTime date;
@@ -25,11 +19,9 @@ class ExpenseOccurrence {
   double get amount => expense.amount;
   RecurrenceType get recurrence => expense.recurrence;
 
-  /// Stable identity used as list key: expense id + occurrence date.
   String get key => '$id@${Expense.isoDate(date)}';
 }
 
-/// Expands [expense] into the occurrences that fall inside [period].
 List<ExpenseOccurrence> expandExpenseOccurrences(
   Expense expense,
   Period period,
@@ -41,9 +33,6 @@ List<ExpenseOccurrence> expandExpenseOccurrences(
   );
 }
 
-/// Expands [expense] into the occurrences whose date falls between [from] and
-/// [to] (inclusive). Unlike [expandExpenseOccurrences], this walks the
-/// recurrence only once whatever the size of the window.
 List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
   Expense expense,
   DateTime from,

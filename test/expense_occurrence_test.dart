@@ -32,7 +32,6 @@ void main() {
       final feb = RecurrenceType.monthly.nextOccurrenceAfter(jan31);
       expect(feb, DateTime(2026, 2, 28));
 
-      // Sticky clamping: keeping the anchor day restores the 31st in March.
       final mar = RecurrenceType.monthly.nextOccurrenceAfter(
         feb,
         anchorDay: jan31.day,
@@ -114,7 +113,6 @@ void main() {
       );
       expect(mar.single.date, DateTime(2026, 3, 31));
 
-      // Does not appear before its anchor date.
       final before = expandExpenseOccurrences(
         expense,
         const Period(year: 2025, month: 12),

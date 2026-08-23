@@ -26,11 +26,8 @@ class OverviewPage extends StatefulWidget {
 class _OverviewPageState extends State<OverviewPage> {
   final OverviewViewModel _viewModel = OverviewViewModel();
 
-  /// Direction of the last period change (+1 next, -1 previous) so the
-  /// slide transition matches the gesture that triggered it.
   int _slideDirection = 1;
 
-  /// Start point/timestamp of the current pointer, for swipe detection.
   Offset? _swipeOrigin;
   Duration _swipeStartedAt = Duration.zero;
 
@@ -85,12 +82,6 @@ class _OverviewPageState extends State<OverviewPage> {
     _onPeriodChanged(target);
   }
 
-  /// Swipe detection via raw pointer events instead of a drag
-  /// [GestureDetector]: the scroll view's vertical recognizer wins the
-  /// gesture arena on most drags, so an arena-based horizontal detector
-  /// never fires reliably. A [Listener] observes every pointer
-  /// regardless of who wins, and we only react to clearly horizontal,
-  /// deliberate swipes.
   void _onPointerDown(PointerDownEvent event) {
     _swipeOrigin = event.position;
     _swipeStartedAt = event.timeStamp;
@@ -103,11 +94,9 @@ class _OverviewPageState extends State<OverviewPage> {
 
     final delta = event.position - origin;
 
-    // Horizontal dominance: ignore mostly-vertical scroll gestures.
     if (delta.dx.abs() < delta.dy.abs() * 1.2) return;
     if (delta.dx.abs() < 56) return;
 
-    // Accept quick flicks as well as slower but longer drags.
     final elapsed = (event.timeStamp - _swipeStartedAt).inMilliseconds;
     if (elapsed > 700 && delta.dx.abs() < 140) return;
 

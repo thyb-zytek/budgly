@@ -1,7 +1,6 @@
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Circular badge whose icon tells the debited state at a glance.
 class ExpenseStatusAvatar extends StatelessWidget {
   final Color? color;
   final bool isDebited;

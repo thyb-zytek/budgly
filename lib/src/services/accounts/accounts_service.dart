@@ -165,8 +165,7 @@ class AccountsService {
     final generation = _cache.generation;
     final updated = await _accountSupabase.update(account);
     if (updated != null) {
-      // The DB row carries no signed URL: preserve the existing one when
-      // the underlying picture file did not change.
+
       final merged =
           (updated.picture != null && updated.picture == account.picture)
               ? updated.copyWith(pictureUrl: account.pictureUrl)

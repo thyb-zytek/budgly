@@ -114,4 +114,3 @@ class UserProfile {
     return Colors.primaries[Random().nextInt(Colors.primaries.length)];
   }
 }
-

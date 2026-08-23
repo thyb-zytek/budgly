@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 class LoginViewModel extends BaseViewModel {
   final AuthService _authService;
   final ProfileService _profileService;
-  
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _password2Controller = TextEditingController();

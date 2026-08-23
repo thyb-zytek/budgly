@@ -43,10 +43,7 @@ class _RevenueFormState extends State<RevenueForm> {
   @override
   void didUpdateWidget(covariant RevenueForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // The inherited estimate loads asynchronously and may not have been
-    // ready yet in initState. Only fill it in if the field is still
-    // exactly as we left it (empty, or the estimate we already applied)
-    // so a value the user is actively typing is never overwritten.
+
     final stillUntouched = _controller.text.isEmpty ||
         (_prefilledFromEstimate && _controller.text == oldWidget.viewModel.inheritedRevenue?.toStringAsFixed(0));
     if (stillUntouched && widget.viewModel.revenue <= 0) {

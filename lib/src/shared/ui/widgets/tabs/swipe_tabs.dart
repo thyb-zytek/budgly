@@ -99,7 +99,7 @@ class _SwipeTabsState extends State<SwipeTabs> with TickerProviderStateMixin {
           child: PageView(
             controller: _pageController,
             onPageChanged: _handlePageChanged,
-            
+
             pageSnapping: true,
             children: widget.children,
           ),

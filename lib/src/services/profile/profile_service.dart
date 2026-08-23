@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 
 class ProfileService implements Listenable {
   static ProfileService? _instance;
-  
+
   static ProfileService get instance {
     _instance ??= ProfileService._();
     return _instance!;
@@ -24,7 +24,7 @@ class ProfileService implements Listenable {
   SharedPreferences? _prefs;
   Future<void>? _loadProfileFuture;
   int _sessionGeneration = 0;
-  
+
   static const String _themeKey = AppConstants.themeKey;
   static const String _localeKey = AppConstants.localeKey;
   static const String _currencyKey = AppConstants.currencyKey;
@@ -60,12 +60,12 @@ class ProfileService implements Listenable {
 
   Future<void> _loadLocalPreferences() async {
     if (_prefs == null) return;
-    
+
     final themeIndex = _prefs!.getInt(_themeKey);
-    final theme = themeIndex != null 
+    final theme = themeIndex != null
         ? ThemeMode.values[themeIndex.clamp(0, ThemeMode.values.length - 1)]
         : ThemeMode.system;
-    
+
     final languageCode = _prefs!.getString(_localeKey) ?? AppConstants.defaultLocale;
     final currency = _prefs!.getString(_currencyKey) ?? AppConstants.defaultCurrency;
 
@@ -77,7 +77,7 @@ class ProfileService implements Listenable {
       try {
         final profile = user.profile!;
         final serverTheme = _getThemeModeFromString(profile.themeMode);
-        
+
         _store.setPreferences(
           themeMode: serverTheme,
           locale: Locale(profile.language),
@@ -154,7 +154,7 @@ class ProfileService implements Listenable {
   Future<void> setThemeMode(ThemeMode mode) async {
     if (_store.themeMode == mode) return;
     _prefs ??= await SharedPreferences.getInstance();
-    
+
     await _prefs!.setInt(_themeKey, mode.index);
     _store.setPreferences(themeMode: mode);
     await _updateServerProfile();
@@ -163,7 +163,7 @@ class ProfileService implements Listenable {
   Future<void> setLocale(Locale newLocale) async {
     if (_store.locale.languageCode == newLocale.languageCode) return;
     _prefs ??= await SharedPreferences.getInstance();
-    
+
     await _prefs!.setString(_localeKey, newLocale.languageCode);
     _store.setPreferences(locale: newLocale);
     await _updateServerProfile();
@@ -172,7 +172,7 @@ class ProfileService implements Listenable {
   Future<void> setCurrency(String newCurrency) async {
     if (_store.currency == newCurrency) return;
     _prefs ??= await SharedPreferences.getInstance();
-    
+
     await _prefs!.setString(_currencyKey, newCurrency);
     _store.setPreferences(currency: newCurrency);
     await _updateServerProfile();

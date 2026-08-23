@@ -82,7 +82,6 @@ class ConfirmDelete extends StatelessWidget {
   }
 }
 
-
 Future<bool?> showConfirmDelete(
   BuildContext context, {
   required String title,

@@ -64,10 +64,7 @@ class CategoryIconsService {
 
   Future<void> _loadIcons() async {
     final cached = await _getCachedIcons();
-    // An empty persistent cache is not a valid icon catalogue. This can
-    // happen when the first login occurs while Supabase is unavailable.
-    // Do not treat it as a successful load: continue to the remote source
-    // and, if needed, the bundled JSON fallback.
+
     if (cached != null && cached.isNotEmpty) {
       _icons = cached;
       _cache.markFresh(_cacheKey);

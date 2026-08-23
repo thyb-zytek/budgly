@@ -11,18 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-/// Flat-design expense card of the occurrences list.
-///
-/// Swipe behavior depends on [ExpenseOccurrence.isDebited]: pending rows
-/// mark as debited on right swipe and edit on left swipe or tap, while
-/// debited rows can only be undone (left swipe) or deleted (long press).
 class ExpenseCard extends StatelessWidget {
   final ExpenseOccurrence occurrence;
   final String currencyCode;
   final String localeName;
 
-  /// Accent color of the account behind this expense, tints the card when
-  /// debited. Falls back to the theme primary color.
   final Color? accountColor;
 
   final VoidCallback onTap;
@@ -94,7 +87,7 @@ class ExpenseCard extends StatelessWidget {
           } else {
             onEdit();
           }
-          // Swiping triggers an action, never removal.
+
           return false;
         },
         background: SwipeActionBackground(

@@ -41,8 +41,7 @@ class StepIndicator extends StatelessWidget {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutCubic,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
-                // L'étape active s'allonge élégamment en pilule, dans le même
-                // tempo que la transition du PageView pour un mouvement cohérent.
+
                 width: isActive ? 28 : 8,
                 height: 8,
                 decoration: BoxDecoration(

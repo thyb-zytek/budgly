@@ -3,7 +3,6 @@ import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
 
-/// Localized label of a [RecurrenceType].
 String recurrenceLabel(AppLocalizations tr, RecurrenceType recurrence) {
   return switch (recurrence) {
     RecurrenceType.none => tr.recurrenceNone,

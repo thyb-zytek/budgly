@@ -42,9 +42,6 @@ void showAppSnackBar(
   ScaffoldMessenger.of(context).showSnackBar(buildAppSnackBar(message, type));
 }
 
-/// Builds the app's floating snackbar. Useful to show a snackbar from a
-/// messenger captured before a route is popped (the builder does not need a
-/// still-mounted [BuildContext]).
 SnackBar buildAppSnackBar(String message, SnackBarType type) {
   return SnackBar(
     behavior: SnackBarBehavior.floating,

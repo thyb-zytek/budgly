@@ -26,7 +26,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _accountsViewModel.dispose();
-    super.dispose();  
+    super.dispose();
   }
 
   @override
@@ -42,7 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
         children: [
           AccountsTab(accountsViewModel: _accountsViewModel),
-          CategoriesTab(accountsViewModel: _accountsViewModel),  
+          CategoriesTab(accountsViewModel: _accountsViewModel),
           const PreferencesTab(),
           ProfileTab(),
         ],

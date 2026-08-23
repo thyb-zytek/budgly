@@ -70,7 +70,7 @@ class CategoriesService {
     final iconCode = rawIconCode.toLowerCase().startsWith('0x')
         ? int.tryParse(rawIconCode.substring(2), radix: 16) ?? 0
         : int.tryParse(rawIconCode) ?? 0;
-    
+
     try {
       if (iconCode != 0) {
         resolvedIcon = _store.availableIcons.firstWhere((i) => i.iconCode == iconCode);

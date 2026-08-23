@@ -81,7 +81,6 @@ class _CategoriesTabState extends State<CategoriesTab>
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    // Le titre ne dépend pas des données changeantes du ViewModel
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -99,7 +98,6 @@ class _CategoriesTabState extends State<CategoriesTab>
               _accountsViewModel,
             ]),
             builder: (context, child) {
-              // Logique de chargement / état vide
               if (_categoriesViewModel.isLoading) {
                 return const AppLoadingIndicator();
               }

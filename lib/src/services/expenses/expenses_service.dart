@@ -134,11 +134,6 @@ class ExpensesService {
     _store.clearCategoryCache(categoryId);
   }
 
-  /// Marks the occurrence of [expense] on [date] as debited.
-  ///
-  /// For one-off expenses this flips the expense flag; for recurring ones
-  /// only the given occurrence (matched by its ISO date) is marked, so the
-  /// other occurrences keep their own state.
   Future<Expense> markOccurrenceDebited(Expense expense, DateTime date) async {
     if (expense.isRecurring) {
       final key = Expense.isoDate(date);
@@ -153,7 +148,6 @@ class ExpensesService {
     return updateExpense(expense.copyWith(isDebited: true));
   }
 
-  /// Reverts the "debited" state of the occurrence of [expense] on [date].
   Future<Expense> unmarkOccurrenceDebited(
     Expense expense,
     DateTime date,
@@ -173,7 +167,6 @@ class ExpensesService {
     return updateExpense(expense.copyWith(isDebited: false));
   }
 
-  /// Toggles the debited state of the occurrence of [expense] on [date].
   Future<Expense> toggleOccurrenceDebited(Expense expense, DateTime date) async {
     return expense.isDebitedAt(date)
         ? unmarkOccurrenceDebited(expense, date)

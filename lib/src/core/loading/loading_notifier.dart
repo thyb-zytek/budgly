@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Reusable reference-counted loading state for application stores.
 mixin LoadingNotifier on ChangeNotifier {
   bool _isLoading = false;
   int _loadingCount = 0;

@@ -50,7 +50,7 @@ class ProfileViewModel extends BaseViewModel {
 
   Future<void> changePassword(bool isValid) async {
     if (!isValid) return;
-    
+
     setLoading(true);
     try {
       await _profileService.changePassword(
@@ -103,7 +103,7 @@ class ProfileViewModel extends BaseViewModel {
       await _profileService.signOut();
       _accountsService.clearLocalAccounts();
       _categoriesService.invalidateCache();
-      
+
       _oldPasswordController.clear();
       _passwordController.clear();
       _confirmPasswordController.clear();

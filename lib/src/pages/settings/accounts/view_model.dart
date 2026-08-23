@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:budgly/src/core/loading/progressive_loader.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
@@ -135,8 +136,8 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
         );
         final updatedAccount = account.copyWith(pictureUrl: pictureUrl);
         _accountsService.updateLocalAccount(updatedAccount);
-      } catch (e) {
-        // Signed URL refresh is best-effort
+      } catch (e, st) {
+        AppLogger.error('Failed to refresh picture URL', e, st);
       }
     }
   }

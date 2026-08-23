@@ -5,10 +5,6 @@ import 'package:budgly/src/shared/domain/widgets/categories/status_chip.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_view.dart';
 import 'package:flutter/material.dart';
 
-/// One category row in the expense list: icon, name, total, and the
-/// debited/pending split as status chips. This replaces the previous
-/// two side-by-side detail blocks, which took twice the vertical
-/// space to convey the same information.
 class CategoryExpenses extends StatelessWidget {
   final CategoryExpenseSummary summary;
   final String currencyCode;

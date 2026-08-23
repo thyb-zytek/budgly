@@ -5,20 +5,12 @@ import 'package:budgly/src/pages/overview/widgets/period_slide_switcher.dart';
 import 'package:budgly/src/pages/overview/widgets/summary_card.dart';
 import 'package:flutter/material.dart';
 
-/// Pinned overview summary that smoothly transitions between a full card and
-/// a compact row while scrolling.
-///
-/// The delegate paints the scaffold background color (not `surface`) so the
-/// pinned band blends seamlessly with the rest of the page — no visible seam
-/// behind the card.
 class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
   final OverviewViewModel viewModel;
   final ValueChanged<Account> onSelectAccount;
   final VoidCallback? onEditRevenue;
   final ValueChanged<String>? onCategoryTap;
 
-  /// Current navigation direction between periods (+1 next, -1 previous),
-  /// used to slide the summary content when the period changes.
   final int slideDirection;
 
   const CollapsingSummaryHeader({

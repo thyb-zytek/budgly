@@ -23,12 +23,6 @@ class CategoriesStore extends ChangeNotifier with LoadingNotifier {
 
   CategoriesStore._();
 
-  /// Records the result of an icon load attempt. [_iconsLoaded] is only
-  /// latched to true when [icons] is non-empty: an empty result means the
-  /// load actually failed (network/auth at startup — the local asset
-  /// fallback should otherwise always produce something), and leaving the
-  /// flag false lets the next [loadAvailableIcons] call retry instead of
-  /// being short-circuited for the rest of the session.
   void setAvailableIcons(List<CategoryIcon> icons) {
     _availableIcons = List.from(icons);
     if (icons.isNotEmpty) {
@@ -42,7 +36,6 @@ class CategoriesStore extends ChangeNotifier with LoadingNotifier {
     _hasLoadedByAccount[accountId] = true;
     notifyListeners();
   }
-
 
   bool hasLoadedAccount(String accountId) {
     return _hasLoadedByAccount[accountId] == true;

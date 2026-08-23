@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Common async state used by MVVM view models.
 enum ViewState {
   idle,
   loading,

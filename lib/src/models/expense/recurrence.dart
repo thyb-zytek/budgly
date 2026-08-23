@@ -1,13 +1,5 @@
 import 'dart:math' as math;
 
-/// How often a recurring expense repeats.
-///
-/// `none` is a one-off expense. The other values describe the interval
-/// between two occurrences. Month-based recurrences clamp the day of the
-/// month (Jan 31 → Feb 28) so the anchor never rolls into the next month.
-/// Clamping is "sticky": when a caller walks occurrences with the same
-/// anchor day, the day is restored once the target month is long enough
-/// (Jan 31 → Feb 28 → Mar 31).
 enum RecurrenceType {
   none,
   daily,
@@ -37,11 +29,6 @@ enum RecurrenceType {
     _ => null,
   };
 
-  /// Next occurrence strictly after [date].
-  ///
-  /// For month-based recurrences, [anchorDay] is the day-of-month of the
-  /// original anchor (the expense's debit date) so clamping stays sticky.
-  /// When omitted it defaults to the day of [date].
   DateTime nextOccurrenceAfter(DateTime date, {int? anchorDay}) {
     final days = _days;
     if (days != null) return DateTime(date.year, date.month, date.day + days);
@@ -50,9 +37,6 @@ enum RecurrenceType {
     return addMonthsClamped(date, months, anchorDay: anchorDay ?? date.day);
   }
 
-  /// Previous occurrence strictly before [date].
-  ///
-  /// Same sticky-clamping semantics as [nextOccurrenceAfter].
   DateTime previousOccurrenceBefore(DateTime date, {int? anchorDay}) {
     final days = _days;
     if (days != null) return DateTime(date.year, date.month, date.day - days);
@@ -61,18 +45,13 @@ enum RecurrenceType {
     return addMonthsClamped(date, -months, anchorDay: anchorDay ?? date.day);
   }
 
-  /// First occurrence on or after [anchor] that is also on or after [target].
-  ///
-  /// Jumps straight to [target]'s window (instead of walking every single
-  /// occurrence since [anchor]) before fine-stepping to the exact date.
   DateTime firstOccurrenceOnOrAfter(DateTime anchor, DateTime target) {
     var date = anchor;
     if (date.isBefore(target)) {
       final days = _days;
       final months = _months;
       if (days != null) {
-        // Use calendar dates in UTC so daylight-saving transitions do not
-        // turn a 24-hour calendar interval into 23/25 elapsed hours.
+
         final dateUtc = DateTime.utc(date.year, date.month, date.day);
         final targetUtc = DateTime.utc(target.year, target.month, target.day);
         final steps = targetUtc.difference(dateUtc).inDays ~/ days;
@@ -104,11 +83,6 @@ enum RecurrenceType {
   }
 }
 
-/// Adds [months] months to [date], clamping the day to the target month's
-/// length (Jan 31 + 1 month → Feb 28) so the result never overflows.
-///
-/// When [anchorDay] is given, the day-of-month kept is that anchor day
-/// instead of [date]'s own day (sticky clamping).
 DateTime addMonthsClamped(DateTime date, int months, {int? anchorDay}) {
   final day = anchorDay ?? date.day;
   final monthIndex = date.month - 1 + months;

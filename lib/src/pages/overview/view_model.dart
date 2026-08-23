@@ -87,8 +87,7 @@ class OverviewViewModel extends BaseViewModel {
     if (match == null) {
       account = accounts.first;
     } else if (!identical(match, _account)) {
-      // Re-point to the latest store instance so color/picture edits
-      // propagate even though the id did not change.
+
       _account = match;
       _invalidatePeriodOccurrencesCache();
     }
@@ -116,7 +115,6 @@ class OverviewViewModel extends BaseViewModel {
     }
   }
 
-  /// Force-refresh all data for the current account (pull-to-refresh).
   Future<void> refreshAll() async {
     final accountId = _account?.id;
 
@@ -187,12 +185,6 @@ class OverviewViewModel extends BaseViewModel {
 
   final Map<String, double?> _inheritedRevenueByAccount = {};
 
-  /// Loads the account's most recently set revenue (any month), used
-  /// as a display fallback for periods that have nothing of their own
-  /// set yet. Cached per account for the lifetime of this view model —
-  /// AccountBudgetsService already drops its own cache entry whenever
-  /// a new revenue is saved, so a fresh app session always sees an
-  /// up-to-date value even though this local cache never expires.
   Future<void> _ensureInheritedRevenueLoaded() async {
     final accountId = _account?.id;
     if (accountId == null) return;
@@ -252,22 +244,10 @@ class OverviewViewModel extends BaseViewModel {
 
   bool get hasRevenue => revenue > 0;
 
-  /// Most recently set revenue for this account, from any month, used
-  /// as a display fallback when the selected period has none of its
-  /// own. Null while still loading or if the account has never had a
-  /// revenue set anywhere.
   double? get inheritedRevenue => _inheritedRevenueByAccount[_account?.id];
 
-  /// True when [remaining] (and therefore [weeklyBudget]) is currently
-  /// based on [inheritedRevenue] rather than a revenue actually set
-  /// for this period — lets the UI mark the figure as an estimate.
   bool get isRevenueEstimated => !hasRevenue && (inheritedRevenue ?? 0) > 0;
 
-  /// Revenue used for the remaining/weekly-budget calculations below:
-  /// the real value for this period if one was set, otherwise the most
-  /// recent prior month's revenue as a working estimate. Falling back
-  /// to 0 (the old behaviour) made every unfilled month show a
-  /// confusing negative "remaining" equal to minus its expenses.
   double get effectiveRevenue => hasRevenue ? revenue : (inheritedRevenue ?? 0);
 
   Future<void> setRevenue(double value) async {
@@ -329,9 +309,6 @@ class OverviewViewModel extends BaseViewModel {
   double get totalExpenses =>
       periodOccurrences.fold(0.0, (sum, occurrence) => sum + occurrence.amount);
 
-  /// Total of this period's occurrences that haven't been marked as
-  /// debited yet — what's still left to actually go out, as opposed
-  /// to [totalExpenses] which includes everything already spent too.
   double get pendingExpenses => periodOccurrences
       .where((occurrence) => !occurrence.isDebited)
       .fold(0.0, (sum, occurrence) => sum + occurrence.amount);
