@@ -155,11 +155,13 @@
   "debitDate": "Debit date",
   "revenue": "Revenue",
   "remaining": "Remaining",
+  "remainingBasedOnRevenueHint": "Based on your revenue for this period",
   "expenses": "Expenses",
   "expensesByCategory": "Expenses by category",
   "noExpensesForPeriod": "No expenses for this period",
   "addFirstExpenseHint": "Tap + to add your first expense.",
   "remainingWeekend": "Budget/weeks",
+  "revenueEstimatedHint": "No revenue set for this period — showing your most recent one as an estimate",
   "debited": "Debited {amount}",
   "@debited": {
     "placeholders": {

@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/category/category.dart';
@@ -132,6 +133,8 @@ class OverviewViewModel extends BaseViewModel {
           forceRefresh: true,
         ),
       ]);
+      _inheritedRevenueByAccount.remove(accountId);
+      await _ensureInheritedRevenueLoaded();
     }
 
     _invalidatePeriodOccurrencesCache();
@@ -156,12 +159,14 @@ class OverviewViewModel extends BaseViewModel {
       loadExpenses();
     }
     _ensureRevenueLoaded();
+    _ensureInheritedRevenueLoaded();
     _maybeShowRevenueEditor();
   }
 
   Period get selectedPeriod => _selectedPeriod;
   Period get minPeriod => Period.current().addMonths(-12);
-  Period get maxPeriod => Period.current().addMonths(3);
+  Period get maxPeriod =>
+      Period.fromDate(DateTime.now().add(const Duration(days: AppConstants.maxFutureExpenseDays)));
 
   set selectedPeriod(Period value) {
     if (_selectedPeriod == value) return;
@@ -169,6 +174,7 @@ class OverviewViewModel extends BaseViewModel {
     _invalidatePeriodOccurrencesCache();
     if (!isDisposed) notifyListeners();
     _ensureRevenueLoaded();
+    _ensureInheritedRevenueLoaded();
     _maybeShowRevenueEditor();
   }
 
@@ -177,6 +183,25 @@ class OverviewViewModel extends BaseViewModel {
     if (!_accountBudgetsService.hasLoaded(_account!.id!, _selectedPeriod.year, _selectedPeriod.month)) {
       _accountBudgetsService.loadRevenue(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
     }
+  }
+
+  final Map<String, double?> _inheritedRevenueByAccount = {};
+
+  /// Loads the account's most recently set revenue (any month), used
+  /// as a display fallback for periods that have nothing of their own
+  /// set yet. Cached per account for the lifetime of this view model —
+  /// AccountBudgetsService already drops its own cache entry whenever
+  /// a new revenue is saved, so a fresh app session always sees an
+  /// up-to-date value even though this local cache never expires.
+  Future<void> _ensureInheritedRevenueLoaded() async {
+    final accountId = _account?.id;
+    if (accountId == null) return;
+    if (_inheritedRevenueByAccount.containsKey(accountId)) return;
+
+    final value = await _accountBudgetsService.getMostRecentRevenue(accountId);
+    if (isDisposed || _account?.id != accountId) return;
+    _inheritedRevenueByAccount[accountId] = value;
+    notifyListeners();
   }
 
   bool get showRevenueEditor => _showRevenueEditor;
@@ -225,9 +250,31 @@ class OverviewViewModel extends BaseViewModel {
     return _accountBudgetsService.hasLoaded(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
   }
 
+  bool get hasRevenue => revenue > 0;
+
+  /// Most recently set revenue for this account, from any month, used
+  /// as a display fallback when the selected period has none of its
+  /// own. Null while still loading or if the account has never had a
+  /// revenue set anywhere.
+  double? get inheritedRevenue => _inheritedRevenueByAccount[_account?.id];
+
+  /// True when [remaining] (and therefore [weeklyBudget]) is currently
+  /// based on [inheritedRevenue] rather than a revenue actually set
+  /// for this period — lets the UI mark the figure as an estimate.
+  bool get isRevenueEstimated => !hasRevenue && (inheritedRevenue ?? 0) > 0;
+
+  /// Revenue used for the remaining/weekly-budget calculations below:
+  /// the real value for this period if one was set, otherwise the most
+  /// recent prior month's revenue as a working estimate. Falling back
+  /// to 0 (the old behaviour) made every unfilled month show a
+  /// confusing negative "remaining" equal to minus its expenses.
+  double get effectiveRevenue => hasRevenue ? revenue : (inheritedRevenue ?? 0);
+
   Future<void> setRevenue(double value) async {
     if (_account?.id == null) return;
     await _accountBudgetsService.setRevenue(_account!.id!, _selectedPeriod.year, _selectedPeriod.month, value);
+    _inheritedRevenueByAccount.remove(_account!.id);
+    _ensureInheritedRevenueLoaded();
   }
 
   List<Expense> get expenses {
@@ -281,11 +328,13 @@ class OverviewViewModel extends BaseViewModel {
 
   double get totalExpenses =>
       periodOccurrences.fold(0.0, (sum, occurrence) => sum + occurrence.amount);
-  double get remaining => revenue - totalExpenses;
+
+  double get remaining => effectiveRevenue - totalExpenses;
 
   int? get remainingWeekendsInPeriod {
-    if (_selectedPeriod != Period.current()) return null;
-    return _selectedPeriod.remainingWeekends();
+    if (_selectedPeriod.isBefore(Period.current())) return null;
+    if (_selectedPeriod == Period.current()) return _selectedPeriod.remainingWeekends();
+    return _selectedPeriod.totalWeekends();
   }
 
   double? get weeklyBudget {

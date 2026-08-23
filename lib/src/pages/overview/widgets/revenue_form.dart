@@ -20,15 +20,42 @@ class RevenueForm extends StatefulWidget {
 
 class _RevenueFormState extends State<RevenueForm> {
   late final TextEditingController _controller;
+  bool _prefilledFromEstimate = false;
+
+  String _initialText() {
+    if (widget.viewModel.revenue > 0) {
+      return widget.viewModel.revenue.toStringAsFixed(0);
+    }
+    final inherited = widget.viewModel.inheritedRevenue;
+    if (inherited != null && inherited > 0) {
+      _prefilledFromEstimate = true;
+      return inherited.toStringAsFixed(0);
+    }
+    return '';
+  }
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: widget.viewModel.revenue > 0
-          ? widget.viewModel.revenue.toStringAsFixed(0)
-          : '',
-    );
+    _controller = TextEditingController(text: _initialText());
+  }
+
+  @override
+  void didUpdateWidget(covariant RevenueForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The inherited estimate loads asynchronously and may not have been
+    // ready yet in initState. Only fill it in if the field is still
+    // exactly as we left it (empty, or the estimate we already applied)
+    // so a value the user is actively typing is never overwritten.
+    final stillUntouched = _controller.text.isEmpty ||
+        (_prefilledFromEstimate && _controller.text == oldWidget.viewModel.inheritedRevenue?.toStringAsFixed(0));
+    if (stillUntouched && widget.viewModel.revenue <= 0) {
+      final inherited = widget.viewModel.inheritedRevenue;
+      if (inherited != null && inherited > 0) {
+        _prefilledFromEstimate = true;
+        _controller.text = inherited.toStringAsFixed(0);
+      }
+    }
   }
 
   @override
@@ -65,6 +92,13 @@ class _RevenueFormState extends State<RevenueForm> {
               currencyCode: widget.viewModel.currencyCode,
               labelText: tr.revenue,
             ),
+            if (_prefilledFromEstimate)
+              Text(
+                tr.revenueEstimatedHint,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer.withAlpha(180),
+                ),
+              ),
             FormActions(
               onCancel: widget.onClose,
               onSubmit: _save,

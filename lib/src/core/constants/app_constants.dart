@@ -1,35 +1,41 @@
 import 'package:budgly/src/models/category/category_icon.dart';
 
 class AppConstants {
-  // Cache validity durations
   static const Duration cacheValidityShort = Duration(minutes: 5);
   static const Duration cacheValidityMedium = Duration(minutes: 50);
   static const Duration cacheValidityLong = Duration(days: 1);
 
-  // Supabase bucket names
   static const String bucketAccounts = 'accounts-pictures';
   static const String bucketConfig = 'config-files';
 
-  // Cache keys
   static const String cacheCategoryIcons = 'cached_category_icons';
 
-  // File names
   static const String categoryIconsFileName = 'category_icons.json';
 
-  // Form keys
   static const String loginFormTypeKey = 'LoginDefaultFormType';
 
-  // Preference keys
   static const String themeKey = 'theme_mode';
   static const String localeKey = 'app_locale';
   static const String currencyKey = 'app_currency';
+  static const String tutorialStepKeyPrefix = 'tutorial_step_';
+  static const String tutorialCompletedKeyPrefix = 'tutorial_completed_';
 
-  // Supported currencies
+  static String tutorialStepKey(String uid) => '$tutorialStepKeyPrefix$uid';
+  static String tutorialCompletedKey(String uid) =>
+      '$tutorialCompletedKeyPrefix$uid';
+
   static const List<String> supportedCurrencies = ['EUR', 'USD', 'GBP'];
 
-  // Default values
   static const String defaultLocale = 'fr';
   static const String defaultCurrency = 'EUR';
+
+  /// How far into the future an expense's debit date (and therefore the
+  /// period navigator) can go. Kept as a single constant so DateField's
+  /// picker and OverviewViewModel.maxPeriod can never drift apart again —
+  /// they did once, letting expenses be created in months the Overview
+  /// period navigator couldn't reach.
+  static const int maxFutureExpenseDays = 365 * 5;
+
   static const CategoryIcon defaultCategoryIcon = CategoryIcon(
     iconName: 'category_rounded',
     iconCode: 0xf624,

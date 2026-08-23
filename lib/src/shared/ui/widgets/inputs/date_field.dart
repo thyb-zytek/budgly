@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -18,7 +19,7 @@ class DateField extends StatelessWidget {
       context: context,
       initialDate: initialDate,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      lastDate: DateTime.now().add(const Duration(days: AppConstants.maxFutureExpenseDays)),
     );
     if (picked != null) onDateChanged(picked);
   }
