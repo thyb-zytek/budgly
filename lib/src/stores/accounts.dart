@@ -24,7 +24,6 @@ class AccountsStore extends ChangeNotifier with LoadingNotifier {
     notifyListeners();
   }
 
-
   void setLoaded(bool loaded) {
     if (_hasLoaded == loaded) return;
     _hasLoaded = loaded;

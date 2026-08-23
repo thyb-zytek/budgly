@@ -5,7 +5,7 @@ import 'package:budgly/src/models/user/user.dart';
 
 class ProfileStore extends ChangeNotifier with LoadingNotifier {
   static ProfileStore? _instance;
-  
+
   static ProfileStore get instance {
     _instance ??= ProfileStore._();
     return _instance!;
@@ -30,7 +30,6 @@ class ProfileStore extends ChangeNotifier with LoadingNotifier {
     _hasLoaded = true;
     notifyListeners();
   }
-
 
   void setPreferences({ThemeMode? themeMode, Locale? locale, String? currency}) {
     if (themeMode != null) _themeMode = themeMode;

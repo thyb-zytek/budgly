@@ -3,8 +3,6 @@ import 'package:budgly/src/core/navigation/app_routes.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:go_router/go_router.dart';
 
-/// Compatibility facade for callers that only need route names or the router.
-/// Route definitions themselves live in [AppRouter].
 abstract final class NavigationHelper {
   static GoRouter get router => AppRouter.router;
 

@@ -29,10 +29,6 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   SharedPreferences? _prefs;
 
-  /// Storage key for this user's saved tutorial step. Falls back to a
-  /// shared "anonymous" bucket in the unlikely case this is read before
-  /// Firebase has a current user, so a resume attempt never crashes —
-  /// worst case it just doesn't find a saved step and starts fresh.
   String get _stepStorageKey =>
       AppConstants.tutorialStepKey(_authService.currentUser?.id ?? 'anonymous');
 
@@ -122,7 +118,7 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
           await _adoptExistingAccount(_accountsService.accounts.first);
         }
       } catch (_) {
-        // The tutorial can still be displayed if account loading fails.
+
       }
 
       await _categoriesService.loadAvailableIcons();
@@ -135,9 +131,6 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
       }
       _categoryEditingData.availableIcons = _categoriesService.availableIcons;
 
-      // Only trust a saved step when there's an account to resume onto —
-      // a saved step with no matching account means it was deleted since
-      // (or the save is stale), so start fresh from Welcome instead.
       if (hasExistingAccount) {
         final savedStep = _prefs?.getInt(_stepStorageKey);
         _currentStep = (savedStep ?? 1).clamp(1, totalSteps - 1).toInt();
@@ -164,8 +157,7 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
       await _budgetService.loadRevenue(account.id!, now.year, now.month);
       _hasRevenue = _budgetService.getRevenue(account.id!, now.year, now.month) > 0;
     } catch (_) {
-      // Non-fatal: the Category step still works, it'll just look empty
-      // even though categories exist server-side, until the next refresh.
+
     }
   }
 
@@ -198,12 +190,6 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
     await _prefs!.setInt(_stepStorageKey, _currentStep);
   }
 
-  /// Clears the saved step once the tutorial is actually finished, so a
-  /// later re-run (e.g. a second account down the line, if that's ever
-  /// supported) doesn't wrongly resume mid-way through. Also marks this
-  /// user as having completed onboarding, which RouteGuards checks to
-  /// decide whether to route back into the tutorial or straight to
-  /// Overview on the next app launch.
   Future<void> completeTutorial() async {
     _prefs ??= await SharedPreferences.getInstance();
     final uid = _authService.currentUser?.id ?? 'anonymous';
@@ -343,7 +329,7 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   @override
   void cancelEdit() {}
-  
+
   Future<bool> addCategory() async {
     if (!isCategoryValid || _createdAccount?.id == null) return false;
     _isAddingCategory = true;

@@ -29,11 +29,6 @@ class AppConstants {
   static const String defaultLocale = 'fr';
   static const String defaultCurrency = 'EUR';
 
-  /// How far into the future an expense's debit date (and therefore the
-  /// period navigator) can go. Kept as a single constant so DateField's
-  /// picker and OverviewViewModel.maxPeriod can never drift apart again —
-  /// they did once, letting expenses be created in months the Overview
-  /// period navigator couldn't reach.
   static const int maxFutureExpenseDays = 365 * 5;
 
   static const CategoryIcon defaultCategoryIcon = CategoryIcon(

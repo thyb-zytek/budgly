@@ -38,10 +38,6 @@ class AccountBudgetsService {
 
   final Map<String, double?> _mostRecentRevenueCache = {};
 
-  /// Most recent month's revenue for this account (across all months,
-  /// not just the currently selected one), or null if the account has
-  /// never had a revenue set. Cached in memory per account since it
-  /// only changes when setRevenue is called.
   Future<double?> getMostRecentRevenue(String accountId) async {
     if (_mostRecentRevenueCache.containsKey(accountId)) {
       return _mostRecentRevenueCache[accountId];

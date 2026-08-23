@@ -47,7 +47,6 @@ Future<void> main() async {
     ProfileService.instance.init(),
   ]);
 
-
   runApp(const BudglyApp());
   unawaited(GoogleSignInInitializer.ensureInitialized());
 }

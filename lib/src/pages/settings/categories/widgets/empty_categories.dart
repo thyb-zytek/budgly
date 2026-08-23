@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 
 class EmptyCategories extends StatelessWidget {
   final String accountName;
-  
+
   const EmptyCategories({super.key, required this.accountName});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Small pill shown next to the date of recurring expenses.
 class RecurrenceBadge extends StatelessWidget {
   final String label;
 

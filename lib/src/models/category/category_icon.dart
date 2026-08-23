@@ -15,7 +15,7 @@ class CategoryIcon {
 
   factory CategoryIcon.fromJson(Map<String, dynamic> json) => CategoryIcon(
     iconName: json['icon_name'],
-    iconCode: json['icon_code'] is String 
+    iconCode: json['icon_code'] is String
         ? int.parse(json['icon_code'] as String)
         : json['icon_code'] as int,
     iconPack: json['icon_pack'],

@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Shared layout for every tutorial step: a headline + content area
-/// that scrolls if it grows, and a primary action pinned to the
-/// bottom of the screen — it never drifts around with the content and
-/// never gets hidden behind the keyboard.
 class TutorialStepScaffold extends StatelessWidget {
   final Widget? badge;
   final String title;

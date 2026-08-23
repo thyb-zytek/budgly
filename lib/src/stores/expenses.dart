@@ -48,7 +48,7 @@ class ExpensesStore extends ChangeNotifier with LoadingNotifier {
   }
 
   void updateExpense(Expense expense) {
-    // Remove the previous copy first so this also works if accountId changes.
+
     for (final list in _expensesByAccount.values) {
       list.removeWhere((e) => e.id == expense.id);
     }

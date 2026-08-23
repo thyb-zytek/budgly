@@ -3,11 +3,6 @@ import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Bottom sheet offering the quick actions (edition / deletion) of an expense
-/// occurrence. Opened by long-pressing a row in the occurrences list.
-///
-/// Pass a null [onEdit] to hide the edition entry (e.g. for a debited
-/// occurrence).
 Future<void> showExpenseQuickActionsSheet(
   BuildContext context, {
   required VoidCallback? onEdit,

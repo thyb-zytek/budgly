@@ -12,8 +12,6 @@ import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 
-/// Lists the expenses of a single category for a given period, and lets the
-/// user mark occurrences as debited, edit or delete them.
 class CategoryExpensesViewModel extends BaseViewModel {
   final ExpensesService _expensesService;
   final CategoriesService _categoriesService;
@@ -70,7 +68,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
   String get currencyCode => _profileService.currency;
   String get localeName => _profileService.locale.languageCode;
 
-  /// Color of the account behind this page, used to tint debited cards.
   Color? get accountColor => _accountsService.getAccountById(accountId)?.color;
 
   bool get isSaving => _isSaving;
@@ -93,11 +90,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
   }
 
-  /// Occurrences of this category, undebited first, then most recent first.
-  ///
-  /// Covers everything from the earliest debit date up to the end of the
-  /// current month, so recurring expenses are expanded automatically while
-  /// future occurrences stay hidden.
   List<ExpenseOccurrence> get occurrences {
     final expenses = _expensesService
         .getExpensesForAccount(accountId)
@@ -119,14 +111,11 @@ class CategoryExpensesViewModel extends BaseViewModel {
     return result;
   }
 
-  /// Summary of this category over the shown window.
   CategoryExpenseSummary? get summary {
     if (category == null) return null;
     return summarize(occurrences);
   }
 
-  /// Aggregates already-expanded [occurrences], so callers that also need
-  /// the list avoid expanding it twice.
   CategoryExpenseSummary summarize(List<ExpenseOccurrence> occurrences) {
     final cat = category!;
     double total = 0;
@@ -151,8 +140,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
       undebitedCount: undebitedCount,
     );
   }
-
-  // --- Edition ---
 
   void startEditing(ExpenseOccurrence occurrence) {
     _editingOccurrence = occurrence;
@@ -245,7 +232,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
     }
   }
 
-  /// Deletes the whole expense behind an occurrence (quick action).
   Future<bool> deleteOccurrence(ExpenseOccurrence occurrence) async {
     if (_isSaving) return false;
     if (occurrence.id.isEmpty) return false;
@@ -266,7 +252,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
     }
   }
 
-  /// Toggles the debited state of the currently edited occurrence.
   Future<bool> toggleEditingOccurrenceDebited() async {
     if (_isSaving) return false;
     final occurrence = _editingOccurrence;
@@ -289,7 +274,6 @@ class CategoryExpensesViewModel extends BaseViewModel {
     }
   }
 
-  /// Toggles the debited state of an occurrence (swipe action).
   Future<bool> toggleDebited(ExpenseOccurrence occurrence) async {
     if (_isSaving) return false;
     _isSaving = true;

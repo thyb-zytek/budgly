@@ -4,13 +4,6 @@ import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
 
-/// Account switcher, in two flavours:
-///  - default: full-width row (avatar + name + dropdown arrow) using the
-///    shared [Selector] chrome — used wherever there's room, e.g. the
-///    expanded summary card.
-///  - [compact]: avatar-only trigger with no background/arrow, for tight
-///    spaces like the collapsed summary header. The dropdown menu itself
-///    is unchanged either way — always the full account list.
 class AccountSelector extends StatelessWidget {
   final List<Account> accounts;
   final Account? selectedAccount;

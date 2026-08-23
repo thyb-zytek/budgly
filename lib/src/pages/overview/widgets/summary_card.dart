@@ -5,16 +5,6 @@ import 'package:budgly/src/pages/overview/widgets/summary_stat.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:flutter/material.dart';
 
-/// Single source of truth for the overview summary UI.
-///
-/// The same content is used in expanded and collapsed states. Keeping one
-/// presentation widget avoids duplicated layouts and makes the two states
-/// visually consistent while the sliver only controls the available height.
-///
-/// The expanded layout lives in a [Card] (theme chrome: elevation 0,
-/// radius 16, hairline border); everything inside stays flat — the stats
-/// and chart side panel sit directly on the card surface, separated by
-/// whitespace and hairline dividers only.
 class OverviewSummaryCard extends StatelessWidget {
   final OverviewViewModel viewModel;
   final ValueChanged<Account> onSelectAccount;

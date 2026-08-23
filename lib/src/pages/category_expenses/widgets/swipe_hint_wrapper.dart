@@ -5,11 +5,6 @@ import 'dart:ui' show lerpDouble;
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-/// Wraps the first expense row and periodically plays a short animation
-/// (every few seconds) showing that a row can be swiped. The travel
-/// direction follows [isDebited]: towards the right when pending (mark as
-/// debited), towards the left once debited (undo). The hint stops as soon
-/// as the user interacts with the row ([stop] is invoked by the tile).
 class SwipeHintWrapper extends StatefulWidget {
   final Widget child;
   final bool isDebited;
@@ -94,8 +89,6 @@ class _SwipeHintContent extends StatelessWidget {
 
   const _SwipeHintContent({required this.progress, required this.isDebited});
 
-  /// Fades the pill in on the first fifth of the animation and out on the
-  /// last fifth.
   static double _fade(double t) {
     if (t < 0.2) return t / 0.2;
     if (t > 0.8) return (1 - t) / 0.2;

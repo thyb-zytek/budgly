@@ -13,10 +13,6 @@ class Expense {
   final RecurrenceType recurrence;
   final bool isDebited;
 
-  /// ISO dates (yyyy-MM-dd) of the occurrences already marked debited.
-  /// Only relevant for recurring expenses: each occurrence keeps its own
-  /// debited state so a subscription can be "paid" one month and not the
-  /// next. One-off expenses use the [isDebited] flag instead.
   final List<String> debitedOccurrences;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -41,14 +37,11 @@ class Expense {
 
   bool get isRecurring => recurrence.isRecurring;
 
-  /// Whether the occurrence on [date] is marked debited.
   bool isDebitedAt(DateTime date) {
     if (!isRecurring) return isDebited;
     return debitedOccurrences.contains(isoDate(date));
   }
 
-  /// Stable day-based key, e.g. "2026-03-15". Used to track the per
-  /// occurrence debited state of recurring expenses.
   static String isoDate(DateTime date) {
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');

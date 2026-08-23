@@ -40,10 +40,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     _account = value;
     notifyListeners();
     if (value?.id != null) {
-      // Icon metadata has its own cache/lifecycle and must not depend on
-      // whether the category list is already cached. During onboarding the
-      // category may already have been loaded, which previously prevented
-      // loadCategories() from running here and left availableIcons empty.
+
       _ensureCategoryIcons();
       if (!hasCategoriesLoaded) {
         loadCategories();
@@ -113,11 +110,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     try {
       await ProgressiveLoader.loadEssentialOnly(
         essentialData: () async {
-          // Loaded first and independently of the category list below: if
-          // that later call throws (e.g. a network error), the icon picker
-          // still ends up with data instead of staying empty for the rest
-          // of the session. Failures here are logged rather than left to
-          // propagate silently.
+
           try {
             await _categoriesService.loadAvailableIcons();
           } catch (e, st) {

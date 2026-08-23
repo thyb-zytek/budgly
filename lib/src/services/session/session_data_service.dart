@@ -3,8 +3,6 @@ import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
 
-/// Coordinates user-scoped in-memory data when the authenticated session
-/// changes. It keeps cross-service cache invalidation out of ProfileService.
 class SessionDataService {
   static SessionDataService? _instance;
 

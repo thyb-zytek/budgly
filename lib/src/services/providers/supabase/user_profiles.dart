@@ -14,9 +14,6 @@ class UserProfileSupabase {
       if (e.code == 'PGRST116') return null;
       if (!_isJwtError(e)) rethrow;
 
-      // Supabase is using the Firebase ID token supplied by the
-      // `accessToken` callback. A Supabase `refreshSession()` does not refresh
-      // that Firebase token, so force-refresh Firebase and retry the request.
       final firebaseUser = fb.FirebaseAuth.instance.currentUser;
       if (firebaseUser == null) rethrow;
       await firebaseUser.getIdToken(true);

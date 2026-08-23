@@ -2,48 +2,23 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:flutter/material.dart';
 
-/// A single stat rendered flat, sharing the exact same visual language
-/// in both flavours — a tinted icon circle on the left, caption and bold
-/// value on the right — only scaled down for the compact variant used in
-/// the collapsed header bar. No background box anywhere: the stat sits
-/// directly on its surface.
-///
-/// An optional [detail] (e.g. the pending amount for "Expenses") is
-/// appended to the value between parentheses, colored with [detailColor]
-/// so it stands out from the main figure while staying secondary.
-///
-/// Values are wrapped in a [FittedBox] (scale down) instead of being
-/// ellipsized: amounts always stay fully readable whatever the screen
-/// width, they just shrink gracefully on tight layouts.
 class SummaryStat extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
 
-  /// Secondary figure shown between parentheses after [value]
-  /// (e.g. upcoming debits inside the total expenses).
   final String? detail;
 
-  /// Color of the parenthesized [detail]; defaults to a muted variant
-  /// color. Set it to an accent (e.g. [ColorScheme.error] for pending
-  /// amounts) when the detail should stand out.
   final Color? detailColor;
   final Color? color;
   final bool isEmphasized;
 
-  /// Smaller metrics for the collapsed header bar.
   final bool compact;
 
-  /// Shown on long-press/hover — used to explain when a value is an
-  /// estimate rather than a value actually set for this period.
   final String? tooltip;
 
-  /// Makes the whole stat tappable (e.g. tap "Revenue" to set it).
   final VoidCallback? onTap;
 
-  /// Small icon appended after the value, e.g. a pencil to hint the
-  /// stat is editable. Only shown in expanded flavour when [onTap] is
-  /// also set.
   final IconData? trailingIcon;
 
   const SummaryStat({
@@ -66,8 +41,7 @@ class SummaryStat extends StatelessWidget {
     final theme = Theme.of(context);
     final accent = color ?? theme.colorScheme.primary;
     final circleSize = compact ? 22.0 : 32.0;
-    // The edit hint stays an expanded-only affordance; in the collapsed
-    // bar tapping the stat already opens the editor.
+
     final showTrailing = !compact && onTap != null && trailingIcon != null;
 
     final content = Row(
@@ -132,8 +106,6 @@ class SummaryStat extends StatelessWidget {
         : Tooltip(message: tooltip!, child: tappable);
   }
 
-  /// The stat value with its optional parenthesized detail, scaled
-  /// down to fit instead of clipped.
   Widget _valueRow(ThemeData theme) {
     return FittedBox(
       fit: BoxFit.scaleDown,
@@ -175,9 +147,6 @@ class SummaryStat extends StatelessWidget {
   }
 }
 
-/// Immutable description of a single stat, independent of how it will be
-/// laid out (expanded vs. collapsed header). Call [build] to turn it into
-/// the actual [SummaryStat] widget once the target [compact]-ness is known.
 class OverviewStatItem {
   final IconData icon;
   final String label;
@@ -218,17 +187,6 @@ class OverviewStatItem {
   );
 }
 
-/// The full set of period stats, computed once from the view model's
-/// current state and shared by the expanded summary card and the
-/// collapsed bar — so the value/color/tooltip logic for each stat
-/// (what "Revenue" shows when unset, when a stat counts as over-budget,
-/// etc.) lives in exactly one place instead of being duplicated across
-/// both layouts, which is how they'd previously drifted out of sync
-/// (e.g. only one of the two showing the "remaining" tooltip).
-///
-/// Upcoming (not yet debited) expenses are folded into the "Expenses"
-/// stat as a parenthesized detail rather than exposed as a separate
-/// stat — it saves space and reads naturally: "Expenses 56 € (12 €)".
 class OverviewSummaryStats {
   final OverviewStatItem revenue;
   final OverviewStatItem expenses;
@@ -271,16 +229,14 @@ class OverviewSummaryStats {
       ),
       expenses: OverviewStatItem(
         icon: Icons.trending_down_rounded,
-        // The label spells out what the parenthesized figure means:
-        // "Expenses (upcoming)" — the detail is the not-yet-debited part.
+
         label: hasPending
             ? '${tr.expenses} (${tr.pendingExpenses.toLowerCase()})'
             : tr.expenses,
         value: formatAmount(viewModel.totalExpenses),
         detail: hasPending ? formatAmount(viewModel.pendingExpenses) : null,
         color: theme.colorScheme.tertiary,
-        // Pending amounts use the error/pending accent so they stand
-        // out from the debited total, matching the pending chips.
+
         detailColor: theme.colorScheme.error,
         tooltip: hasPending
             ? tr.expensesUpcomingHint(formatAmount(viewModel.pendingExpenses))

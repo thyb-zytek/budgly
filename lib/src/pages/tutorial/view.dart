@@ -41,9 +41,6 @@ class _TutorialPageState extends State<TutorialPage> {
     }
   }
 
-  // Seul point d'entrée pour avancer d'une étape : met à jour le view model
-  // ET anime le PageController. Avant, les étapes appelaient nextStep()
-  // seul, ce qui changeait l'état sans faire tourner la page.
   void _onNextStep() {
     _viewModel.nextStep();
     _pageController?.animateToPage(
@@ -74,9 +71,6 @@ class _TutorialPageState extends State<TutorialPage> {
           return const Scaffold(body: AppLoadingIndicator());
         }
 
-        // Created lazily here rather than in initState: by this point
-        // currentStep already reflects a resumed step (if any), whereas
-        // initState runs before that async restore completes.
         _pageController ??= PageController(initialPage: _viewModel.currentStep);
 
         return PopScope(

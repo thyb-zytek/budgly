@@ -23,21 +23,12 @@ class AccountBudgetFirestore {
     return AccountBudget.fromMap(doc.id, data);
   }
 
-  /// Most recent month (by year/month, not by edit date) with a revenue
-  /// greater than zero set for this account, or null if none exists.
-  /// Used to suggest a sensible default when the selected period has no
-  /// revenue of its own.
-  ///
-  /// Requires a composite index on this collection: accountId (Asc),
-  /// year (Desc), month (Desc). If it doesn't exist yet, this query
-  /// throws with a direct "create index" link in the error/console —
-  /// follow it once, or create it manually with those exact fields.
   Future<AccountBudget?> getMostRecentWithRevenue(String accountId) async {
     final snapshot = await _collection
         .where('accountId', isEqualTo: accountId)
         .orderBy('year', descending: true)
         .orderBy('month', descending: true)
-        .limit(24) // 2 years back is enough for any realistic case
+        .limit(24)
         .get();
 
     for (final doc in snapshot.docs) {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Colored layer revealed behind a row while it is swiped.
 class SwipeActionBackground extends StatelessWidget {
   final Alignment alignment;
   final IconData icon;

@@ -5,7 +5,7 @@ class AddEntity extends StatelessWidget {
   final String heroTag;
   final bool disabled;
   final VoidCallback onPressed;
-  
+
   const AddEntity({super.key, required this.onPressed, required this.heroTag, this.disabled = false});
 
   @override

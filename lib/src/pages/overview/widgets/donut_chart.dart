@@ -2,32 +2,16 @@ import 'dart:math' as math;
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:flutter/material.dart';
 
-/// Donut chart showing the split of expenses per category.
-///
-/// The arcs animate in whenever the data changes, which makes the
-/// chart feel alive when switching accounts or periods instead of
-/// popping instantly.
 class CategoryDonutChart extends StatefulWidget {
   final List<CategoryExpenseSummary> summaries;
   final double size;
   final double strokeWidthFactor;
   final Widget? centerChild;
 
-  /// Reference total the slices are measured against — pass the
-  /// period's revenue here. When it's greater than the sum of the
-  /// category totals, the leftover arc stays visible in [emptyColor],
-  /// representing budget that hasn't been spent yet. Falls back to
-  /// the sum of category totals (old behaviour, full ring) when null,
-  /// zero, or lower than that sum — e.g. no revenue set yet, or the
-  /// account is over budget.
   final double? referenceTotal;
 
-  /// Color of the unallocated portion of the ring. Defaults to
-  /// [ColorScheme.outlineVariant] so it reads as "empty" rather than
-  /// as a colored category.
   final Color? emptyColor;
 
-  /// Called when the user taps a category slice.
   final ValueChanged<CategoryExpenseSummary>? onCategoryTap;
 
   const CategoryDonutChart({
@@ -46,8 +30,7 @@ class CategoryDonutChart extends StatefulWidget {
 }
 
 class _CategoryDonutChartState extends State<CategoryDonutChart> {
-  // Bump every time the data changes so TweenAnimationBuilder replays
-  // the sweep-in animation instead of jumping straight to the new state.
+
   Key _animationKey = UniqueKey();
 
   @override
@@ -197,8 +180,6 @@ class _DonutPainter extends CustomPainter {
         ? referenceTotal!
         : categoriesTotal;
 
-    // No gaps between slices: round caps make consecutive arcs join
-    // seamlessly into a smooth, continuous ring.
     double startAngle = -math.pi / 2;
 
     for (final summary in summaries) {

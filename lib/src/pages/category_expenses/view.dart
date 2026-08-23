@@ -13,10 +13,6 @@ import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
-/// Lists every expense occurrence of a category (recurring ones expanded
-/// automatically): undebited first, then most recent first. Swipe actions
-/// adapt to the row state and a periodic hint animates over the first row
-/// until the user interacts with it.
 class CategoryExpensesPage extends StatefulWidget {
   final String accountId;
   final String categoryId;
@@ -80,7 +76,6 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
     );
   }
 
-  /// Deletes the whole expense behind an occurrence after confirmation.
   Future<void> _deleteOccurrence(ExpenseOccurrence occurrence) async {
     final tr = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);

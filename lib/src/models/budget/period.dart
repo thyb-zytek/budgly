@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 class Period {
   final int year;
-  final int month; // 1-12
+  final int month;
 
   const Period({required this.year, required this.month});
 
@@ -39,7 +39,7 @@ class Period {
     if (!contains(today)) return 0;
 
     int count = 0;
-    
+
     if (today.weekday == DateTime.sunday) {
       count++;
     }
@@ -51,14 +51,10 @@ class Period {
       }
       current = current.add(const Duration(days: 1));
     }
-    
+
     return count;
   }
 
-  /// Total number of Saturdays across the whole month, regardless of
-  /// today's date. Used for forward planning on future periods, where
-  /// "remaining" doesn't apply yet — nothing has happened in that month
-  /// so the whole month is still ahead.
   int totalWeekends() {
     int count = 0;
     DateTime current = startOfMonth;

@@ -26,7 +26,7 @@ class StatusChip extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: 4, 
+        spacing: 4,
         children: [
           Icon(icon, size: 16, color: color),
           Text(

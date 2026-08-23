@@ -2,13 +2,6 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:flutter/material.dart';
 
-/// Pinned header letting the user move between budget periods.
-///
-/// Flat design: chevrons + label sitting directly on the page canvas,
-/// no pill background. The label cross-fades/slides when the period
-/// changes so navigation feels responsive instead of an abrupt jump.
-/// Horizontal swipes anywhere on the page (this header included) are
-/// handled by the overview page itself.
 class PeriodSelector extends SliverPersistentHeaderDelegate {
   final Period period;
   final Period minPeriod;
@@ -36,9 +29,7 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
 
     return Material(
       elevation: 0,
-      // Opaque page-canvas band: same color as the background (so it
-      // stays visually flat) but it clips the categories scrolling
-      // underneath instead of letting them show through the control.
+
       color: theme.scaffoldBackgroundColor,
       child: SizedBox(
         height: maxExtent,

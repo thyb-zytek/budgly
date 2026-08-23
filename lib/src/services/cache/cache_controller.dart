@@ -1,8 +1,3 @@
-/// Small in-memory cache coordinator used by data services.
-///
-/// It deliberately stores only cache metadata, while the actual application
-/// state remains in the corresponding Store. This prevents duplicating the
-/// same TTL/in-flight-request logic across every service.
 class CacheController<K> {
   CacheController({required this.ttl});
 
