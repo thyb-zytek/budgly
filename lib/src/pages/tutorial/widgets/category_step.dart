@@ -173,7 +173,7 @@ class _CategoryStepState extends State<CategoryStep> {
           },
         );
       },
-    );
+    ).then((_) => searchController.dispose());
   }
 
   Future<void> _handleValidate() async {
