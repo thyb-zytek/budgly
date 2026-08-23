@@ -1,13 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/settings/profile/view_model.dart';
-import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/pages/settings/profile/widgets/change_password_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
-import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/domain/widgets/user/details.dart';
 import 'package:budgly/src/shared/domain/widgets/user/view_card.dart';
-import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 
@@ -19,12 +17,7 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  final _formKey = GlobalKey<FormState>();
   late final ProfileViewModel _viewModel = ProfileViewModel();
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _onChangeName(String name) {
     _viewModel.onChangeName(name).then((_) {
@@ -39,8 +32,6 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   void _onChangePassword() {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
     _viewModel
         .changePassword(true)
         .then((_) {
@@ -70,127 +61,10 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   void _displayChangePasswordDialog() {
-    final tr = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    showAppBottomSheet(
+    ChangePasswordSheet.show(
       context,
-      builder: (context) {
-        return SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 24,
-              children: [
-                Text(
-                  tr.editPassword,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: AutofillGroup(
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        spacing: 8,
-                        children: [
-                          TextInput(
-                            controller: _viewModel.oldPasswordController,
-                            labelText: tr.oldPassword,
-                            type: InputType.password,
-                            textInputAction: TextInputAction.next,
-                            onFieldSubmitted: (_) =>
-                                FocusScope.of(context).nextFocus(),
-                            hotValidating: (v) {
-                              if (v?.isEmpty ?? true) {
-                                return tr.passwordRequired;
-                              } else {
-                                return null;
-                              }
-                            },
-                          ),
-                          TextInput(
-                            controller: _viewModel.passwordController,
-                            labelText: tr.password,
-                            type: InputType.password,
-                            textInputAction: TextInputAction.next,
-                            onFieldSubmitted: (_) =>
-                                FocusScope.of(context).nextFocus(),
-                            hotValidating: (v) {
-                              String? result = _viewModel.validatePassword(v);
-                              if (result == "passwordRequired") {
-                                return tr.passwordRequired;
-                              } else if (result == "passwordTooShort") {
-                                return tr.passwordTooShort;
-                              } else {
-                                return result;
-                              }
-                            },
-                          ),
-                          TextInput(
-                            controller: _viewModel.confirmPasswordController,
-                            labelText: tr.confirmPassword,
-                            type: InputType.password,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) {
-                              _onChangePassword();
-                              Navigator.pop(context);
-                            },
-                            hotValidating: (v) {
-                              String? result = _viewModel.validatePassword(v);
-                              if (result == "passwordRequired") {
-                                return tr.passwordRequired;
-                              } else if (result == "passwordsDoNotMatch") {
-                                return tr.passwordsDontMatch;
-                              } else {
-                                return result;
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    spacing: 16,
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          style: ButtonType.error.filledStyle(theme, dense: true),
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            tr.cancel,
-                            style: ButtonType.error.labelStyle(theme, dense: true),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: FilledButton(
-                          style: ButtonType.primary.filledStyle(theme, dense: true),
-                          onPressed: () {
-                            _onChangePassword();
-                            Navigator.pop(context);
-                          },
-                          child: Text(
-                            tr.validate,
-                            style: ButtonType.primary.labelStyle(theme, dense: true),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      viewModel: _viewModel,
+      onSubmit: _onChangePassword,
     );
   }
 
