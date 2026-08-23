@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/shared/ui/widgets/entity_form.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/avatar_customization_sheet.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';

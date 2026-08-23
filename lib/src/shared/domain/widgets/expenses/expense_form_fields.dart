@@ -1,7 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
-import 'package:budgly/src/shared/domain/widgets/expense_advanced_options.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_advanced_options.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/currency_input.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';

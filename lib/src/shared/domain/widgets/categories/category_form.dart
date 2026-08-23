@@ -1,7 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/shared/ui/widgets/entity_form.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
