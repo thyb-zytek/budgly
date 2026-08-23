@@ -10,6 +10,7 @@ import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_view.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
@@ -104,26 +105,9 @@ class _CategoriesTabState extends State<CategoriesTab>
 
               final accounts = _accountsViewModel.accounts;
               if (accounts.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(24).copyWith(top: MediaQuery.of(context).size.height / 4),
-                  child: Column(
-                    spacing: 16,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: theme.colorScheme.onSurfaceVariant,
-                        size: 52,
-                      ),
-                      Expanded(
-                        child: Text(
-                          tr.noAccountForCategories,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                return EmptyState(
+                  icon: Icons.info_outline,
+                  title: tr.noAccountForCategories,
                 );
               }
 
