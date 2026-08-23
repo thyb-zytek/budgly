@@ -329,6 +329,13 @@ class OverviewViewModel extends BaseViewModel {
   double get totalExpenses =>
       periodOccurrences.fold(0.0, (sum, occurrence) => sum + occurrence.amount);
 
+  /// Total of this period's occurrences that haven't been marked as
+  /// debited yet — what's still left to actually go out, as opposed
+  /// to [totalExpenses] which includes everything already spent too.
+  double get pendingExpenses => periodOccurrences
+      .where((occurrence) => !occurrence.isDebited)
+      .fold(0.0, (sum, occurrence) => sum + occurrence.amount);
+
   double get remaining => effectiveRevenue - totalExpenses;
 
   int? get remainingWeekendsInPeriod {

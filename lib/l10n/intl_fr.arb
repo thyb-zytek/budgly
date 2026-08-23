@@ -157,6 +157,15 @@
   "remaining": "Restant",
   "remainingBasedOnRevenueHint": "Basé sur ton revenu pour cette période",
   "expenses": "Dépenses",
+  "pendingExpenses": "À venir",
+  "expensesUpcomingHint": "Dont {amount} non encore débités.",
+  "@expensesUpcomingHint": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "expensesByCategory": "Dépenses par catégorie",
   "noExpensesForPeriod": "Aucune dépense pour cette période",
   "addFirstExpenseHint": "Appuyez sur + pour ajouter votre première dépense.",
