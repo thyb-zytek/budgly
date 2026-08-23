@@ -1,19 +1,14 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
-import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/pages/tutorial/view_model.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
-import 'package:budgly/src/shared/ui/widgets/customization_picker.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
-import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide TextInput;
-import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 
 class CategoryStep extends StatefulWidget {
   final TutorialViewModel viewModel;
@@ -50,130 +45,21 @@ class _CategoryStepState extends State<CategoryStep> {
   }
 
   void _openCustomizationPicker(BuildContext context) {
-    final theme = Theme.of(context);
-    final tr = AppLocalizations.of(context)!;
     final vm = widget.viewModel;
-    final searchController = TextEditingController();
-    List<CategoryIcon> filteredIcons = vm.availableIcons;
 
-    showAppBottomSheet(
+    showCategoryCustomizationSheet(
       context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            void filterIcons(String query) {
-              final locale = tr.localeName;
-              setModalState(() {
-                filteredIcons = vm.availableIcons.where((icon) {
-                  final label = icon.labels[locale] ?? icon.iconName;
-                  return label.toLowerCase().contains(query.toLowerCase());
-                }).toList();
-              });
-            }
-
-            return SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                child: CustomizationPicker(
-                  title: tr.categoryCustomization,
-                  previewWidget: CategoryIconView(
-                    icon: vm.categoryIcon ?? AppConstants.defaultCategoryIcon,
-                    color: vm.categoryColor,
-                    size: 80,
-                  ),
-                  tabTitles: [
-                    TabTitle(icon: Icons.category_rounded, title: tr.icon),
-                    TabTitle(icon: Icons.palette_rounded, title: tr.color),
-                  ],
-                  tabs: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 16,
-                      children: [
-                        TextInput(
-                          controller: searchController,
-                          labelText: tr.searchIcon,
-                          onChange: filterIcons,
-                          onFieldSubmitted: (v) {
-                            if (filteredIcons.isNotEmpty) {
-                              setModalState(
-                                () => vm.setCategoryIcon(filteredIcons.first),
-                              );
-                            }
-                          },
-                        ),
-                        SizedBox(
-                          height: 220,
-                          child: GridView.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 6,
-                                  mainAxisSpacing: 4,
-                                  crossAxisSpacing: 4,
-                                  childAspectRatio: 1,
-                                ),
-                            itemCount: filteredIcons.length,
-                            itemBuilder: (context, index) {
-                              final iconItem = filteredIcons[index];
-                              final currentIcon = vm.categoryIcon;
-                              final isSelected =
-                                  currentIcon?.iconName == iconItem.iconName;
-
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? theme.colorScheme.primary
-                                        : Colors.transparent,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () => setModalState(
-                                    () => vm.setCategoryIcon(iconItem),
-                                  ),
-                                  child: Icon(
-                                    IconPickerIcon(
-                                      name: iconItem.iconName,
-                                      data: iconItem.toIconData(),
-                                      pack: iconItem.iconPack,
-                                    ).data,
-                                    size: 32,
-                                    color: isSelected
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    ColorWheel(
-                      key: const ValueKey('tutorial_cat_color'),
-                      color: vm.categoryColor,
-                      onChanged: (color) {
-                        setModalState(() => vm.setCategoryColor(color));
-                      },
-                    ),
-                  ],
-                  onValidate: () {
-                    setState(() {});
-                    Navigator.pop(context);
-                  },
-                  onCancel: () => Navigator.pop(context),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ).then((_) => searchController.dispose());
+      availableIcons: vm.availableIcons,
+      initialIcon: vm.categoryIcon ?? AppConstants.defaultCategoryIcon,
+      initialColor: vm.categoryColor,
+      previewBuilder: (context, icon, color) => CategoryIconView(
+        icon: icon,
+        color: color,
+        size: 80,
+      ),
+      onIconChanged: vm.setCategoryIcon,
+      onColorChanged: vm.setCategoryColor,
+    );
   }
 
   Future<void> _handleValidate() async {
