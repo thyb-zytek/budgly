@@ -3,8 +3,8 @@ import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
-import 'package:budgly/src/shared/domain/widgets/expense_form_fields.dart';
-import 'package:budgly/src/shared/ui/widgets/form_actions.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_fields.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:flutter/material.dart';
 

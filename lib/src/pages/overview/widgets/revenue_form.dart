@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/shared/ui/widgets/form_actions.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/currency_input.dart';
 import 'package:flutter/material.dart';
 
