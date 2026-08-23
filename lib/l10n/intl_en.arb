@@ -241,5 +241,6 @@
     "placeholders": {
       "count": { "type": "int" }
     }
-  }
+  },
+  "expenseCreatedSuccessfully": "Expense added successfully"
 }
