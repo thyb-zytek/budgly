@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/loading/progressive_loader.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
@@ -38,8 +39,15 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     if (_account == value) return;
     _account = value;
     notifyListeners();
-    if (value?.id != null && !hasCategoriesLoaded) {
-      loadCategories();
+    if (value?.id != null) {
+      // Icon metadata has its own cache/lifecycle and must not depend on
+      // whether the category list is already cached. During onboarding the
+      // category may already have been loaded, which previously prevented
+      // loadCategories() from running here and left availableIcons empty.
+      _ensureCategoryIcons();
+      if (!hasCategoriesLoaded) {
+        loadCategories();
+      }
     }
   }
 
@@ -88,19 +96,42 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     super.dispose();
   }
 
+  Future<void> _ensureCategoryIcons() async {
+    try {
+      await _categoriesService.loadAvailableIcons();
+      _editingData.availableIcons = _categoriesService.availableIcons;
+    } catch (e, st) {
+      AppLogger.error('Failed to load category icons', e, st);
+    } finally {
+      if (!isDisposed) notifyListeners();
+    }
+  }
+
   Future<void> loadCategories({bool needLoading = true}) async {
     if (_account?.id == null) return;
     if (needLoading) setLoading(true);
     try {
       await ProgressiveLoader.loadEssentialOnly(
         essentialData: () async {
-          await _categoriesService.listCategoriesByAccount(_account!.id!);
-          await _categoriesService.loadAvailableIcons();
+          // Loaded first and independently of the category list below: if
+          // that later call throws (e.g. a network error), the icon picker
+          // still ends up with data instead of staying empty for the rest
+          // of the session. Failures here are logged rather than left to
+          // propagate silently.
+          try {
+            await _categoriesService.loadAvailableIcons();
+          } catch (e, st) {
+            AppLogger.error('Failed to load category icons', e, st);
+          }
           _editingData.availableIcons = _categoriesService.availableIcons;
+
+          await _categoriesService.listCategoriesByAccount(_account!.id!);
         },
         secondaryData: () async {},
         onProgress: (progress) {},
       );
+    } catch (e, st) {
+      AppLogger.error('Failed to load categories', e, st);
     } finally {
       if (needLoading) setLoading(false);
       if (!isDisposed) notifyListeners();
