@@ -215,7 +215,7 @@ class _CategoryFormState extends State<CategoryForm>
           },
         );
       },
-    );
+    ).then((_) => searchController.dispose());
   }
 
   Widget _buildCategoryIcon() {
