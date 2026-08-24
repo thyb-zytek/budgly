@@ -249,7 +249,6 @@
   "tutorialStepBudgetDescription": "Définis tes revenus mensuels pour suivre ce qu'il te reste. Tu peux passer cette étape.",
   "tutorialGetStarted": "Commencer",
   "tutorialNext": "Suivant",
-  "tutorialSkip": "Passer",
   "tutorialFinish": "C'est parti !",
   "tutorialLogoutConfirm": "Es-tu sûr de vouloir te déconnecter ? Ta progression sera perdue.",
   "tutorialStepProgress": "Étape {current} sur {total}",

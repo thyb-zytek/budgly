@@ -78,15 +78,6 @@ class BudgetStep extends StatelessWidget {
           ),
         ),
       ),
-      secondaryAction: TextButton(
-        onPressed: onFinish,
-        child: Text(
-          tr.tutorialSkip,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
     );
   }
 }
