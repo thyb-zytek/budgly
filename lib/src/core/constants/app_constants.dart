@@ -19,10 +19,12 @@ class AppConstants {
   static const String currencyKey = 'app_currency';
   static const String tutorialStepKeyPrefix = 'tutorial_step_';
   static const String tutorialCompletedKeyPrefix = 'tutorial_completed_';
+  static const String fabUsedKeyPrefix = 'fab_used_';
 
   static String tutorialStepKey(String uid) => '$tutorialStepKeyPrefix$uid';
   static String tutorialCompletedKey(String uid) =>
       '$tutorialCompletedKeyPrefix$uid';
+  static String fabUsedKey(String heroTag) => '$fabUsedKeyPrefix$heroTag';
 
   static const List<String> supportedCurrencies = ['EUR', 'USD', 'GBP'];
 

@@ -133,6 +133,9 @@
     }
   },
   "newExpense": "Create expense",
+  "fabNewExpense": "New expense",
+  "fabNewAccount": "New account",
+  "fabNewCategory": "New category",
   "editExpense": "Edit expense",
   "accountRequired": "Account is required",
   "categoryRequired": "Category is required",

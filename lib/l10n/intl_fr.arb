@@ -133,6 +133,9 @@
     }
   },
   "newExpense": "Créer une dépense",
+  "fabNewExpense": "Nouvelle dépense",
+  "fabNewAccount": "Nouveau compte",
+  "fabNewCategory": "Nouvelle catégorie",
   "editExpense": "Modifier une dépense",
   "accountRequired": "Le compte est requis",
   "categoryRequired": "La catégorie est requise",

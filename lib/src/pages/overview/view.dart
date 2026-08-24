@@ -1,7 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/core/theme/component_styles.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/pages/overview/widgets/collapsing_summary_header.dart';
@@ -11,6 +10,7 @@ import 'package:budgly/src/pages/overview/widgets/period_slide_switcher.dart';
 import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_expense_list.dart';
 import 'package:budgly/src/shared/ui/widgets/gestures/horizontal_swipe_detector.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/budgly_fab.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
@@ -202,13 +202,10 @@ class _OverviewPageState extends State<OverviewPage> {
               ),
             ),
           ),
-          floatingActionButton: FloatingActionButton(
+          floatingActionButton: BudglyFab(
             heroTag: "create_expense",
+            label: tr.fabNewExpense,
             onPressed: _openAddExpenseModal,
-            child: Icon(
-              Icons.add_rounded,
-              size: BudglyComponentStyles.fabIconSize,
-            ),
           ),
         );
       },
