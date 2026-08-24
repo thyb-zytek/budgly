@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/category/category.dart';
@@ -67,6 +68,8 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   String get currencyCode => _profileService.currency;
   String get localeName => _profileService.locale.languageCode;
+
+  int get amountDecimalPlaces => _profileService.amountDecimalPlaces;
 
   Color? get accountColor => _accountsService.getAccountById(accountId)?.color;
 
@@ -173,10 +176,11 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   String? validate(AppLocalizations tr) {
     if (editingData.nameController.text.trim().isEmpty) return tr.nameRequired;
-    final amount = double.tryParse(
-      editingData.amountController.text.replaceAll(',', '.'),
+    final amount = parseAmount(
+      editingData.amountController.text,
+      decimalPlaces: _profileService.amountDecimalPlaces,
     );
-    if (amount == null || amount <= 0) return tr.amountInvalid;
+    if (amount == null) return tr.amountInvalid;
     return null;
   }
 
@@ -185,10 +189,11 @@ class CategoryExpensesViewModel extends BaseViewModel {
     final occurrence = _editingOccurrence;
     if (occurrence == null) return false;
 
-    final amount = double.tryParse(
-      editingData.amountController.text.replaceAll(',', '.'),
+    final amount = parseAmount(
+      editingData.amountController.text,
+      decimalPlaces: _profileService.amountDecimalPlaces,
     );
-    if (amount == null || amount <= 0) return false;
+    if (amount == null) return false;
 
     _isSaving = true;
     if (!isDisposed) notifyListeners();

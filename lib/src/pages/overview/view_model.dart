@@ -13,6 +13,7 @@ import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:flutter/material.dart';
@@ -229,12 +230,18 @@ class OverviewViewModel extends BaseViewModel {
       amount: value,
       currencyCode: currencyCode,
       localeName: localeName,
+      decimalPlaces: amountDecimalPlaces,
     );
   }
 
   double get revenue {
     if (_account?.id == null) return 0;
-    return _accountBudgetsService.getRevenue(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
+    final value = _accountBudgetsService.getRevenue(
+      _account!.id!,
+      _selectedPeriod.year,
+      _selectedPeriod.month,
+    );
+    return normalizeAmount(value, decimalPlaces: amountDecimalPlaces);
   }
 
   bool get isRevenueLoaded {
@@ -242,9 +249,15 @@ class OverviewViewModel extends BaseViewModel {
     return _accountBudgetsService.hasLoaded(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
   }
 
+  int get amountDecimalPlaces => _profileService.amountDecimalPlaces;
+
   bool get hasRevenue => revenue > 0;
 
-  double? get inheritedRevenue => _inheritedRevenueByAccount[_account?.id];
+  double? get inheritedRevenue {
+    final value = _inheritedRevenueByAccount[_account?.id];
+    if (value == null) return null;
+    return normalizeAmount(value, decimalPlaces: amountDecimalPlaces);
+  }
 
   bool get isRevenueEstimated => !hasRevenue && (inheritedRevenue ?? 0) > 0;
 
@@ -252,7 +265,13 @@ class OverviewViewModel extends BaseViewModel {
 
   Future<void> setRevenue(double value) async {
     if (_account?.id == null) return;
-    await _accountBudgetsService.setRevenue(_account!.id!, _selectedPeriod.year, _selectedPeriod.month, value);
+    final valueToSave = normalizeAmount(value, decimalPlaces: amountDecimalPlaces);
+    await _accountBudgetsService.setRevenue(
+      _account!.id!,
+      _selectedPeriod.year,
+      _selectedPeriod.month,
+      valueToSave,
+    );
     _inheritedRevenueByAccount.remove(_account!.id);
     _ensureInheritedRevenueLoaded();
   }
@@ -428,10 +447,11 @@ class OverviewViewModel extends BaseViewModel {
     if (editingData.category == null) return tr.categoryRequired;
     if (editingData.nameController.text.trim().isEmpty) return tr.nameRequired;
 
-    final amount = double.tryParse(
-      editingData.amountController.text.replaceAll(',', '.'),
+    final amount = parseAmount(
+      editingData.amountController.text,
+      decimalPlaces: _profileService.amountDecimalPlaces,
     );
-    if (amount == null || amount <= 0) return tr.amountInvalid;
+    if (amount == null) return tr.amountInvalid;
 
     return null;
   }
@@ -442,10 +462,11 @@ class OverviewViewModel extends BaseViewModel {
     final category = editingData.category;
     if (formAccount?.id == null || category?.id == null) return false;
 
-    final amount = double.tryParse(
-      editingData.amountController.text.replaceAll(',', '.'),
+    final amount = parseAmount(
+      editingData.amountController.text,
+      decimalPlaces: _profileService.amountDecimalPlaces,
     );
-    if (amount == null || amount <= 0) return false;
+    if (amount == null) return false;
 
     _isSaving = true;
     notifyListeners();

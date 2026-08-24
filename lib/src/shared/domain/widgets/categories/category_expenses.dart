@@ -9,6 +9,7 @@ class CategoryExpenses extends StatelessWidget {
   final CategoryExpenseSummary summary;
   final String currencyCode;
   final String localeName;
+  final int decimalPlaces;
   final VoidCallback? onTap;
 
   const CategoryExpenses({
@@ -16,6 +17,7 @@ class CategoryExpenses extends StatelessWidget {
     required this.summary,
     required this.currencyCode,
     required this.localeName,
+    this.decimalPlaces = 2,
     this.onTap,
   });
 
@@ -24,6 +26,7 @@ class CategoryExpenses extends StatelessWidget {
       amount: value,
       currencyCode: currencyCode,
       localeName: localeName,
+      decimalPlaces: decimalPlaces,
     );
   }
 

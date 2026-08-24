@@ -34,6 +34,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
     amount: value,
     currencyCode: viewModel.currencyCode,
     localeName: viewModel.localeName,
+    decimalPlaces: viewModel.amountDecimalPlaces,
   );
 
   @override
