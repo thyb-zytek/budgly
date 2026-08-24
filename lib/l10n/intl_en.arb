@@ -249,7 +249,6 @@
   "tutorialStepBudgetDescription": "Define your monthly revenue to track what's remaining. You can skip this step.",
   "tutorialGetStarted": "Get started",
   "tutorialNext": "Next",
-  "tutorialSkip": "Skip",
   "tutorialFinish": "Let's go!",
   "tutorialLogoutConfirm": "Are you sure you want to log out? Your setup progress will be lost.",
   "tutorialStepProgress": "Step {current} of {total}",
