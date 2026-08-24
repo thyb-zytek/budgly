@@ -1,0 +1,2 @@
+ALTER TABLE user_profiles
+ADD COLUMN IF NOT EXISTS round_up_expenses BOOLEAN NOT NULL DEFAULT false;
