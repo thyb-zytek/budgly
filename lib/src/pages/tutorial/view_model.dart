@@ -1,4 +1,5 @@
 import 'package:budgly/src/core/constants/app_constants.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/account/account_editing_data.dart';
@@ -388,7 +389,10 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   Future<void> saveRevenue() async {
     if (_createdAccount?.id == null) return;
-    final value = double.tryParse(revenueController.text.replaceAll(',', '.'));
+    final value = parseAmount(
+      revenueController.text,
+      decimalPlaces: ProfileService.instance.amountDecimalPlaces,
+    );
     if (value == null || value <= 0) return;
 
     final now = DateTime.now();

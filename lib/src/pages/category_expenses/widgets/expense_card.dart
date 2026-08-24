@@ -15,6 +15,7 @@ class ExpenseCard extends StatelessWidget {
   final ExpenseOccurrence occurrence;
   final String currencyCode;
   final String localeName;
+  final int decimalPlaces;
 
   final Color? accountColor;
 
@@ -29,6 +30,7 @@ class ExpenseCard extends StatelessWidget {
     required this.occurrence,
     required this.currencyCode,
     required this.localeName,
+    this.decimalPlaces = 2,
     required this.onTap,
     required this.onEdit,
     required this.onToggleDebited,
@@ -42,6 +44,7 @@ class ExpenseCard extends StatelessWidget {
       amount: value,
       currencyCode: currencyCode,
       localeName: localeName,
+      decimalPlaces: decimalPlaces,
     );
   }
 

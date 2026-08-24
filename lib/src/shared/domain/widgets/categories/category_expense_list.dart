@@ -6,6 +6,7 @@ class CategoryExpenseList extends StatelessWidget {
   final List<CategoryExpenseSummary> summaries;
   final String currencyCode;
   final String localeName;
+  final int decimalPlaces;
   final ValueChanged<CategoryExpenseSummary>? onTapCategory;
 
   const CategoryExpenseList({
@@ -13,6 +14,7 @@ class CategoryExpenseList extends StatelessWidget {
     required this.summaries,
     required this.currencyCode,
     required this.localeName,
+    this.decimalPlaces = 2,
     this.onTapCategory,
   });
 
@@ -26,6 +28,7 @@ class CategoryExpenseList extends StatelessWidget {
             summary: summaries[i],
             currencyCode: currencyCode,
             localeName: localeName,
+            decimalPlaces: decimalPlaces,
             onTap: onTapCategory == null
                 ? null
                 : () => onTapCategory!(summaries[i]),

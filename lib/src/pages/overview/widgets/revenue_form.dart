@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/currency_input.dart';
@@ -62,7 +63,10 @@ class _RevenueFormState extends State<RevenueForm> {
   }
 
   Future<void> _save() async {
-    final value = double.tryParse(_controller.text.replaceAll(',', '.')) ?? 0;
+    final value = parseAmount(
+      _controller.text,
+      decimalPlaces: widget.viewModel.amountDecimalPlaces,
+    ) ?? 0;
     await widget.viewModel.setRevenue(value);
     widget.onClose();
   }

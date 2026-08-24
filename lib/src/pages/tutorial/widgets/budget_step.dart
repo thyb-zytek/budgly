@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
@@ -55,7 +56,10 @@ class BudgetStep extends StatelessWidget {
             ),
             textInputAction: TextInputAction.done,
             hotValidating: (v) {
-              final amount = double.tryParse((v ?? '').replaceAll(',', '.'));
+              final amount = parseAmount(
+                v ?? '',
+                decimalPlaces: ProfileService.instance.amountDecimalPlaces,
+              );
               if (v != null && v.isNotEmpty && (amount == null || amount <= 0)) {
                 return tr.amountInvalid;
               }

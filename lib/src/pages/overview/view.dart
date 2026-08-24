@@ -185,6 +185,7 @@ class _OverviewPageState extends State<OverviewPage> {
                             summaries: summaries,
                             currencyCode: _viewModel.currencyCode,
                             localeName: _viewModel.localeName,
+                            decimalPlaces: _viewModel.amountDecimalPlaces,
                             onTapCategory: (summary) {
                               final categoryId = summary.category.id;
                               if (categoryId == null ||
