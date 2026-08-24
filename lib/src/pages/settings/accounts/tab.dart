@@ -128,6 +128,7 @@ class _AccountsTabState extends State<AccountsTab>
             ),
             AddEntity(
               heroTag: 'add_account',
+              label: tr.fabNewAccount,
               disabled: widget.accountsViewModel.isCreatingAccount,
               onPressed: widget.accountsViewModel.addAccount,
             ),

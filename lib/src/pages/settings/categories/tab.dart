@@ -205,6 +205,7 @@ class _CategoriesTabState extends State<CategoriesTab>
                   ),
                   AddEntity(
                     heroTag: 'add_category',
+                    label: tr.fabNewCategory,
                     disabled: _categoriesViewModel.isCreatingCategory,
                     onPressed: () => _categoriesViewModel.addCategory(),
                   ),
