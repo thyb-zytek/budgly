@@ -199,14 +199,25 @@ class CategoryExpensesViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
 
     try {
-      await _expensesService.updateExpense(
-        occurrence.expense.copyWith(
-          name: editingData.nameController.text.trim(),
-          amount: amount,
-          debitDate: editingData.debitDate,
-          recurrence: editingData.recurrence,
-        ),
+      var updatedExpense = occurrence.expense;
+
+      if (occurrence.recurrence.isRecurring &&
+          amount != occurrence.amount) {
+        updatedExpense = updatedExpense.withRecurringAmountChange(
+          occurrence.date,
+          amount,
+        );
+      } else if (!occurrence.recurrence.isRecurring) {
+        updatedExpense = updatedExpense.copyWith(amount: amount);
+      }
+
+      updatedExpense = updatedExpense.copyWith(
+        name: editingData.nameController.text.trim(),
+        debitDate: editingData.debitDate,
+        recurrence: editingData.recurrence,
       );
+
+      await _expensesService.updateExpense(updatedExpense);
       return true;
     } catch (_) {
       return false;

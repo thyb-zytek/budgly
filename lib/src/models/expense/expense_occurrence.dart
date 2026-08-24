@@ -16,7 +16,7 @@ class ExpenseOccurrence {
   String get id => expense.id ?? '';
   String get categoryId => expense.categoryId;
   String get name => expense.name;
-  double get amount => expense.amount;
+  double get amount => expense.amountAt(date);
   RecurrenceType get recurrence => expense.recurrence;
 
   String get key => '$id@${Expense.isoDate(date)}';

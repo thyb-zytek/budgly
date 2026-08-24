@@ -56,7 +56,7 @@ class ExpenseCard extends StatelessWidget {
 
     showExpenseQuickActionsSheet(
       context,
-      onEdit: occurrence.isDebited ? null : onEdit,
+      onEdit: onEdit,
       onDelete: onDelete,
     );
   }
@@ -116,7 +116,7 @@ class ExpenseCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             onUserInteracted?.call();
-            if (!isDebited) onTap();
+            onTap();
           },
           borderRadius: BorderRadius.circular(18),
           child: AnimatedContainer(
