@@ -138,6 +138,7 @@ class OverviewViewModel extends BaseViewModel {
 
     _invalidatePeriodOccurrencesCache();
     _lastRevenueEvaluationKey = null;
+    _maybeShowRevenueEditor();
     if (!isDisposed) notifyListeners();
   }
 
@@ -185,16 +186,23 @@ class OverviewViewModel extends BaseViewModel {
   }
 
   final Map<String, double?> _inheritedRevenueByAccount = {};
+  final Set<String> _loadingInheritedRevenue = {};
 
   Future<void> _ensureInheritedRevenueLoaded() async {
     final accountId = _account?.id;
     if (accountId == null) return;
     if (_inheritedRevenueByAccount.containsKey(accountId)) return;
+    if (!_loadingInheritedRevenue.add(accountId)) return;
 
-    final value = await _accountBudgetsService.getMostRecentRevenue(accountId);
-    if (isDisposed || _account?.id != accountId) return;
-    _inheritedRevenueByAccount[accountId] = value;
-    notifyListeners();
+    try {
+      final value = await _accountBudgetsService.getMostRecentRevenue(accountId);
+      if (isDisposed || _account?.id != accountId) return;
+      _inheritedRevenueByAccount[accountId] = value;
+      _maybeShowRevenueEditor();
+    } finally {
+      _loadingInheritedRevenue.remove(accountId);
+    }
+    if (!isDisposed) notifyListeners();
   }
 
   bool get showRevenueEditor => _showRevenueEditor;
@@ -213,12 +221,16 @@ class OverviewViewModel extends BaseViewModel {
     final accountId = _account?.id;
     if (accountId == null) return;
     if (!isRevenueLoaded) return;
+    if (!_inheritedRevenueByAccount.containsKey(accountId)) {
+      _ensureInheritedRevenueLoaded();
+      return;
+    }
 
     final key = '${accountId}_${_selectedPeriod.year}_${_selectedPeriod.month}';
     if (_lastRevenueEvaluationKey == key) return;
     _lastRevenueEvaluationKey = key;
 
-    final shouldShow = revenue <= 0;
+    final shouldShow = effectiveRevenue <= 0;
     if (_showRevenueEditor != shouldShow) {
       _showRevenueEditor = shouldShow;
       if (!isDisposed) notifyListeners();
