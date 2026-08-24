@@ -147,7 +147,7 @@ class CategoryExpensesViewModel extends BaseViewModel {
     editingData.amountController.text = _formatAmountInput(occurrence.amount);
     editingData.debitDate = occurrence.expense.debitDate;
     editingData.recurrence = occurrence.recurrence;
-    editingData.showAdvancedOptions = false;
+    editingData.showAdvancedOptions = occurrence.recurrence.isRecurring;
     if (!isDisposed) notifyListeners();
   }
 

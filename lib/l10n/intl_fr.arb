@@ -144,7 +144,8 @@
   "category": "Catégorie",
   "activity": "Activité",
   "amount": "Montant",
-  "debitDateOptions": "Date de débit",
+  "expenseAdvancedOptions": "Planifier",
+  "expenseAdvancedOptionsHint": "Répétition automatique, date de prélèvement",
   "recurrenceActiveSummary": "Récurrent · {frequency}",
   "@recurrenceActiveSummary": {
     "placeholders": {
@@ -155,6 +156,7 @@
   },
   "tapToCustomize": "Appuyez pour personnaliser",
   "recurrence": "Récurrence",
+  "recurrenceHelp": "Cette dépense sera automatiquement recréée selon la fréquence choisie.",
   "recurrenceNone": "Aucune",
   "recurrenceDaily": "Quotidien",
   "recurrenceWeekly": "Hebdomadaire",
@@ -165,6 +167,7 @@
   "recurrenceHalfYearly": "Tout les 6 mois",
   "recurrenceBiYearly": "Tout les 2 ans",
   "debitDate": "Date de débit",
+  "debitDateHelp": "Date à laquelle cette dépense sera déduite de votre solde.",
   "revenue": "Revenue",
   "remaining": "Restant",
   "remainingBasedOnRevenueHint": "Basé sur ton revenu pour cette période",

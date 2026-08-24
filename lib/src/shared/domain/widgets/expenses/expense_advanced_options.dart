@@ -6,7 +6,7 @@ import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_selector.da
 import 'package:budgly/src/shared/ui/widgets/inputs/date_field.dart';
 import 'package:flutter/material.dart';
 
-class ExpenseAdvancedOptions extends StatefulWidget {
+class ExpenseAdvancedOptions extends StatelessWidget {
   final ExpenseEditingData editingData;
   final String localeName;
   final VoidCallback onToggleAdvanced;
@@ -21,14 +21,6 @@ class ExpenseAdvancedOptions extends StatefulWidget {
     required this.onDateChanged,
     required this.onRecurrenceChanged,
   });
-
-  @override
-  State<ExpenseAdvancedOptions> createState() =>
-      _ExpenseAdvancedOptionsState();
-}
-
-class _ExpenseAdvancedOptionsState extends State<ExpenseAdvancedOptions> {
-  late bool _showRecurrence = widget.editingData.recurrence.isRecurring;
 
   Widget _sectionLabel(BuildContext context, String text) {
     final theme = Theme.of(context);
@@ -46,111 +38,79 @@ class _ExpenseAdvancedOptionsState extends State<ExpenseAdvancedOptions> {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final data = widget.editingData;
+    final data = editingData;
+    final isExpanded = data.showAdvancedOptions;
     final isRecurring = data.recurrence.isRecurring;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => setState(() => _showRecurrence = !_showRecurrence),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isRecurring
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outlineVariant,
+        TextButton(
+          onPressed: onToggleAdvanced,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 12,
+            children: [
+              const Icon(Icons.event_repeat_rounded, size: 18),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    tr.expenseAdvancedOptions,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  if (isRecurring) ...[
+                    const SizedBox(height: 4),
+                    RecurrenceBadge(
+                      label: tr.recurrenceActiveSummary(
+                        recurrenceLabel(tr, data.recurrence),
+                      ),
+                    ),
+                  ]
+                ],
               ),
-            ),
-            child: Row(
-              spacing: 10,
-              children: [
-                Icon(
-                  Icons.repeat_rounded,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                ),
-                Expanded(
-                  child: Text(
-                    tr.recurrence,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: isRecurring
-                      ? RecurrenceBadge(
-                          key: const ValueKey('recurrence-summary'),
-                          label: tr.recurrenceActiveSummary(
-                            recurrenceLabel(tr, data.recurrence),
+            ],
+          ),
+        ),        
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: isExpanded
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Column(
+                    spacing: 18,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 6,
+                        children: [
+                          _sectionLabel(context, tr.recurrence),
+                          RecurrenceSelector(
+                            selectedRecurrence: data.recurrence,
+                            onRecurrenceChanged: onRecurrenceChanged,
                           ),
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('recurrence-empty'),
-                        ),
-                ),
-                AnimatedRotation(
-                  turns: _showRecurrence ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.expand_more_rounded,
-                    size: 22,
-                    color: theme.colorScheme.onSurfaceVariant,
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 6,
+                        children: [
+                          _sectionLabel(context, tr.debitDate),
+                          DateField(
+                            initialDate: data.debitDate,
+                            localeName: localeName,
+                            onDateChanged: onDateChanged,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: !_showRecurrence
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: RecurrenceSelector(
-                    selectedRecurrence: data.recurrence,
-                    onRecurrenceChanged: widget.onRecurrenceChanged,
-                  ),
-                ),
-        ),
-        Align(
-          alignment: Alignment.center,
-          child: TextButton.icon(
-            onPressed: widget.onToggleAdvanced,
-            icon: Icon(
-              data.showAdvancedOptions
-                  ? Icons.expand_less
-                  : Icons.expand_more,
-            ),
-            label: Text(tr.debitDateOptions),
-          ),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: !data.showAdvancedOptions
-              ? const SizedBox(width: double.infinity)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 8,
-                  children: [
-                    _sectionLabel(context, tr.debitDate),
-                    DateField(
-                      initialDate: data.debitDate,
-                      localeName: widget.localeName,
-                      onDateChanged: widget.onDateChanged,
-                    ),
-                  ],
-                ),
+                )
+              : const SizedBox(width: double.infinity),
         ),
       ],
     );
