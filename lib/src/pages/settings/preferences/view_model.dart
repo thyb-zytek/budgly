@@ -17,6 +17,7 @@ class PreferencesViewModel extends BaseViewModel {
   ThemeMode get mode => _profileService.themeMode;
   Locale get locale => _profileService.locale;
   String get currency => _profileService.currency;
+  int get amountDecimalPlaces => _profileService.amountDecimalPlaces;
   List<String> get supportedCurrencies => AppConstants.supportedCurrencies;
 
   @override
@@ -41,5 +42,9 @@ class PreferencesViewModel extends BaseViewModel {
     if (currency != null) {
       await _profileService.setCurrency(currency);
     }
+  }
+
+  Future<void> changeAmountDecimalPlaces(int value) async {
+    await _profileService.setAmountDecimalPlaces(value);
   }
 }

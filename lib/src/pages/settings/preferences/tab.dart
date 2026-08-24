@@ -1,5 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/settings/preferences/view_model.dart';
+import 'package:budgly/src/pages/settings/preferences/widgets/amount_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/currency_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/locale_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/theme_form.dart';
@@ -59,6 +60,11 @@ class _PreferencesTabState extends State<PreferencesTab> {
                     currentCurrency: _viewModel.currency,
                     supportedCurrencies: _viewModel.supportedCurrencies,
                     onCurrencyChanged: _viewModel.changeCurrency,
+                  ),
+                  AmountForm(
+                    amountDecimalPlaces: _viewModel.amountDecimalPlaces,
+                    onChanged: _viewModel.changeAmountDecimalPlaces,
+                    currency: _viewModel.currency,
                   ),
                 ],
               );

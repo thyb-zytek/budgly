@@ -13,6 +13,7 @@ class UserProfile {
   final Color color;
   final String themeMode;
   final String currency;
+  final int amountDecimalPlaces;
   final String language;
   final List<Account> accounts;
   final bool onboardingCompleted;
@@ -27,6 +28,7 @@ class UserProfile {
     Color? color,
     this.themeMode = 'system',
     this.currency = 'EUR',
+    this.amountDecimalPlaces = 2,
     this.language = 'fr',
     List<Account>? accounts,
     bool? onboardingCompleted,
@@ -49,6 +51,7 @@ class UserProfile {
           : UserProfile.generateRandomColor(),
       themeMode: json['theme_mode']?.toString() ?? 'system',
       currency: json['currency']?.toString() ?? 'EUR',
+      amountDecimalPlaces: (json['amount_decimal_places'] as num?)?.toInt().clamp(0, 2) ?? 2,
       language: json['language']?.toString() ?? AppConstants.defaultLocale,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       accounts: json['accounts'] != null
@@ -74,6 +77,7 @@ class UserProfile {
       'color': color.toHexString(),
       'theme_mode': themeMode,
       'currency': currency,
+      'amount_decimal_places': amountDecimalPlaces,
       'language': language,
       'accounts': accounts.map((account) => account.toJson()).toList(),
       'onboarding_completed': onboardingCompleted,
@@ -90,6 +94,7 @@ class UserProfile {
     Color? color,
     String? themeMode,
     String? currency,
+    int? amountDecimalPlaces,
     String? language,
     List<Account>? accounts,
     bool? onboardingCompleted,
@@ -102,6 +107,7 @@ class UserProfile {
       color: color ?? this.color,
       themeMode: themeMode ?? this.themeMode,
       currency: currency ?? this.currency,
+      amountDecimalPlaces: amountDecimalPlaces ?? this.amountDecimalPlaces,
       language: language ?? this.language,
       accounts: accounts ?? this.accounts,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,

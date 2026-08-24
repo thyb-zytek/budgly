@@ -28,6 +28,7 @@ class ProfileService implements Listenable {
   static const String _themeKey = AppConstants.themeKey;
   static const String _localeKey = AppConstants.localeKey;
   static const String _currencyKey = AppConstants.currencyKey;
+  static const String _amountDecimalPlacesKey = 'amount_decimal_places';
 
   ProfileService({
     ProfileStore? store,
@@ -45,6 +46,7 @@ class ProfileService implements Listenable {
   ThemeMode get themeMode => _store.themeMode;
   Locale get locale => _store.locale;
   String get currency => _store.currency;
+  int get amountDecimalPlaces => _store.amountDecimalPlaces;
   bool get onboardingCompleted => _store.currentUser?.profile?.onboardingCompleted ?? false;
   bool get isLoading => _store.isLoading;
 
@@ -68,8 +70,14 @@ class ProfileService implements Listenable {
 
     final languageCode = _prefs!.getString(_localeKey) ?? AppConstants.defaultLocale;
     final currency = _prefs!.getString(_currencyKey) ?? AppConstants.defaultCurrency;
+    final amountDecimalPlaces = _prefs!.getInt(_amountDecimalPlacesKey) ?? 2;
 
-    _store.setPreferences(themeMode: theme, locale: Locale(languageCode), currency: currency);
+    _store.setPreferences(
+      themeMode: theme,
+      locale: Locale(languageCode),
+      currency: currency,
+      amountDecimalPlaces: amountDecimalPlaces,
+    );
   }
 
   Future<void> syncPreferencesWithServer(User user) async {
@@ -82,11 +90,13 @@ class ProfileService implements Listenable {
           themeMode: serverTheme,
           locale: Locale(profile.language),
           currency: profile.currency,
+          amountDecimalPlaces: profile.amountDecimalPlaces,
         );
 
         await _prefs?.setInt(_themeKey, serverTheme.index);
         await _prefs?.setString(_localeKey, profile.language);
         await _prefs?.setString(_currencyKey, profile.currency);
+        await _prefs?.setInt(_amountDecimalPlacesKey, profile.amountDecimalPlaces);
       } catch (e) {
         AppLogger.error('Error syncing preferences with server: $e', e);
       }
@@ -178,6 +188,20 @@ class ProfileService implements Listenable {
     await _updateServerProfile();
   }
 
+  Future<void> setAmountDecimalPlaces(int decimalPlaces) async {
+    final value = decimalPlaces.clamp(0, 2);
+    if (_store.amountDecimalPlaces == value) return;
+    _prefs ??= await SharedPreferences.getInstance();
+
+    await _prefs!.setInt(_amountDecimalPlacesKey, value);
+    _store.setPreferences(amountDecimalPlaces: value);
+    try {
+      await _updateServerProfile();
+    } catch (_) {
+      rethrow;
+    }
+  }
+
   Future<void> _updateServerProfile() async {
     final user = _store.currentUser;
     if (user != null) {
@@ -186,6 +210,7 @@ class ProfileService implements Listenable {
           'theme_mode': _store.themeMode.toString().split('.').last,
           'language': _store.locale.languageCode,
           'currency': _store.currency,
+          'amount_decimal_places': _store.amountDecimalPlaces,
         });
         final updatedUser = await _authService.reloadCurrentUser();
         if (updatedUser != null) _store.setUser(updatedUser);

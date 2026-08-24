@@ -16,12 +16,14 @@ class ProfileStore extends ChangeNotifier with LoadingNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   Locale _locale = const Locale(AppConstants.defaultLocale);
   String _currency = AppConstants.defaultCurrency;
+  int _amountDecimalPlaces = 2;
 
   User? get currentUser => _currentUser;
   bool get hasLoaded => _hasLoaded;
   ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
   String get currency => _currency;
+  int get amountDecimalPlaces => _amountDecimalPlaces;
 
   ProfileStore._();
 
@@ -31,10 +33,11 @@ class ProfileStore extends ChangeNotifier with LoadingNotifier {
     notifyListeners();
   }
 
-  void setPreferences({ThemeMode? themeMode, Locale? locale, String? currency}) {
+  void setPreferences({ThemeMode? themeMode, Locale? locale, String? currency, int? amountDecimalPlaces}) {
     if (themeMode != null) _themeMode = themeMode;
     if (locale != null) _locale = locale;
     if (currency != null) _currency = currency;
+    if (amountDecimalPlaces != null) _amountDecimalPlaces = amountDecimalPlaces.clamp(0, 2);
     notifyListeners();
   }
 
@@ -44,6 +47,7 @@ class ProfileStore extends ChangeNotifier with LoadingNotifier {
     _themeMode = ThemeMode.system;
     _locale = const Locale(AppConstants.defaultLocale);
     _currency = AppConstants.defaultCurrency;
+    _amountDecimalPlaces = 2;
     notifyListeners();
   }
 }
