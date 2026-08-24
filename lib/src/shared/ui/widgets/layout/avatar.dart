@@ -13,6 +13,7 @@ class Avatar extends StatelessWidget {
   final double borderWidth;
   final bool canRemove;
   final VoidCallback? onRemove;
+  final bool showEditBadge;
 
   const Avatar({
     super.key,
@@ -26,6 +27,7 @@ class Avatar extends StatelessWidget {
     this.borderWidth = 2.5,
     this.canRemove = false,
     this.onRemove,
+    this.showEditBadge = false,
   });
 
   @override
@@ -96,6 +98,25 @@ class Avatar extends StatelessWidget {
                     size: 18,
                     color: theme.colorScheme.error,
                   ),
+                ),
+              ),
+            ),
+          ),
+        if (showEditBadge && onTap != null)
+          Positioned(
+            bottom: -2,
+            right: -2,
+            child: Material(
+              color: theme.colorScheme.primary,
+              shape: const CircleBorder(),
+              elevation: 2,
+              shadowColor: Colors.black26,
+              child: Padding(
+                padding: const EdgeInsets.all(5),
+                child: Icon(
+                  Icons.photo_camera_rounded,
+                  size: size < 60 ? 13 : 16,
+                  color: theme.colorScheme.onPrimary,
                 ),
               ),
             ),

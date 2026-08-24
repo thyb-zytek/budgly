@@ -191,6 +191,7 @@ class _CategoriesTabState extends State<CategoriesTab>
                                                   viewModel:
                                                       _categoriesViewModel,
                                                   category: category,
+                                                  withPulse: true,
                                                   withHint: true,
                                                 ),
                                         ),

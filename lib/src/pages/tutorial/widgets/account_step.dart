@@ -92,14 +92,26 @@ class _AccountStepState extends State<AccountStep> {
           subtitle: tr.tutorialStepAccountsDescription,
           content: AbsorbPointer(
             absorbing: _isSubmitting,
-            child: AccountForm(
-              formKey: _formKey,
-              viewModel: vm,
-              account: vm.createdAccount,
-              compact: true,
-              withPulse: vm.createdAccount?.id == null,
-              withHint: vm.createdAccount?.id == null,
-              enabled: !_isSubmitting,
+            child: Column(
+              children: [
+                AccountForm(
+                  formKey: _formKey,
+                  viewModel: vm,
+                  account: vm.createdAccount,
+                  compact: true,
+                  withPulse: vm.createdAccount?.id == null,
+                  withHint: vm.createdAccount?.id == null,
+                  enabled: !_isSubmitting,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  tr.tapToCustomize,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
           primaryAction: ListenableBuilder(

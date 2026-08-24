@@ -150,6 +150,7 @@
       }
     }
   },
+  "tapToCustomize": "Tap to customize",
   "recurrence": "Recurrence",
   "recurrenceNone": "None",
   "recurrenceDaily": "Daily",

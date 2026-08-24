@@ -6,6 +6,7 @@ import 'package:budgly/src/pages/tutorial/view_model.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
+import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' hide TextInput;
@@ -24,8 +25,16 @@ class CategoryStep extends StatefulWidget {
   State<CategoryStep> createState() => _CategoryStepState();
 }
 
-class _CategoryStepState extends State<CategoryStep> {
+class _CategoryStepState extends State<CategoryStep>
+    with TickerProviderStateMixin, PulseHintAnimationMixin {
   late final FocusNode _nameFocusNode;
+
+  @override
+  bool get withPulse => false;
+  @override
+  bool get withHint => true;
+  @override
+  bool get hintEnabled => true;
 
   @override
   void initState() {
@@ -36,15 +45,19 @@ class _CategoryStepState extends State<CategoryStep> {
       const Duration(milliseconds: 300),
       () => _nameFocusNode.requestFocus(),
     );
+
+    initPulseHintAnimations();
   }
 
   @override
   void dispose() {
+    disposePulseHintAnimations();
     _nameFocusNode.dispose();
     super.dispose();
   }
 
   void _openCustomizationPicker(BuildContext context) {
+    cancelHint();
     final vm = widget.viewModel;
 
     showCategoryCustomizationSheet(
@@ -59,7 +72,10 @@ class _CategoryStepState extends State<CategoryStep> {
       ),
       onIconChanged: vm.setCategoryIcon,
       onColorChanged: vm.setCategoryColor,
-    );
+    ).then((_) {
+      if (!mounted) return;
+      onHintEnabled();
+    });
   }
 
   Future<void> _handleValidate() async {
@@ -133,12 +149,13 @@ class _CategoryStepState extends State<CategoryStep> {
               Row(
                 spacing: 16,
                 children: [
-                  GestureDetector(
-                    onTap: () => _openCustomizationPicker(context),
-                    child: CategoryIconView(
+                  wrapWithPulseHint(
+                    CategoryIconView(
                       icon: currentIcon,
                       color: vm.categoryColor,
                       size: 56,
+                      onTap: () => _openCustomizationPicker(context),
+                      showEditBadge: true,
                     ),
                   ),
                   Expanded(
@@ -151,6 +168,13 @@ class _CategoryStepState extends State<CategoryStep> {
                     ),
                   ),
                 ],
+              ),
+              Text(
+                tr.tapToCustomize,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               ListenableBuilder(
                 listenable: vm.categoryNameController,

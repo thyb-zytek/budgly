@@ -118,6 +118,7 @@ class _AccountFormState extends State<AccountForm>
         isLocalPicture: _isTempLocalPicture,
         size: 52,
         onTap: widget.enabled ? () => _openAvatarPicker(context, initial) : null,
+        showEditBadge: widget.enabled,
       ),
     );
   }
