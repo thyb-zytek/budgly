@@ -144,7 +144,8 @@
   "category": "Category",
   "activity": "Activity",
   "amount": "Amount",
-  "debitDateOptions": "Debit date options",
+  "expenseAdvancedOptions": "Schedule",
+  "expenseAdvancedOptionsHint": "Automatic repeat, debit date",
   "recurrenceActiveSummary": "Recurring · {frequency}",
   "@recurrenceActiveSummary": {
     "placeholders": {
@@ -155,6 +156,7 @@
   },
   "tapToCustomize": "Tap to customize",
   "recurrence": "Recurrence",
+  "recurrenceHelp": "This expense will be automatically recreated at the chosen frequency.",
   "recurrenceNone": "None",
   "recurrenceDaily": "Daily",
   "recurrenceWeekly": "Weekly",
@@ -165,6 +167,7 @@
   "recurrenceHalfYearly": "Every 6 months",
   "recurrenceBiYearly": "Every 2 years",
   "debitDate": "Debit date",
+  "debitDateHelp": "Date on which this expense will be deducted from your balance.",
   "revenue": "Revenue",
   "remaining": "Remaining",
   "remainingBasedOnRevenueHint": "Based on your revenue for this period",
