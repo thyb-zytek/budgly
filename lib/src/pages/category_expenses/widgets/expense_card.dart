@@ -4,7 +4,7 @@ import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/expense_quick_actions_sheet.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/expense_status_avatar.dart';
-import 'package:budgly/src/pages/category_expenses/widgets/recurrence_badge.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_badge.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/swipe_action_background.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_selector.dart';
 import 'package:flutter/material.dart';
