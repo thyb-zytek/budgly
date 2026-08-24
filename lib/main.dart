@@ -42,10 +42,11 @@ Future<void> main() async {
     },
   );
 
-  await Future.wait([
-    _restoreSession(),
-    ProfileService.instance.init(),
-  ]);
+  // Load local preferences before restoring/syncing the user profile.
+  // Otherwise the profile sync can load the server value and a late
+  // SharedPreferences init can overwrite it with a stale local value.
+  await ProfileService.instance.init();
+  await _restoreSession();
 
   runApp(const BudglyApp());
   unawaited(GoogleSignInInitializer.ensureInitialized());
