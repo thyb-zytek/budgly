@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 mixin PulseHintAnimationMixin<T extends StatefulWidget> on TickerProviderStateMixin<T> {
+  static const Duration hintFirstDelay = Duration(milliseconds: 1500);
+  static const Duration hintRepeatInterval = Duration(seconds: 3);
+
   AnimationController? pulseController;
   Animation<double>? pulseAnimation;
 
@@ -38,10 +41,17 @@ mixin PulseHintAnimationMixin<T extends StatefulWidget> on TickerProviderStateMi
   }
 
   void scheduleHint() {
+    _scheduleHint(hintFirstDelay);
+  }
+
+  void _scheduleHint(Duration delay) {
     hintTimer?.cancel();
-    hintTimer = Timer(const Duration(seconds: 5), () {
-      if (!mounted || !hintEnabled) return;
-      hintController!.forward(from: 0).then((_) => scheduleHint());
+    hintTimer = Timer(delay, () {
+      if (!mounted || !hintEnabled || hintController == null) return;
+      hintController!.forward(from: 0).then((_) {
+        if (!mounted || !hintEnabled) return;
+        _scheduleHint(hintRepeatInterval);
+      });
     });
   }
 
