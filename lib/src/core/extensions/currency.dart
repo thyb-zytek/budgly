@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 
 extension CurrencyIcon on String {
   IconData get currencyIcon {
@@ -19,13 +20,17 @@ String formatCurrency({
   required double amount,
   required String currencyCode,
   required String localeName,
-  int decimalDigits = 0,
+  int decimalPlaces = 2,
+  bool forceDecimal = false,
 }) {
+  final displayAmount = normalizeAmount(amount, decimalPlaces: decimalPlaces);
+  final places = decimalPlaces.clamp(0, 2);
+  final isInteger = displayAmount == displayAmount.roundToDouble();
   return NumberFormat.currency(
     locale: localeName,
     symbol: _currencySymbol(currencyCode),
-    decimalDigits: decimalDigits,
-  ).format(amount);
+    decimalDigits: forceDecimal ? places : (isInteger ? 0 : places),
+  ).format(displayAmount);
 }
 
 String _currencySymbol(String currencyCode) {
