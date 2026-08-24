@@ -141,7 +141,15 @@
   "category": "Category",
   "activity": "Activity",
   "amount": "Amount",
-  "advancedOptions": "Advanced options",
+  "debitDateOptions": "Debit date options",
+  "recurrenceActiveSummary": "Recurring · {frequency}",
+  "@recurrenceActiveSummary": {
+    "placeholders": {
+      "frequency": {
+        "type": "String"
+      }
+    }
+  },
   "recurrence": "Recurrence",
   "recurrenceNone": "None",
   "recurrenceDaily": "Daily",
