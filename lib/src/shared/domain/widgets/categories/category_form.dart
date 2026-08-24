@@ -118,6 +118,7 @@ class _CategoryFormState extends State<CategoryForm>
         color: _tempColor,
         size: 52,
         onTap: widget.enabled ? () => _openCustomizationPicker(context) : null,
+        showEditBadge: widget.enabled,
       ),
     );
   }
