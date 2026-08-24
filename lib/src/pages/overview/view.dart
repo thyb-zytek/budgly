@@ -122,18 +122,6 @@ class _OverviewPageState extends State<OverviewPage> {
                     ),
                   ),
 
-                  if (_viewModel.accounts.isNotEmpty)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: CollapsingSummaryHeader(
-                        viewModel: _viewModel,
-                        onSelectAccount: (acc) => _viewModel.account = acc,
-                        onEditRevenue: _viewModel.openRevenueEditor,
-                        onCategoryTap: _openCategoryDetails,
-                        slideDirection: _slideDirection,
-                      ),
-                    ),
-
                   SliverToBoxAdapter(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
@@ -148,6 +136,18 @@ class _OverviewPageState extends State<OverviewPage> {
                             ),
                     ),
                   ),
+
+                  if (_viewModel.accounts.isNotEmpty)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: CollapsingSummaryHeader(
+                        viewModel: _viewModel,
+                        onSelectAccount: (acc) => _viewModel.account = acc,
+                        onEditRevenue: _viewModel.openRevenueEditor,
+                        onCategoryTap: _openCategoryDetails,
+                        slideDirection: _slideDirection,
+                      ),
+                    ),
 
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
 

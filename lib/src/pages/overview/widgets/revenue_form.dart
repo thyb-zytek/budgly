@@ -76,35 +76,38 @@ class _RevenueFormState extends State<RevenueForm> {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 8,
-          children: [
-            CurrencyInput(
-              controller: _controller,
-              currencyCode: widget.viewModel.currencyCode,
-              labelText: tr.revenue,
-            ),
-            if (_prefilledFromEstimate)
-              Text(
-                tr.revenueEstimatedHint,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer.withAlpha(180),
-                ),
+    return Material(
+      color: theme.scaffoldBackgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 8,
+            children: [
+              CurrencyInput(
+                controller: _controller,
+                currencyCode: widget.viewModel.currencyCode,
+                labelText: tr.revenue,
               ),
-            FormActions(
-              onCancel: widget.onClose,
-              onSubmit: _save,
-            ),
-          ],
+              if (_prefilledFromEstimate)
+                Text(
+                  tr.revenueEstimatedHint,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer.withAlpha(180),
+                  ),
+                ),
+              FormActions(
+                onCancel: widget.onClose,
+                onSubmit: _save,
+              ),
+            ],
+          ),
         ),
       ),
     );
