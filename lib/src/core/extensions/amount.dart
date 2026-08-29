@@ -1,13 +1,14 @@
 import 'dart:math' as math;
 
-/// Parses and normalizes a user-entered monetary amount.
+/// Parses a user-entered monetary amount.
 ///
-/// [decimalPlaces] controls the precision used by the app. Values are
-/// rounded toward the next representable value (ceiling) at that precision.
-double? parseAmount(String value, {int decimalPlaces = 2}) {
+/// Returns the exact value typed by the user (full precision): the rounding
+/// to the configured decimals is a display concern handled by
+/// [normalizeAmount]/`formatCurrency`, never a storage concern.
+double? parseAmount(String value) {
   final amount = double.tryParse(value.trim().replaceAll(',', '.'));
   if (amount == null || amount <= 0) return null;
-  return normalizeAmount(amount, decimalPlaces: decimalPlaces);
+  return amount;
 }
 
 double normalizeAmount(double amount, {int decimalPlaces = 2}) {

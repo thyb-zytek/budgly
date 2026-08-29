@@ -13,18 +13,22 @@ class AccountBudgetsStore extends ChangeNotifier {
   AccountBudget? get(String key) => _budgets[key];
 
   void set(String key, AccountBudget? budget) {
+    if (_loadedKeys.contains(key) && _budgets[key]?.revenue == budget?.revenue) {
+      return;
+    }
     _budgets[key] = budget;
     _loadedKeys.add(key);
     notifyListeners();
   }
 
   void clear(String key) {
-    _loadedKeys.remove(key);
+    if (!_loadedKeys.remove(key) && !_budgets.containsKey(key)) return;
     _budgets.remove(key);
     notifyListeners();
   }
 
   void clearAll() {
+    if (_loadedKeys.isEmpty && _budgets.isEmpty) return;
     _loadedKeys.clear();
     _budgets.clear();
     notifyListeners();
@@ -39,5 +43,13 @@ class AccountBudgetsStore extends ChangeNotifier {
       _budgets.remove(key);
     }
     notifyListeners();
+  }
+
+  List<AccountBudget> getBudgetsForAccount(String accountId) {
+    final prefix = '${accountId}_';
+    return _budgets.entries
+        .where((e) => e.key.startsWith(prefix) && e.value != null)
+        .map((e) => e.value!)
+        .toList();
   }
 }

@@ -2,40 +2,85 @@
 
 ## Project
 
-Flutter mobile app (Android + iOS only) — budget tracking. Package name `budgly`, Dart SDK `^3.12.2`, `flutter_lints`.
+Budgly is an Android and iOS Flutter budget-tracking application. It uses Dart
+`^3.12.2` and `flutter_lints`.
 
-## Backend split (critical)
+## Architecture
 
-Auth and data live on **different backends**; per-feature the data provider differs:
+The app follows pragmatic MVVM and is offline-first:
 
-- **Firebase Auth** = identity: email/password + Google Sign-In (`lib/src/core/auth/`, `lib/src/services/auth.dart`).
-- **Supabase** = `user_profiles`, `accounts`, `categories`, and storage (`services/providers/supabase/`).
-- **Cloud Firestore (legacy, still in use)** = `expenses`, budgets (`services/providers/firestore/`, models under `lib/src/models/budget/` and `lib/src/models/expense/`).
+```text
+View -> ViewModel -> Service -> Store / Provider -> Local cache / backend
+```
 
-Each `services/*.dart` singleton orchestrates a provider + a `stores/*.dart` ChangeNotifier cache. To change a feature's backend, check which provider its service imports.
+- Views render state and do not access backends directly.
+- ViewModels own screen state and orchestration. Check `isDisposed` before
+  notifying after async work.
+- Services own domain logic, local-first loading, synchronization, and
+  provider access.
+- Stores are singleton `ChangeNotifier` caches and must remain backend-agnostic.
+- Show cached data immediately when available; refresh remotely in the
+  background with `unawaited()` when the refresh does not block the UI.
 
-Supabase auth is a bridge: `main.dart` initializes Supabase with the Firebase ID token via `accessToken`, so Supabase RLS `auth.jwt() ->> 'sub'` equals the **Firebase UID**. RLS in `supabase_migrations/` enforces per-user access (profiles/accounts by `user_id`, categories via their account).
+See `docs/architecture.md` for the complete startup, routing, and sync model.
 
-## Setup / secrets
+## Backend boundaries
 
-- `assets/.env` is required at runtime — `SUPABASE_URL` and `SUPABASE_KEY` (main throws if missing). It is gitignored (`*/.env`), so check a teammate or Supabase project; do not commit it.
-- `lib/firebase_options.dart` is gitignored — regenerate with FlutterFire CLI (`flutterfire configure`).
-- Google Sign-In needs platform config: `android/app/google-services.json` (gitignored) / iOS `GoogleService-Info.plist`.
-- Supabase schema/storage policies live in `supabase_migrations/` (001 tables + RLS, 002 buckets `accounts-pictures`, `config-files`). Apply changes via the Supabase CLI — there is no local DB.
-- Storage picture paths are `$userId/$accountId/$fileName`; account picture URLs are fetched as signed URLs.
+Authentication and application data are intentionally split:
+
+- Firebase Auth provides identity (email/password and Google Sign-In).
+- Supabase owns profiles, accounts, categories, account-picture storage, and
+  offline mutation replay through `SyncQueue`.
+- Cloud Firestore still owns expenses and budgets. Its native persistent cache
+  provides offline reads and writes, so do not enqueue Firestore mutations in
+  `SyncQueue`.
+
+The Firebase ID token bridges into Supabase, so its RLS subject is the Firebase
+UID. Before changing persistence, confirm the feature's service and provider;
+do not move a feature between backends accidentally.
+
+## Startup and navigation
+
+- Keep routing and cold-start UI local-only. Route guards must not perform
+  network calls, reload data, or await Supabase.
+- Startup awaits only essential infrastructure before `runApp()`; remote
+  refreshes and analytics initialization happen afterward.
+- `AuthSessionNotifier` and `ProfileService` drive router redirects. If a
+  Firebase user exists while the local profile is still hydrating, wait for the
+  next profile notification rather than fetching in a guard.
+
+## Localization and UI
+
+- The default locale is French. Add every user-visible string to both
+  `lib/l10n/intl_en.arb` and `lib/l10n/intl_fr.arb`, then regenerate l10n.
+- Preserve the Saira font setup declared in `pubspec.yaml`.
+- Keep widgets focused on presentation; place reusable domain widgets under
+  `lib/src/shared/domain/` and reusable UI primitives under `lib/src/shared/ui/`.
+
+## Secrets and generated configuration
+
+- `assets/.env` must contain `SUPABASE_URL` and `SUPABASE_KEY`. Never commit it.
+- Firebase platform configuration and `lib/firebase_options.dart` are generated
+  or environment-specific; regenerate them with FlutterFire when needed rather
+  than hand-writing secrets.
+- Apply database/storage policy changes through the Supabase CLI using
+  `supabase_migrations/`; there is no local database to edit.
 
 ## Commands
 
-- `flutter pub get` — runs l10n generation (`generate: true` in pubspec).
-- `flutter analyze` — lint is `flutter_lints` with relaxations: `prefer_const_constructors*`, `use_key_in_widget_constructors`, `avoid_print` are all disabled. `print` is used on purpose.
-- `flutter gen-l10n` — run after editing ARB files; generates `lib/l10n/app_localizations*.dart`.
-- `dart run flutter_launcher_icons` — regenerate launcher icons from `assets/images/logo.png`.
-- **Tests**: `test/period_test.dart` covers the `Period` model (requires `initializeDateFormatting` for `fr_FR`/`en_US` in `setUpAll`). `flutter test` must stay green.
+- `flutter pub get` -- install dependencies and generate localizations.
+- `flutter analyze` -- run static analysis.
+- `flutter test` -- run the test suite.
+- `flutter gen-l10n` -- regenerate localization output after ARB changes.
+- `dart run flutter_launcher_icons` -- regenerate launcher icons after changing
+  the source asset.
 
-## Conventions
+Run analysis and the relevant tests after changing Dart code. Do not edit files
+under `build/` or generated localization output by hand.
 
-- **Localization**: `flutter_intl` with ARB files in `lib/l10n/` (`intl_en.arb` template, `intl_fr.arb`). Default locale is `fr` (`AppConstants.defaultLocale`). When adding UI strings, add to both ARB files and regenerate.
-- **State**: services (singletons, in-memory caches with validity from `AppConstants` — 5min short / 50min medium / 1 day long) → stores (ChangeNotifier) → ViewModels (`shared/view_models/base_view_model.dart`). Views listen via `ListenableBuilder`/`ChangeNotifier`.
-- **Navigation**: go_router via `NavigationHelper` in `lib/src/core/routers/navigation_helper.dart` — routes: `/login`, `/tutorial`, and a shell with `/overview` + `/settings`; sign-in redirect and tutorial/overview branching live there.
-- **Commit messages**: gitmoji-prefixed (`✨ ♻️ 📦 🎨 🗑️ …`), atomic. Full rules in `.devin/commit_guidelines.md` (French).
-- **Font**: Saira variable font family (regular + italic) declared in pubspec; OFL license registered in `main.dart`.
+## Change discipline
+
+- Preserve existing worktree changes unless the task explicitly includes them.
+- Keep changes small and feature-scoped; update/add tests for changed behavior.
+- Keep commit messages atomic and gitmoji-prefixed, following
+  `.devin/commit_guidelines.md`.

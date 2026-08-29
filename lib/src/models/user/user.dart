@@ -79,6 +79,7 @@ class User {
     String? email,
     bool? emailVerified,
     Uri? avatarUrl,
+    AuthProvider? provider,
     UserProfile? profile,
   }) {
     return User(
@@ -86,6 +87,7 @@ class User {
       email: email ?? this.email,
       emailVerified: emailVerified ?? this.emailVerified,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      provider: provider ?? this.provider,
       profile: profile ?? this.profile,
     );
   }

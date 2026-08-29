@@ -1,9 +1,8 @@
-import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/user/user.dart';
 
-class ProfileStore extends ChangeNotifier with LoadingNotifier {
+class ProfileStore extends ChangeNotifier {
   static ProfileStore? _instance;
 
   static ProfileStore get instance {
@@ -26,6 +25,9 @@ class ProfileStore extends ChangeNotifier with LoadingNotifier {
   int get amountDecimalPlaces => _amountDecimalPlaces;
 
   ProfileStore._();
+
+
+
 
   void setUser(User? user) {
     _currentUser = user;

@@ -38,6 +38,27 @@ class AuthState {
       isGoogleSignIn: isGoogleSignIn ?? this.isGoogleSignIn,
     );
   }
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AuthState &&
+          other.formType == formType &&
+          other.errorCode == errorCode &&
+          other.errorMessage == errorMessage &&
+          other.isLoading == isLoading &&
+          other.currentUser == currentUser &&
+          other.isGoogleSignIn == isGoogleSignIn;
+
+  @override
+  int get hashCode => Object.hash(
+        formType,
+        errorCode,
+        errorMessage,
+        isLoading,
+        currentUser,
+        isGoogleSignIn,
+      );
+
 }
 
 enum AuthForm {

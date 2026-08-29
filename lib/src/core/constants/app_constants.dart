@@ -1,16 +1,11 @@
 import 'package:budgly/src/models/category/category_icon.dart';
 
 class AppConstants {
-  static const Duration cacheValidityShort = Duration(minutes: 5);
-  static const Duration cacheValidityMedium = Duration(minutes: 50);
-  static const Duration cacheValidityLong = Duration(days: 1);
 
   static const String bucketAccounts = 'accounts-pictures';
-  static const String bucketConfig = 'config-files';
 
   static const String cacheCategoryIcons = 'cached_category_icons';
 
-  static const String categoryIconsFileName = 'category_icons.json';
 
   static const String loginFormTypeKey = 'LoginDefaultFormType';
 
@@ -19,12 +14,10 @@ class AppConstants {
   static const String currencyKey = 'app_currency';
   static const String tutorialStepKeyPrefix = 'tutorial_step_';
   static const String tutorialCompletedKeyPrefix = 'tutorial_completed_';
-  static const String fabUsedKeyPrefix = 'fab_used_';
 
   static String tutorialStepKey(String uid) => '$tutorialStepKeyPrefix$uid';
   static String tutorialCompletedKey(String uid) =>
       '$tutorialCompletedKeyPrefix$uid';
-  static String fabUsedKey(String heroTag) => '$fabUsedKeyPrefix$heroTag';
 
   static const List<String> supportedCurrencies = ['EUR', 'USD', 'GBP'];
 
@@ -32,6 +25,14 @@ class AppConstants {
   static const String defaultCurrency = 'EUR';
 
   static const int maxFutureExpenseDays = 365 * 5;
+
+  static const int maxUploadSizeBytes = 5 * 1024 * 1024; // 5 MB
+  static const List<String> allowedUploadExtensions = [
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+  ];
 
   static const CategoryIcon defaultCategoryIcon = CategoryIcon(
     iconName: 'category_rounded',

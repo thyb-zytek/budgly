@@ -1,6 +1,7 @@
 import 'package:budgly/src/core/auth/auth_session.dart';
 import 'package:budgly/src/core/navigation/app_routes.dart';
 import 'package:budgly/src/core/navigation/route_guards.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/category_expenses/view.dart';
 import 'package:budgly/src/pages/login/view.dart';
@@ -24,7 +25,10 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.login,
-    refreshListenable: AuthSessionNotifier.instance,
+    refreshListenable: Listenable.merge([
+      AuthSessionNotifier.instance,
+      ProfileService.instance,
+    ]),
     redirect: (context, state) => RouteGuards.authRedirect(state),
     routes: [
       GoRoute(

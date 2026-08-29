@@ -1,25 +1,23 @@
-import "package:flutter/material.dart";
+import 'package:flutter/material.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 
 class MaterialTheme {
   const MaterialTheme();
 
   static TextTheme textTheme = const TextTheme(
     displayLarge: TextStyle(
-      fontFamily: "Saira",
       fontSize: 48,
       fontWeight: FontWeight.w700,
       letterSpacing: -1.0,
       height: 1.1,
     ),
     displayMedium: TextStyle(
-      fontFamily: "Saira",
       fontSize: 40,
       fontWeight: FontWeight.w700,
       letterSpacing: -0.5,
       height: 1.1,
     ),
     displaySmall: TextStyle(
-      fontFamily: "Saira",
       fontSize: 32,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
@@ -27,21 +25,18 @@ class MaterialTheme {
     ),
 
     headlineLarge: TextStyle(
-      fontFamily: "Saira",
       fontSize: 28,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.3,
     ),
     headlineMedium: TextStyle(
-      fontFamily: "Saira",
       fontSize: 24,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.3,
     ),
     headlineSmall: TextStyle(
-      fontFamily: "Saira",
       fontSize: 20,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
@@ -49,21 +44,18 @@ class MaterialTheme {
     ),
 
     titleLarge: TextStyle(
-      fontFamily: "Saira",
       fontSize: 18,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.4,
     ),
     titleMedium: TextStyle(
-      fontFamily: "Saira",
       fontSize: 16,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.1,
       height: 1.4,
     ),
     titleSmall: TextStyle(
-      fontFamily: "Saira",
       fontSize: 14,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.1,
@@ -71,21 +63,18 @@ class MaterialTheme {
     ),
 
     bodyLarge: TextStyle(
-      fontFamily: "Saira",
       fontSize: 16,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.2,
       height: 1.5,
     ),
     bodyMedium: TextStyle(
-      fontFamily: "Saira",
       fontSize: 14,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.2,
       height: 1.5,
     ),
     bodySmall: TextStyle(
-      fontFamily: "Saira",
       fontSize: 12,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.3,
@@ -93,21 +82,18 @@ class MaterialTheme {
     ),
 
     labelLarge: TextStyle(
-      fontFamily: "Saira",
       fontSize: 14,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.1,
       height: 1.4,
     ),
     labelMedium: TextStyle(
-      fontFamily: "Saira",
       fontSize: 12,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.2,
       height: 1.4,
     ),
     labelSmall: TextStyle(
-      fontFamily: "Saira",
       fontSize: 11,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.3,
@@ -235,6 +221,11 @@ class MaterialTheme {
     final border = colorScheme.outlineVariant.withValues(alpha: 0.5);
     final borderStrong = colorScheme.outline.withValues(alpha: 0.6);
 
+    final buttonTextStyle = textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.1,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: colorScheme.brightness,
@@ -269,7 +260,7 @@ class MaterialTheme {
         color: surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BudglyRadius.large,
           side: BorderSide(color: border, width: 1),
         ),
         margin: EdgeInsets.zero,
@@ -281,15 +272,12 @@ class MaterialTheme {
           shadowColor: Colors.transparent,
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: BudglyButtonDimensions.normalPadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BudglyRadius.medium,
             side: BorderSide(color: border, width: 1),
           ),
-          textStyle: textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
+          textStyle: buttonTextStyle,
         ),
       ),
 
@@ -297,17 +285,14 @@ class MaterialTheme {
         style: FilledButton.styleFrom(
           elevation: 0,
           shadowColor: Colors.transparent,
-          backgroundColor: colorScheme.primaryContainer,
-          foregroundColor: colorScheme.onPrimaryContainer,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          padding: BudglyButtonDimensions.normalPadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BudglyRadius.medium,
             side: BorderSide(color: border, width: 1),
           ),
-          textStyle: textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
+          textStyle: buttonTextStyle,
         ),
       ),
 
@@ -315,15 +300,12 @@ class MaterialTheme {
         style: OutlinedButton.styleFrom(
           elevation: 0,
           foregroundColor: colorScheme.primary,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: BudglyButtonDimensions.normalPadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BudglyRadius.medium,
             side: BorderSide(color: borderStrong, width: 1),
           ),
-          textStyle: textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
+          textStyle: buttonTextStyle,
         ),
       ),
 
@@ -334,7 +316,7 @@ class MaterialTheme {
         focusElevation: 0,
         hoverElevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BudglyRadius.large,
           side: BorderSide(color: border, width: 1),
         ),
         sizeConstraints: const BoxConstraints.tightFor(
@@ -350,23 +332,23 @@ class MaterialTheme {
         fillColor: surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: borderStrong, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: colorScheme.error, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
@@ -429,7 +411,7 @@ class MaterialTheme {
           elevation: const WidgetStatePropertyAll(0),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BudglyRadius.medium,
               side: BorderSide(color: border, width: 1),
             ),
           ),
@@ -441,7 +423,7 @@ class MaterialTheme {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BudglyRadius.extraLarge,
           side: BorderSide(color: border, width: 1),
         ),
       ),
