@@ -1,18 +1,20 @@
+import 'dart:async';
+
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/core/view_models/view_model_selector.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/pages/overview/widgets/collapsing_summary_header.dart';
-import 'package:budgly/src/pages/overview/widgets/expense_form.dart';
-import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
-import 'package:budgly/src/pages/overview/widgets/period_slide_switcher.dart';
-import 'package:budgly/src/pages/overview/widgets/revenue_form.dart';
-import 'package:budgly/src/shared/domain/widgets/categories/category_expense_list.dart';
-import 'package:budgly/src/shared/ui/widgets/gestures/horizontal_swipe_detector.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_editor_sheet.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
+import 'package:budgly/src/pages/overview/widgets/overview_content.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/budgly_fab.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,44 +27,132 @@ class OverviewPage extends StatefulWidget {
 
 class _OverviewPageState extends State<OverviewPage> {
   final OverviewViewModel _viewModel = OverviewViewModel();
-
-  int _slideDirection = 1;
+  final ValueNotifier<int> _slideDirection = ValueNotifier(1);
+  final ValueNotifier<bool> _showFabLabel = ValueNotifier(true);
+  Timer? _fabLabelTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _fabLabelTimer = Timer(const Duration(seconds: 8), () {
+      _showFabLabel.value = false;
+    });
   }
 
-  Future<void> _loadData() async {
-    if (!_viewModel.hasAccountsLoaded) {
-      await _viewModel.loadAccounts();
-    }
-    if (_viewModel.accounts.isNotEmpty && _viewModel.account == null) {
-      _viewModel.account = _viewModel.accounts.first;
-    }
-  }
+  Future<void> _loadData() => _viewModel.loadInitialData();
 
   @override
   void dispose() {
+    _fabLabelTimer?.cancel();
+    _showFabLabel.dispose();
+    _slideDirection.dispose();
     _viewModel.dispose();
     super.dispose();
   }
 
   void _openAddExpenseModal() {
+    final tr = AppLocalizations.of(context)!;
+    _showFabLabel.value = false;
+    _fabLabelTimer?.cancel();
     _viewModel.startNewExpense();
     showAppBottomSheet(
       context,
-      builder: (context) => ExpenseForm(viewModel: _viewModel),
+      builder: (context) => ExpenseEditorSheet(
+        listenable: _viewModel,
+        editingData: _viewModel.expenseForm.data,
+        title: tr.newExpense,
+        currencyCode: _viewModel.currencyCode,
+        localeName: _viewModel.localeName,
+        validate: (tr) => _viewModel.expenseForm.validate(
+          tr,
+          requireAccountAndCategory: true,
+        ),
+        onSubmit: _viewModel.createExpense,
+        onToggleAdvanced: _viewModel.expenseForm.toggleAdvancedOptions,
+        onDateChanged: _viewModel.expenseForm.setDebitDate,
+        onRecurrenceChanged: _viewModel.expenseForm.setRecurrence,
+        onEndDateChanged: _viewModel.expenseForm.setEndDate,
+        onEndDateCleared: _viewModel.expenseForm.clearEndDate,
+        isSaving: () => _viewModel.isSaving,
+        isSubmitEnabled: () => _viewModel.categoriesForSelectedAccount().isNotEmpty &&
+            _viewModel.expenseForm.data.account != null &&
+            _viewModel.expenseForm.data.category != null,
+        preFieldsBuilder: (context) {
+          final theme = Theme.of(context);
+          final data = _viewModel.expenseForm.data;
+          final categories = _viewModel.categoriesForSelectedAccount();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 18,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  SectionLabel(tr.account),
+                  FramedContainer(
+                    child: AccountSelector(
+                      accounts: _viewModel.accounts,
+                      selectedAccount: data.account,
+                      backgroundColor: theme.colorScheme.surface,
+                      onSelect: _viewModel.selectFormAccount,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  SectionLabel(tr.category),
+                  categories.isEmpty
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.errorContainer.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            spacing: 8,
+                            children: [
+                              Icon(Icons.error_outline, size: 18, color: theme.colorScheme.error),
+                              Expanded(
+                                child: Text(
+                                  tr.noCategoryForAccount,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : FramedContainer(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: CategorySelector(
+                            categories: categories,
+                            selectedCategory: data.category,
+                            onSelect: _viewModel.selectFormCategory,
+                          ),
+                        ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
   void _onPeriodChanged(Period period) {
     final current = _viewModel.selectedPeriod;
     if (period.isAfter(current)) {
-      _slideDirection = 1;
+      _slideDirection.value = 1;
     } else if (period.isBefore(current)) {
-      _slideDirection = -1;
+      _slideDirection.value = -1;
     } else {
       return;
     }
@@ -95,121 +185,33 @@ class _OverviewPageState extends State<OverviewPage> {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
 
-    return ListenableBuilder(
-      listenable: _viewModel,
-      builder: (context, child) {
-        if (_viewModel.isLoading) {
-          return const Scaffold(body: AppLoadingIndicator());
-        }
-
-        final summaries = _viewModel.categorySummaries;
-
-        return Scaffold(
-          body: HorizontalSwipeDetector(
-            onSwipe: (direction) =>
-                _changePeriodBySwipe(direction == SwipeDirection.forward),
-            child: RefreshIndicator(
-              onRefresh: _viewModel.refreshAll,
-              child: CustomScrollView(
-                slivers: [
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: PeriodSelector(
-                      period: _viewModel.selectedPeriod,
-                      minPeriod: _viewModel.minPeriod,
-                      maxPeriod: _viewModel.maxPeriod,
-                      onChanged: _onPeriodChanged,
-                    ),
-                  ),
-
-                  SliverToBoxAdapter(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _viewModel.showRevenueEditor
-                          ? RevenueForm(
-                              key: const ValueKey('revenue-editor'),
-                              viewModel: _viewModel,
-                              onClose: _viewModel.closeRevenueEditor,
-                            )
-                          : const SizedBox.shrink(
-                              key: ValueKey('revenue-editor-hidden'),
-                            ),
-                    ),
-                  ),
-
-                  if (_viewModel.accounts.isNotEmpty)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: CollapsingSummaryHeader(
-                        viewModel: _viewModel,
-                        onSelectAccount: (acc) => _viewModel.account = acc,
-                        onEditRevenue: _viewModel.openRevenueEditor,
-                        onCategoryTap: _openCategoryDetails,
-                        slideDirection: _slideDirection,
-                      ),
-                    ),
-
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                  if (summaries.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: PeriodSlideSwitcher(
-                        period: _viewModel.selectedPeriod,
-                        direction: _slideDirection,
-                        child: EmptyState(
-                          icon: Icons.receipt_long_rounded,
-                          title: tr.noExpensesForPeriod,
-                          subtitle: tr.addFirstExpenseHint,
-                        ),
-                      ),
-                    )
-                  else ...[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                      sliver: SliverToBoxAdapter(
-                        child: Text(
-                          tr.expensesByCategory,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-                      sliver: SliverToBoxAdapter(
-                        child: PeriodSlideSwitcher(
-                          period: _viewModel.selectedPeriod,
-                          direction: _slideDirection,
-                          child: CategoryExpenseList(
-                            summaries: summaries,
-                            currencyCode: _viewModel.currencyCode,
-                            localeName: _viewModel.localeName,
-                            decimalPlaces: _viewModel.amountDecimalPlaces,
-                            onTapCategory: (summary) {
-                              final categoryId = summary.category.id;
-                              if (categoryId == null ||
-                                  _viewModel.account?.id == null) {
-                                return;
-                              }
-                              _openCategoryDetails(categoryId);
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          floatingActionButton: BudglyFab(
-            heroTag: "create_expense",
-            label: tr.fabNewExpense,
-            onPressed: _openAddExpenseModal,
-          ),
-        );
-      },
+    return Scaffold(
+      body: ViewModelFeedback(
+        viewModel: _viewModel,
+        child: ViewModelSelector<OverviewViewModel, bool>(
+          model: _viewModel,
+          selector: (model) => model.isLoading,
+          builder: (context, isLoading) => isLoading
+              ? const AppLoadingIndicator()
+              : OverviewContent(
+                  viewModel: _viewModel,
+                  slideDirection: _slideDirection,
+                  onPeriodChanged: _onPeriodChanged,
+                  onSwipe: _changePeriodBySwipe,
+                  onCategoryTap: _openCategoryDetails,
+                  onRefresh: _viewModel.refreshAll,
+                  translations: tr,
+                ),
+        ),
+      ),
+      floatingActionButton: ValueListenableBuilder<bool>(
+        valueListenable: _showFabLabel,
+        builder: (context, showLabel, child) => BudglyFab(
+          heroTag: 'create_expense',
+          label: showLabel ? tr.fabNewExpense : null,
+          onPressed: _openAddExpenseModal,
+        ),
+      ),
     );
   }
 }

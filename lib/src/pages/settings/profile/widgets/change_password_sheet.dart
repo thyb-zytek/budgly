@@ -4,6 +4,7 @@ import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/pages/settings/profile/view_model.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class ChangePasswordSheet extends StatefulWidget {
@@ -76,7 +77,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
               child: AutofillGroup(
                 child: Form(
                   key: _formKey,
@@ -116,7 +117,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
               child: Row(
                 spacing: 16,
                 children: [
@@ -126,19 +127,17 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         tr.cancel,
-                        style: ButtonType.error.labelStyle(theme, dense: true),
                       ),
                     ),
                   ),
                   Expanded(
                     child: FilledButton(
-                      style:
-                          ButtonType.primary.filledStyle(theme, dense: true),
+                      style: FilledButton.styleFrom(
+              padding: BudglyButtonDimensions.densePadding,
+            ),
                       onPressed: _submit,
                       child: Text(
                         tr.validate,
-                        style:
-                            ButtonType.primary.labelStyle(theme, dense: true),
                       ),
                     ),
                   ),

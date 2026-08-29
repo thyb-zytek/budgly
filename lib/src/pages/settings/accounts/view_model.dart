@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:math';
 
-import 'package:budgly/src/core/loading/progressive_loader.dart';
+import 'package:budgly/src/core/errors/app_user_message.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
@@ -10,6 +11,7 @@ import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/image/image_service.dart';
 import 'package:budgly/src/models/account/account_editing_data.dart';
 import 'package:budgly/src/services/image/account_image_helper.dart';
+import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
 import 'package:flutter/material.dart';
 
@@ -61,25 +63,21 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
     super.dispose();
   }
 
-  Future<void> loadAccounts({bool needLoading = true}) async {
-    if (needLoading) setLoading(true);
+  Future<void> loadAccounts() async {
+    setLoading(true);
     try {
-      await ProgressiveLoader.loadEssentialOnly(
-        essentialData: () async {
-          await _accountsService.loadAccounts();
-        },
-        secondaryData: () async {
-          await Future.wait(
-            _accountsService.accounts
-                .where((account) => account.picture != null && account.id != null)
-                .map(refreshPictureUrl),
-          );
-        },
-        onProgress: (progress) {},
-      );
+      await _accountsService.loadAccounts();
+      // Signed URLs are presentation data. They must never delay the account
+      // list, especially when the account list itself came from local cache.
+      unawaited(Future.wait(
+        _accountsService.accounts
+            .where((account) => account.picture != null && account.id != null)
+            .map(refreshPictureUrl),
+      ));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
-      if (needLoading) setLoading(false);
-      if (!isDisposed) notifyListeners();
+      setLoading(false);
     }
   }
 
@@ -103,20 +101,44 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
     _localAccounts.add(account);
 
     setLoading(false);
-    if (!isDisposed) notifyListeners();
+  }
+
+  Future<void> _cleanupDeletedAccount(String accountId) async {
+    try {
+      CategoriesService.instance.invalidateAccountCache(accountId);
+      await Future.wait([
+        ExpensesService.instance.deleteByAccountId(accountId),
+        AccountBudgetsService.instance.deleteByAccountId(accountId),
+        _accountsService.deleteAccountFolder(accountId),
+      ]);
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to clean up deleted account', e, stackTrace);
+    }
   }
 
   @override
   Future<void> removeAccount(Account account) async {
-    if (account.id != null) {
-      await ExpensesService.instance.deleteByAccountId(account.id!);
-      await AccountBudgetsService.instance.deleteByAccountId(account.id!);
-      await _accountsService.deleteAccountFolder(account.id!);
-      await _accountsService.deleteAccount(account.id!);
-    } else {
+    if (account.id == null) {
       _localAccounts.removeWhere((a) => identical(a, account));
+      if (!isDisposed) notifyListeners();
+      return;
     }
-    if (!isDisposed) notifyListeners();
+
+    setLoading(true);
+    try {
+      final accountId = account.id!;
+      await _accountsService.deleteAccount(accountId);
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.accountDeleted));
+
+      // Account removal is complete from the user's point of view once the
+      // local state and Supabase queue are updated. Firestore/storage cleanup
+      // is best-effort and can finish offline or on the next sync.
+      unawaited(_cleanupDeletedAccount(accountId));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+    } finally {
+      setLoading(false);
+    }
   }
 
   @override
@@ -174,6 +196,9 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
 
       _localAccounts.removeWhere((a) => identical(a, account));
       _editingAccount = null;
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.accountSaved));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
       setLoading(false);
     }
@@ -200,6 +225,7 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
         name: _nameController.text,
         color: _editingData.color,
         picture: currentFileName,
+        pictureUrl: currentFileName == null ? null : account.pictureUrl,
       );
 
       updatedAccount = await _accountsService.updateAccount(updatedAccount);
@@ -213,6 +239,9 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
       }
 
       _editingAccount = null;
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.accountSaved));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
       setLoading(false);
     }

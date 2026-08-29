@@ -4,6 +4,7 @@ import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show
         GoogleSignIn,
@@ -20,16 +21,20 @@ class AuthService {
     return _instance!;
   }
 
-  final fb.FirebaseAuth _auth;
-  final GoogleSignIn _googleSignIn;
+  final fb.FirebaseAuth? _authInput;
+  final GoogleSignIn? _googleSignInInput;
   final UserProfileSupabase _userProfileSupabase;
+
+  fb.FirebaseAuth get _auth => _authInput ?? fb.FirebaseAuth.instance;
+  GoogleSignIn get _googleSignIn =>
+      _googleSignInInput ?? GoogleSignIn.instance;
 
   AuthService({
     fb.FirebaseAuth? auth,
     GoogleSignIn? googleSignIn,
     UserProfileSupabase? userProfileSupabase,
-  })  : _auth = auth ?? fb.FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn.instance,
+  })  : _authInput = auth,
+        _googleSignInInput = googleSignIn,
         _userProfileSupabase = userProfileSupabase ?? UserProfileSupabase();
 
   AuthService._() : this();
@@ -89,6 +94,7 @@ class AuthService {
   }
 
   Future<User> signUpWithEmailAndPassword(String email, String password) async {
+    AnalyticsService.instance.track('signup_started');
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       if (userCredential.user == null) {
@@ -98,16 +104,21 @@ class AuthService {
       await userCredential.user!.sendEmailVerification();
       UserProfile profile = await _userProfileSupabase.getOrCreateProfile(userCredential.user!);
 
-      return User.fromFirebaseUser(userCredential.user!, profile: profile);
+      final user = User.fromFirebaseUser(userCredential.user!, profile: profile);
+      await AnalyticsService.instance.identify(user.id);
+      AnalyticsService.instance.track('signup_completed');
+      return user;
     } catch (e) {
       if (e is fb.FirebaseAuthException && e.code == 'email-already-in-use') {
         throw const AuthenticationException(code: 'email-already-in-use', message: 'Email already in use');
       }
+      AnalyticsService.instance.track('signup_failed', {'error_code': e is fb.FirebaseAuthException ? e.code : 'unknown'});
       throw AuthenticationException(code: 'sign-up-failed', message: 'Failed to sign up: $e');
     }
   }
 
   Future<User> signInWithEmailAndPassword(String email, String password) async {
+    AnalyticsService.instance.track('login_started');
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(email: email, password: password);
       final fbUser = userCredential.user;
@@ -117,8 +128,12 @@ class AuthService {
 
       final UserProfile profile =
           await _userProfileSupabase.getOrCreateProfile(fbUser);
-      return User.fromFirebaseUser(fbUser, profile: profile);
+      final user = User.fromFirebaseUser(fbUser, profile: profile);
+      await AnalyticsService.instance.identify(user.id);
+      AnalyticsService.instance.track('login_completed');
+      return user;
     } on fb.FirebaseAuthException catch (e) {
+      AnalyticsService.instance.track('login_failed', {'error_code': e.code});
       throw AuthenticationException(code: e.code, message: e.message ?? "An error occurred during sign in");
     } catch (e) {
       throw AuthenticationException(code: 'sign-in-failed', message: 'Failed to sign in: $e');
@@ -126,9 +141,12 @@ class AuthService {
   }
 
   Future<void> resetPassword(String email) async {
+    AnalyticsService.instance.track('password_reset_started');
     try {
       await _auth.sendPasswordResetEmail(email: email);
+      AnalyticsService.instance.track('password_reset_completed');
     } on fb.FirebaseAuthException catch (e) {
+      AnalyticsService.instance.track('password_reset_failed', {'error_code': e.code});
       throw AuthenticationException(code: e.code, message: e.message ?? "An error occurred");
     }
   }
@@ -138,6 +156,7 @@ class AuthService {
       final fb.User? user = _auth.currentUser;
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
+        AnalyticsService.instance.track('email_verification_sent');
       }
     } on fb.FirebaseAuthException catch (e) {
       throw AuthenticationException(code: e.code, message: e.message ?? "An error occurred");
@@ -145,23 +164,46 @@ class AuthService {
   }
 
   Future<User> signInWithGoogle() async {
+    AnalyticsService.instance.track('google_signin_started');
     try {
       await GoogleSignInInitializer.ensureInitialized();
 
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
+        throw const AuthenticationException(
+          code: 'missing-id-token',
+          message: 'Google Sign-In did not return an ID token. '
+              'Check Firebase SHA / serverClientId configuration.',
+        );
+      }
       final credential = fb.GoogleAuthProvider.credential(idToken: googleAuth.idToken);
       final userCredential = await _auth.signInWithCredential(credential);
-      final fbUser = userCredential.user!;
+      final fbUser = userCredential.user;
+      if (fbUser == null) {
+        throw const AuthenticationException(
+          code: 'no-firebase-user',
+          message: 'Firebase did not return a user after Google credential.',
+        );
+      }
 
       final profile = await _userProfileSupabase.getOrCreateProfile(fbUser);
-      return User.fromFirebaseUser(fbUser, profile: profile);
+      final user = User.fromFirebaseUser(fbUser, profile: profile);
+      await AnalyticsService.instance.identify(user.id);
+      AnalyticsService.instance.track('google_signin_completed');
+      return user;
     } on fb.FirebaseAuthException catch (e) {
+      AnalyticsService.instance.track('google_signin_failed', {'error_code': e.code});
       throw AuthenticationException(code: e.code, message: e.message ?? 'Google Sign-In Error');
-    } catch (e) {
-      if (e is GoogleSignInException && e.code == GoogleSignInExceptionCode.canceled) {
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthenticationException(code: 'canceled', message: 'Google Sign-In was canceled.');
       }
+      AnalyticsService.instance.track('google_signin_failed', {'error_code': e.code.name});
+      throw AuthenticationException(code: e.code.name, message: e.toString());
+    } catch (e) {
+      if (e is AuthenticationException) rethrow;
+      AnalyticsService.instance.track('google_signin_failed', {'error_code': 'unknown'});
       throw AuthenticationException(code: 'google-sign-in-failed', message: 'Failed to sign in with Google: $e');
     }
   }
@@ -170,7 +212,10 @@ class AuthService {
     try {
       await _googleSignIn.signOut();
       await _auth.signOut();
+      await AnalyticsService.instance.reset();
+      AnalyticsService.instance.track('logout_completed');
     } catch (e) {
+      AnalyticsService.instance.track('logout_failed');
       throw AuthenticationException(code: 'sign-out-failed', message: 'Failed to sign out: $e');
     }
   }

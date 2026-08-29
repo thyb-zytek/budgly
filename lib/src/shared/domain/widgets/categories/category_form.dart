@@ -1,11 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
@@ -56,10 +56,9 @@ class _CategoryFormState extends State<CategoryForm>
     initPulseHintAnimations();
 
     if (widget.category?.id == null) {
-      Future.delayed(
-        const Duration(milliseconds: 300),
-        () => _nameFocusNode.requestFocus(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nameFocusNode.requestFocus();
+    });
     }
   }
 
@@ -111,37 +110,37 @@ class _CategoryFormState extends State<CategoryForm>
     });
   }
 
-  Widget _buildCategoryIcon() {
-    return wrapWithPulseHint(
-      CategoryIconView(
-        icon: _tempIcon,
-        color: _tempColor,
-        size: 52,
-        onTap: widget.enabled ? () => _openCustomizationPicker(context) : null,
-        showEditBadge: widget.enabled,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
 
-    return AnimatedBuilder(
-      animation: widget.viewModel,
+    return ListenableBuilder(
+      listenable: widget.viewModel,
       builder: (context, child) {
         if (widget.compact) {
           return Row(
             spacing: 8,
             children: [
-              _buildCategoryIcon(),
+              PulseHint(
+                pulseAnimation: pulseAnimation,
+                hintAnimation: hintAnimation,
+                child: CategoryIconView(
+                  icon: _tempIcon,
+                  color: _tempColor,
+                  size: 52,
+                  onTap: widget.enabled
+                      ? () => _openCustomizationPicker(context)
+                      : null,
+                  showEditBadge: widget.enabled,
+                ),
+              ),
               Expanded(
                 child: TextInput(
                   focusNode: _nameFocusNode,
                   controller: widget.viewModel.categoryEditingData.nameController,
                   labelText: tr.categoryName,
                   textInputAction: TextInputAction.done,
-                  onChange: (_) => setState(() {}),
                 ),
               ),
             ],
@@ -151,7 +150,19 @@ class _CategoryFormState extends State<CategoryForm>
         return EntityForm(
           formKey: widget.formKey,
           focusNode: _nameFocusNode,
-          leadingWidget: _buildCategoryIcon(),
+          leadingWidget: PulseHint(
+            pulseAnimation: pulseAnimation,
+            hintAnimation: hintAnimation,
+            child: CategoryIconView(
+              icon: _tempIcon,
+              color: _tempColor,
+              size: 52,
+              onTap: widget.enabled
+                  ? () => _openCustomizationPicker(context)
+                  : null,
+              showEditBadge: widget.enabled,
+            ),
+          ),
           nameController: widget.viewModel.categoryEditingData.nameController,
           labelText: tr.categoryName,
           validator: (v) =>

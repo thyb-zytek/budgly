@@ -1,5 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
@@ -49,18 +49,18 @@ class _UserDetailsState extends State<UserDetails> {
       elevation: 0,
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16).copyWith(top: 24),
+        padding: const EdgeInsets.all(BudglySpacing.lg).copyWith(top: BudglySpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
           spacing: 32,
           children: [
             Stack(
               alignment: Alignment.centerLeft,
               children: [
                 Column(
-                  mainAxisSize: MainAxisSize.max,
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 8,
                   children: [
@@ -87,7 +87,7 @@ class _UserDetailsState extends State<UserDetails> {
                           ),
                         )
                         : Padding(
-                          padding: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.only(left: BudglySpacing.sm),
                           child: Text(
                             widget.user.profile?.fullName ?? tr.notAvailable,
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -113,8 +113,7 @@ class _UserDetailsState extends State<UserDetails> {
                                 _isEditingName = false;
                               });
                             },
-                            color: ButtonType.primary.iconButtonColor(theme),
-                            style: ButtonType.primary.iconButtonStyle(theme),
+                            color: theme.colorScheme.primary,
                           ),
                           IconButton(
                             icon: Icon(Icons.cancel_rounded, size: 32),
@@ -123,8 +122,7 @@ class _UserDetailsState extends State<UserDetails> {
                               _nameController.text =
                                   widget.user.profile?.fullName ?? '';
                             }),
-                            color: ButtonType.error.iconButtonColor(theme),
-                            style: ButtonType.error.iconButtonStyle(theme),
+                            color: theme.colorScheme.error,
                           ),
                         ],
                       ),
@@ -135,14 +133,13 @@ class _UserDetailsState extends State<UserDetails> {
                       child: IconButton(
                         onPressed: _displayEditName,
                         icon: Icon(Icons.edit, size: 32),
-                        color: ButtonType.primary.iconButtonColor(theme),
-                        style: ButtonType.primary.iconButtonStyle(theme),
+                        color: theme.colorScheme.primary,
                       ),
                     ),
               ],
             ),
             Column(
-              mainAxisSize: MainAxisSize.max,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 8,
               children: [
@@ -155,7 +152,7 @@ class _UserDetailsState extends State<UserDetails> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: BudglySpacing.sm),
                   child: Text(
                     widget.user.email ?? tr.notAvailable,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -166,7 +163,7 @@ class _UserDetailsState extends State<UserDetails> {
               ],
             ),
             Column(
-              mainAxisSize: MainAxisSize.max,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 8,
               children: [
@@ -179,7 +176,7 @@ class _UserDetailsState extends State<UserDetails> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: BudglySpacing.sm),
                   child: Text(
                     widget.user.profile?.createdAt != null
                         ? DateFormat(

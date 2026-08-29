@@ -5,6 +5,7 @@ import 'package:budgly/src/pages/settings/categories/tab.dart';
 import 'package:budgly/src/pages/settings/preferences/tab.dart';
 import 'package:budgly/src/pages/settings/profile/tab.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/swipe_tabs.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -21,6 +22,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _accountsViewModel = AccountsViewModel();
+    AnalyticsService.instance.track('settings_opened');
   }
 
   @override

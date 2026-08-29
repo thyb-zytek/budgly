@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class Avatar extends StatelessWidget {
@@ -33,6 +34,26 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isFilePicture = picture != null &&
+        (isLocalPicture ||
+            picture!.startsWith('/') ||
+            picture!.startsWith('file://'));
+    File? pictureFile;
+    if (picture != null) {
+      if (picture!.startsWith('file://')) {
+        try {
+          pictureFile = File(Uri.parse(picture!).toFilePath());
+        } catch (e) {
+          // If URI parsing fails, try using the path directly after removing file:// prefix
+          final path = picture!.replaceFirst('file://', '');
+          if (path.isNotEmpty) {
+            pictureFile = File(path);
+          }
+        }
+      } else if (picture!.startsWith('/')) {
+        pictureFile = File(picture!);
+      }
+    }
     final effectiveBorderColor = borderColor ?? backgroundColor;
     final innerRadius =
         effectiveBorderColor == null ? size / 2 : size / 2 - borderWidth;
@@ -42,9 +63,10 @@ class Avatar extends StatelessWidget {
       backgroundColor: backgroundColor,
       foregroundImage: picture == null
           ? null
-          : isLocalPicture
-          ? FileImage(File(picture!))
+          : isFilePicture
+          ? FileImage(pictureFile!)
           : NetworkImage(picture!),
+      onForegroundImageError: (exception, stackTrace) {},
       child: Text(
         initial,
         style: size < 100
@@ -71,12 +93,17 @@ class Avatar extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        GestureDetector(
-          onTap: onTap,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Center(child: avatar),
+        Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Center(child: avatar),
+            ),
           ),
         ),
         if (canRemove && onRemove != null)
@@ -86,13 +113,11 @@ class Avatar extends StatelessWidget {
             child: Material(
               color: theme.colorScheme.surface,
               shape: const CircleBorder(),
-              elevation: 2,
-              shadowColor: Colors.black26,
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: onRemove,
                 child: Padding(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(BudglySpacing.sm),
                   child: Icon(
                     Icons.close_rounded,
                     size: 18,
@@ -109,10 +134,8 @@ class Avatar extends StatelessWidget {
             child: Material(
               color: theme.colorScheme.primary,
               shape: const CircleBorder(),
-              elevation: 2,
-              shadowColor: Colors.black26,
               child: Padding(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(BudglySpacing.sm),
                 child: Icon(
                   Icons.photo_camera_rounded,
                   size: size < 60 ? 13 : 16,

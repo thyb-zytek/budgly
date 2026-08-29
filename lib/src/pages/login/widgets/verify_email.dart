@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class VerifyEmail extends StatefulWidget {
@@ -61,24 +62,22 @@ class _VerifyEmailState extends State<VerifyEmail> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(top: 24),
+            padding: EdgeInsets.only(top: BudglySpacing.xl),
             child: FilledButton(
-              style: ButtonType.primary.filledStyle(theme),
-              onPressed: widget.onResendPressed,
+                            onPressed: widget.onResendPressed,
               child: Text(
                 tr.resendVerificationEmail,
-                style: ButtonType.primary.labelStyle(theme),
               ),
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(top: BudglySpacing.sm),
             child: FilledButton(
               style: ButtonType.neutralVariant.filledStyle(theme),
               onPressed: widget.onSignInPressed,
               child: Text(
                 tr.signIn,
-                style: ButtonType.neutralVariant.labelStyle(theme),
+                
               ),
             ),
           ),

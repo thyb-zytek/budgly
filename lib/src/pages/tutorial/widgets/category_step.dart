@@ -1,9 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
-import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/pages/tutorial/view_model.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
+import 'package:budgly/src/pages/tutorial/widgets/tutorial_category_tile.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
@@ -41,10 +40,9 @@ class _CategoryStepState extends State<CategoryStep>
     super.initState();
     _nameFocusNode = FocusNode();
 
-    Future.delayed(
-      const Duration(milliseconds: 300),
-      () => _nameFocusNode.requestFocus(),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nameFocusNode.requestFocus();
+    });
 
     initPulseHintAnimations();
   }
@@ -92,41 +90,6 @@ class _CategoryStepState extends State<CategoryStep>
     if (mounted) widget.onNext();
   }
 
-  Widget _categoryTile(BuildContext context, Category category) {
-    final theme = Theme.of(context);
-
-    return TutorialPopIn(
-      key: ValueKey(category.id),
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              if (category.icon != null)
-                CategoryIconView(
-                  icon: category.icon!,
-                  color: category.color ?? theme.colorScheme.primary,
-                  size: 36,
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  category.name ?? '',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_rounded, size: 20),
-                onPressed: () => widget.viewModel.removeCategory(category),
-                color: theme.colorScheme.error,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +112,10 @@ class _CategoryStepState extends State<CategoryStep>
               Row(
                 spacing: 16,
                 children: [
-                  wrapWithPulseHint(
-                    CategoryIconView(
+                  PulseHint(
+                    pulseAnimation: pulseAnimation,
+                    hintAnimation: hintAnimation,
+                    child: CategoryIconView(
                       icon: currentIcon,
                       color: vm.categoryColor,
                       size: 56,
@@ -194,8 +159,7 @@ class _CategoryStepState extends State<CategoryStep>
                           label: Text(tr.add),
                         )
                       : FilledButton(
-                          style: ButtonType.primary.filledStyle(theme),
-                          onPressed: isValid ? _handleValidate : null,
+                                                    onPressed: isValid ? _handleValidate : null,
                           child: Text(tr.add),
                         );
                 },
@@ -208,7 +172,10 @@ class _CategoryStepState extends State<CategoryStep>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: vm.createdCategories
-                        .map((category) => _categoryTile(context, category))
+                        .map((category) => TutorialCategoryTile(
+                              category: category,
+                              onDelete: () => vm.removeCategory(category),
+                            ))
                         .toList(),
                   ),
                 ),
@@ -222,11 +189,9 @@ class _CategoryStepState extends State<CategoryStep>
               return SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  style: ButtonType.primary.filledStyle(theme),
-                  onPressed: canProceed ? _handleNext : null,
+                                    onPressed: canProceed ? _handleNext : null,
                   child: Text(
                     tr.tutorialNext,
-                    style: ButtonType.primary.labelStyle(theme),
                   ),
                 ),
               );
@@ -237,3 +202,4 @@ class _CategoryStepState extends State<CategoryStep>
     );
   }
 }
+

@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class TutorialStepScaffold extends StatelessWidget {
@@ -26,12 +27,12 @@ class TutorialStepScaffold extends StatelessWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
-            child: _StepEntrance(
-              child: Column(
+            padding: const EdgeInsets.fromLTRB(BudglySpacing.xxl, BudglySpacing.sm, BudglySpacing.xxl, BudglySpacing.lg),
+            child: _buildStepEntrance(
+              Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 20,
+                spacing: BudglySpacing.xl,
                 children: [
                   if (badge != null) Center(child: badge!),
                   Text(
@@ -48,10 +49,7 @@ class TutorialStepScaffold extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (content != null) ...[
-                    const SizedBox(height: 4),
-                    content!,
-                  ],
+                  ?content,
                 ],
               ),
             ),
@@ -61,13 +59,13 @@ class TutorialStepScaffold extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           padding: EdgeInsets.fromLTRB(
-            32,
-            12,
-            32,
+            BudglySpacing.xxl,
+            BudglySpacing.md,
+            BudglySpacing.xxl,
             24 + MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Column(
-            spacing: 8,
+            spacing: BudglySpacing.sm,
             children: [
               primaryAction,
               ?secondaryAction,
@@ -79,80 +77,21 @@ class TutorialStepScaffold extends StatelessWidget {
   }
 }
 
-class _StepEntrance extends StatelessWidget {
-  final Widget child;
-
-  const _StepEntrance({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) {
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, (1 - t) * 16),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-}
-
-class TutorialStepBadge extends StatelessWidget {
-  final Widget child;
-  final Color? color;
-  final double size;
-
-  const TutorialStepBadge({
-    super.key,
-    required this.child,
-    this.color,
-    this.size = 96,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tint = color ?? theme.colorScheme.primary;
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [tint.withAlpha(46), tint.withAlpha(0)],
+Widget _buildStepEntrance(Widget child) {
+  return TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0, end: 1),
+    duration: const Duration(milliseconds: 450),
+    curve: Curves.easeOutCubic,
+    builder: (context, t, child) {
+      return Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, (1 - t) * 16),
+          child: child,
         ),
-      ),
-      child: Center(child: child),
-    );
-  }
+      );
+    },
+    child: child,
+  );
 }
 
-class TutorialPopIn extends StatelessWidget {
-  final Widget child;
-
-  const TutorialPopIn({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutBack,
-      builder: (context, t, child) {
-        return Opacity(
-          opacity: t.clamp(0, 1),
-          child: Transform.scale(scale: t, child: child),
-        );
-      },
-      child: child,
-    );
-  }
-}

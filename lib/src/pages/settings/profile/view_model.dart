@@ -1,4 +1,7 @@
+import 'package:budgly/src/core/auth/auth_exception.dart';
+import 'package:budgly/src/core/errors/app_user_message.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
@@ -24,8 +27,6 @@ class ProfileViewModel extends BaseViewModel {
 
   User? get currentUser => _profileService.currentUser;
 
-  @override
-  bool get isLoading => super.isLoading || _profileService.isLoading;
   TextEditingController get oldPasswordController => _oldPasswordController;
   TextEditingController get passwordController => _passwordController;
   TextEditingController get confirmPasswordController => _confirmPasswordController;
@@ -57,8 +58,12 @@ class ProfileViewModel extends BaseViewModel {
         _oldPasswordController.value.text,
         _passwordController.value.text,
       );
-    } catch (e) {
-      rethrow;
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.passwordChanged));
+    } catch (e, stackTrace) {
+      final userMessage = e is AuthenticationException && e.code == 'password-change-failed'
+          ? const AppUserMessage.error(AppMessageKey.passwordChangeFailed)
+          : null; // let setError classify anything else generically
+      setError(e, stackTrace: stackTrace, userMessage: userMessage);
     } finally {
       _oldPasswordController.clear();
       _passwordController.clear();
@@ -68,8 +73,11 @@ class ProfileViewModel extends BaseViewModel {
   }
 
   Future<void> loadUser() async {
+    setLoading(true);
     try {
       await _profileService.loadUserProfile(forceRefresh: true);
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
       setLoading(false);
     }
@@ -78,32 +86,58 @@ class ProfileViewModel extends BaseViewModel {
   Future<void> refreshUser() async {
     setLoading(true);
     try {
-      _accountsService.invalidateCache();
-      _categoriesService.invalidateCache();
+      // Replay every pending local mutation. Offline-first: we only replace
+      // the local data with fresh server data once we are sure all pending
+      // mutations reached the server (i.e. we are online). Otherwise we bail
+      // out and keep the existing local data intact.
+      final online = await ProfileService.flushPendingMutations();
+      if (!online) {
+        throw StateError('offline: pending mutations could not be flushed');
+      }
+
+      // Online: safe to overwrite local caches/stores with server data.
+      await Future.wait([
+        _accountsService.loadAccounts(forceRefresh: true),
+        _profileService.refreshFromServer(),
+      ]);
+
       final firstAccount = _accountsService.accounts.isNotEmpty
           ? _accountsService.accounts.first.id
           : null;
       if (firstAccount != null) {
-        _categoriesService.listCategoriesByAccount(firstAccount);
+        await _categoriesService.listCategoriesByAccount(
+          firstAccount,
+          forceRefresh: true,
+        );
       }
 
-      await _profileService.loadUserProfile(forceRefresh: true);
+      AnalyticsService.instance.track('profile_refresh', const {'status': 'success'});
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.profileRefreshed));
+    } catch (e, stackTrace) {
+      AnalyticsService.instance.track('profile_refresh', const {'status': 'failed'});
+      setError(
+        e,
+        stackTrace: stackTrace,
+        userMessage: const AppUserMessage.error(AppMessageKey.refreshProfileFailed),
+      );
     } finally {
       setLoading(false);
     }
   }
 
   Future<void> onChangeName(String name) async {
-    await _profileService.updateUserName(name);
+    try {
+      await _profileService.updateUserName(name);
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.nameChanged));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+    }
   }
 
   Future<void> signOut() async {
     setLoading(true);
     try {
       await _profileService.signOut();
-      _accountsService.clearLocalAccounts();
-      _categoriesService.invalidateCache();
-
       _oldPasswordController.clear();
       _passwordController.clear();
       _confirmPasswordController.clear();

@@ -6,6 +6,7 @@ import 'package:budgly/src/pages/tutorial/widgets/welcome_step.dart';
 import 'package:budgly/src/pages/tutorial/widgets/account_step.dart';
 import 'package:budgly/src/pages/tutorial/widgets/category_step.dart';
 import 'package:budgly/src/pages/tutorial/widgets/budget_step.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -88,10 +89,7 @@ class _TutorialPageState extends State<TutorialPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.all(BudglySpacing.md),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [

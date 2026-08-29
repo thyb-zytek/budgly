@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
@@ -32,14 +33,24 @@ class RecurrenceSelector extends StatelessWidget {
     final tr = AppLocalizations.of(context)!;
 
     return Selector<RecurrenceType>(
-      items: RecurrenceType.values,
+      items: const [
+        RecurrenceType.none,
+        RecurrenceType.monthly,
+        RecurrenceType.yearly,
+        RecurrenceType.bimonthly,
+        RecurrenceType.trimonthly,
+        RecurrenceType.halfyearly,
+        RecurrenceType.biyearly,
+        RecurrenceType.daily,
+        RecurrenceType.weekly,
+      ],
       selectedItem: selectedRecurrence,
       backgroundColor: Theme.of(context).colorScheme.surface,
       maxHeight: 300,
       onSelect: onRecurrenceChanged,
       itemBuilder: (context, recurrence) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
           child: Text(recurrenceLabel(tr, recurrence)),
         );
       },

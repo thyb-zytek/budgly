@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class PreferenceSection extends StatelessWidget {
@@ -15,7 +16,7 @@ class PreferenceSection extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+      padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.sm, BudglySpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 8,

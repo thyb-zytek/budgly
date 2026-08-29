@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:flutter/material.dart';
 
@@ -58,13 +59,15 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapUp: (details) {
-        final summary = _hitTest(details.localPosition);
-        if (summary != null) widget.onCategoryTap?.call(summary);
-      },
-      child: SizedBox(
+    return Semantics(
+      label: AppLocalizations.of(context)?.semanticDonutChart,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapUp: (details) {
+          final summary = _hitTest(details.localPosition);
+          if (summary != null) widget.onCategoryTap?.call(summary);
+        },
+        child: SizedBox(
         width: widget.size,
         height: widget.size,
         child: Stack(
@@ -99,7 +102,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   CategoryExpenseSummary? _hitTest(Offset position) {

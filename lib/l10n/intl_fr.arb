@@ -4,6 +4,10 @@
   "appDescription": "Gérer votre budget en toute simplicité.",
   "overviewLink": "Budget",
   "settingsLink": "Paramètres",
+  "syncIssueBanner": "Certaines modifications n'ont pas pu être synchronisées.",
+  "syncIssueRetry": "Réessayer",
+  "syncSuccessBanner": "Toutes les modifications ont été synchronisées.",
+  "syncSyncingBanner": "Synchronisation en cours...",
   "invalidCurrency": "La valeur doit être un montant valide.",
   "invalidDate": "La date doit être valide.",
   "userHasAccount": "Vous avez un compte ?",
@@ -61,6 +65,9 @@
   "add": "Ajouter",
   "cancel": "Annuler",
   "commonError": "Erreur",
+  "serviceUnavailableTitle": "Service temporairement indisponible",
+  "serviceUnavailableMessage": "Nous n'arrivons pas à joindre nos serveurs pour le moment. Cela peut être dû à une connexion internet limitée ou à une maintenance de nos services.",
+  "reloadApp": "Recharger",
   "cropImage": "Ajuster l'image",
   "pickImage": "Sélectionner une image",
   "picture": "Image",
@@ -114,14 +121,13 @@
   "accountUpdatedSuccessfully": "Compte mis à jour avec succès",
   "logout": "Se déconnecter",
   "refreshProfile": "Actualiser le profil",
+  "profileRefreshed": "Profil actualisé",
+  "refreshProfileFailed": "Actualisation impossible",
   "changePassword": "Changer le mot de passe",
   "editPassword": "Modifier le mot de passe",
   "oldPassword": "Ancien mot de passe",
   "passwordChangeFailed": "Changement de mot de passe echoué",
   "passwordChangedSuccessfully": "Mot de passe changé avec succès",
-  "serviceUnavailableTitle": "Service temporairement indisponible",
-  "serviceUnavailableMessage": "Nous n'arrivons pas à joindre nos serveurs pour le moment. Cela peut être dû à une connexion internet limitée ou à une maintenance de nos services.",
-  "reloadApp": "Recharger",
   "avatarCustomization": "Personnalisation de l'avatar",
   "selectAccountToManageCategories": "Sélectionnez un compte pour gérer ses catégories",
   "categoryCustomization": "Personnalisation de la catégorie",
@@ -171,6 +177,10 @@
   "recurrenceBiYearly": "Tout les 2 ans",
   "debitDate": "Date de débit",
   "debitDateHelp": "Date à laquelle cette dépense sera déduite de votre solde.",
+  "endDate": "Date de fin",
+  "endDateHelp": "Cette dépense cessera de se répéter après cette date (incluse).",
+  "addEndDate": "Ajouter une date de fin",
+  "endDateBeforeDebitDate": "La date de fin ne peut pas être antérieure à la date de débit.",
   "revenue": "Revenue",
   "remaining": "Restant",
   "remainingBasedOnRevenueHint": "Basé sur ton revenu pour cette période",
@@ -219,6 +229,14 @@
       }
     }
   },
+  "recurringEditFromDate": "Les échéances précédentes restent inchangées. La modification s'applique à partir du {date}.",
+  "@recurringEditFromDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "createdOnDate": "Créée le",
   "debitedOnDate": "Débité le",
   "edit": "Modifier",
@@ -242,9 +260,40 @@
       }
     }
   },
+  "confirmDeleteRecurringExpense": "Supprimer la dépense récurrente : {expenseName}",
+  "@confirmDeleteRecurringExpense": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteRecurringExpenseMessage": "Cette dépense est récurrente le {date}. Voulez-vous supprimer uniquement cette échéance ou cette échéance et les suivantes ?",
+  "@confirmDeleteRecurringExpenseMessage": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteSingleOccurrence": "Cette occurrence uniquement",
+  "deleteFutureOccurrences": "Cette occurrence et les suivantes",
   "expenseDeletedSuccessfully": "Dépense supprimée avec succès",
   "expenseUpdatedSuccessfully": "Dépense mise à jour avec succès",
   "expenseUpdateFailed": "Échec de la mise à jour de la dépense",
+  "errorNetwork": "Problème de connexion. Vérifiez votre réseau et réessayez.",
+  "errorPermission": "Vous n'avez pas les droits nécessaires pour cette action.",
+  "errorNotFound": "Cet élément est introuvable, il a peut-être déjà été supprimé.",
+  "errorValidation": "Certaines informations semblent invalides.",
+  "errorUnknown": "Une erreur inattendue s'est produite. Réessayez.",
+  "accountSaved": "Compte enregistré.",
+  "accountDeleted": "Compte supprimé.",
+  "categorySaved": "Catégorie enregistrée.",
+  "categoryDeleted": "Catégorie supprimée.",
+  "expenseSaved": "Dépense enregistrée.",
+  "expenseDeleted": "Dépense supprimée.",
+  "budgetSaved": "Budget mis à jour.",
+  "pictureUpdateFailed": "La photo n'a pas pu être enregistrée, mais le reste a bien été sauvegardé.",
   "tutorialWelcome": "Bienvenue sur Budgly !",
   "tutorialWelcomeDescription": "Configure ton premier compte pour commencer à suivre tes dépenses.",
   "tutorialStepAccounts": "Créer un compte",
@@ -260,15 +309,24 @@
   "tutorialStepProgress": "Étape {current} sur {total}",
   "@tutorialStepProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "tutorialCategoryCount": "{count, plural, one{{count} catégorie} other{{count} catégories}}",
   "@tutorialCategoryCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "expenseCreatedSuccessfully": "Dépense ajoutée avec succès"
+  "expenseCreatedSuccessfully": "Dépense ajoutée avec succès",
+  "semanticDonutChart": "Graphique en anneau des dépenses par catégorie",
+  "semanticColorPicker": "Sélecteur de couleur",
+  "semanticSwipeTabs": "Onglets navigables par glissement"
 }

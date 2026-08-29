@@ -1,6 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/shared/ui/widgets/customization_picker.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/color_wheel.dart';
@@ -56,8 +55,8 @@ Future<bool> showAvatarCustomizationSheet(
                 tabs: [
                   SizedBox(
                     width: double.infinity,
-                    child: FilledButton.icon(
-                      style: ButtonType.outlined.filledStyle(theme),
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(),
                       onPressed: () => pickImage().then((path) {
                         if (path == null) return;
                         setModalState(() {
@@ -68,11 +67,11 @@ Future<bool> showAvatarCustomizationSheet(
                       iconAlignment: IconAlignment.start,
                       icon: Icon(
                         Icons.upload_rounded,
-                        color: ButtonType.outlined.colors(theme).foreground,
+                        
                       ),
                       label: Text(
                         tr.pickImage,
-                        style: ButtonType.outlined.labelStyle(theme),
+                        
                       ),
                     ),
                   ),

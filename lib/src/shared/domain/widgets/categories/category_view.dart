@@ -1,5 +1,4 @@
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:flutter/material.dart';
 
@@ -44,7 +43,12 @@ class CategoryView extends StatelessWidget {
             ),
           ),
         Expanded(
-          child: Text(category.name ?? '', style: theme.textTheme.titleLarge),
+          child: Text(
+            category.name ?? '',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         if (onEdit != null || onDelete != null)
           Row(
@@ -55,15 +59,13 @@ class CategoryView extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.edit_rounded, size: 32),
                   onPressed: onEdit,
-                  color: ButtonType.primary.iconButtonColor(theme),
-                  style: ButtonType.primary.iconButtonStyle(theme),
+                  color: theme.colorScheme.primary,
                 ),
               if (onDelete != null)
                 IconButton(
                   icon: Icon(Icons.delete_rounded, size: 32),
                   onPressed: onDelete,
-                  color: ButtonType.error.iconButtonColor(theme),
-                  style: ButtonType.error.iconButtonStyle(theme),
+                  color: theme.colorScheme.error,
                 ),
             ],
           ),

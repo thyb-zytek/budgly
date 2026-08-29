@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class LoginAppbar extends StatelessWidget {
@@ -23,16 +24,16 @@ class LoginAppbar extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 16),
+              padding: const EdgeInsets.only(left: BudglySpacing.lg),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 width: isCompact ? 100 : 125,
-                child: Image.asset('assets/images/logo.png'),
+                child: Image.asset('assets/images/logo.webp'),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.only(bottom: BudglySpacing.xl),
               child: Text(
                 "Budgly",
                 style: theme.textTheme.displayLarge!.copyWith(
@@ -43,7 +44,7 @@ class LoginAppbar extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.lg),
           child: Text(
             tr.appDescription,
             style: theme.textTheme.titleLarge!.copyWith(

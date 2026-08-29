@@ -18,26 +18,21 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isHighlighted ? color.withAlpha(28) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+    return Chip(
+      avatar: Icon(icon, size: 16, color: color),
+      label: Text(
+        label,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: color,
+          fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 4,
-        children: [
-          Icon(icon, size: 16, color: color),
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
+      backgroundColor:
+          isHighlighted ? color.withAlpha(28) : Colors.transparent,
+      side: BorderSide.none,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

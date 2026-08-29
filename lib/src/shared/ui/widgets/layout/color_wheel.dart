@@ -1,3 +1,4 @@
+import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
@@ -14,7 +15,9 @@ class ColorWheel extends StatelessWidget {
         final availableWidth = constraints.maxWidth;
         final mediaQuery = MediaQuery.of(context);
 
-        return MediaQuery(
+        return Semantics(
+          label: AppLocalizations.of(context)?.semanticColorPicker,
+          child: MediaQuery(
           data: mediaQuery.copyWith(
             size: Size(availableWidth, availableWidth * 0.6),
           ),
@@ -29,7 +32,7 @@ class ColorWheel extends StatelessWidget {
               hueRingStrokeWidth: 16,
             ),
           ),
-        );
+        ));
       },
     );
   }

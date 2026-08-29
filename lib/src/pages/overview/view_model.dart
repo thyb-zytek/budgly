@@ -1,44 +1,53 @@
+import 'dart:async';
+
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
+import 'package:budgly/src/core/errors/app_user_message.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
-import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_controller.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/core/extensions/amount.dart';
-import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
-import 'package:flutter/material.dart';
+import 'package:budgly/src/pages/overview/ui_state.dart';
+import 'package:budgly/src/services/calculators/expense_summary_calculator.dart';
+import 'package:budgly/src/services/calculators/expense_occurrence_calculator.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
+import 'package:budgly/src/pages/overview/overview_repository.dart';
 
 class OverviewViewModel extends BaseViewModel {
   final AccountsService _accountsService;
   final CategoriesService _categoriesService;
   final ExpensesService _expensesService;
   final AccountBudgetsService _accountBudgetsService;
+  final OverviewRepository _repository;
   final ProfileService _profileService;
+  final ExpenseSummaryCalculator _summaryCalculator;
+  final ExpenseOccurrenceCalculator _occurrenceCalculator;
 
-  Account? _account;
-  bool _isSaving = false;
+  OverviewUiState _uiState = OverviewUiState(selectedPeriod: Period.current());
 
-  bool _showRevenueEditor = false;
   String? _lastRevenueEvaluationKey;
 
-  Period _selectedPeriod = Period.current();
-  List<ExpenseOccurrence>? _cachedPeriodOccurrences;
-  String? _periodOccurrencesCacheKey;
+  String? _derivedDataKey;
+  List<ExpenseOccurrence>? _cachedOccurrences;
+  List<CategoryExpenseSummary>? _cachedCategorySummaries;
+  List<Expense> _expenses = const [];
+  String? _expensesKey;
+  String? _loadingExpensesKey;
+  Future<void>? _expensesLoad;
 
-  late final ExpenseEditingData editingData = ExpenseEditingData(
-    nameController: TextEditingController(),
-    amountController: TextEditingController(),
-  );
+  final ExpenseFormController expenseForm = ExpenseFormController();
 
   OverviewViewModel({
     AccountsService? accountsService,
@@ -46,35 +55,129 @@ class OverviewViewModel extends BaseViewModel {
     ExpensesService? expensesService,
     AccountBudgetsService? accountBudgetsService,
     ProfileService? profileService,
-  })  : _accountsService = accountsService ?? AccountsService.instance,
-        _categoriesService = categoriesService ?? CategoriesService.instance,
-        _expensesService = expensesService ?? ExpensesService.instance,
-        _accountBudgetsService =
-            accountBudgetsService ?? AccountBudgetsService.instance,
-        _profileService = profileService ?? ProfileService.instance {
-    _accountsService.changeNotifier.addListener(_onServiceChanged);
-    _categoriesService.addListener(_onServiceChanged);
-    _expensesService.addListener(_onServiceChanged);
-    _accountBudgetsService.addListener(_onServiceChanged);
-    _profileService.addListener(_onServiceChanged);
+    ExpenseSummaryCalculator? summaryCalculator,
+    ExpenseOccurrenceCalculator? occurrenceCalculator,
+    OverviewRepository? repository,
+  }) : _accountsService = accountsService ?? AccountsService.instance,
+       _categoriesService = categoriesService ?? CategoriesService.instance,
+       _expensesService = expensesService ?? ExpensesService.instance,
+       _accountBudgetsService =
+           accountBudgetsService ?? AccountBudgetsService.instance,
+       _repository = repository ??
+           OverviewRepository(
+             categoriesService: categoriesService,
+             expensesService: expensesService,
+             accountBudgetsService: accountBudgetsService,
+           ),
+       _profileService = profileService ?? ProfileService.instance,
+       _summaryCalculator =
+           summaryCalculator ?? const ExpenseSummaryCalculator(),
+       _occurrenceCalculator =
+           occurrenceCalculator ?? const ExpenseOccurrenceCalculator() {
+    AnalyticsService.instance.track('screen_viewed', {'screen': 'overview'});
+    expenseForm.addListener(_onFormChanged);
+    _accountsService.changeNotifier.addListener(_onAccountsChanged);
+    _categoriesService.addListener(_onCategoriesChanged);
+    _expensesService.addListener(_onExpensesChanged);
+    _accountBudgetsService.addListener(_onRevenueChanged);
+    _profileService.addListener(_onProfileChanged);
   }
 
-  void _onServiceChanged() {
+  void _onFormChanged() {
+    _notifyAfterFrame();
+  }
+
+  void _onAccountsChanged() {
+    _dataRevision++;
     _syncSelectedAccount();
-    _invalidatePeriodOccurrencesCache();
-    _maybeShowRevenueEditor();
-    if (!isDisposed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!isDisposed) notifyListeners();
-      });
+    _notifyAfterFrame();
+  }
+
+  void _onCategoriesChanged() {
+    _dataRevision++;
+    _invalidateDerivedData();
+    _notifyAfterFrame();
+  }
+
+  void _onExpensesChanged() {
+    _dataRevision++;
+    final accountId = _uiState.account?.id;
+    final cachedExpenses = accountId == null
+        ? null
+        : _expensesService.cachedExpensesForPeriod(
+            accountId,
+            _uiState.selectedPeriod,
+          );
+    if (cachedExpenses != null) {
+      _expenses = cachedExpenses;
+      _expensesKey = _currentPeriodCacheKey;
+      _invalidateDerivedData();
+      _maybeShowRevenueEditor();
+      _notifyAfterFrame();
+    } else if (accountId != null) {
+      // Optimistic fallback: derive period expenses from the local store
+      // so a debitDate/period move is reflected instantly even before the
+      // Firestore period cache is repopulated.
+      final all = _expensesService.getExpensesForAccount(accountId);
+      final period = _uiState.selectedPeriod;
+      final start = period.startOfMonth;
+      final end = period.endOfMonth;
+      _expenses = all.where((expense) {
+        if (!expense.isRecurring) {
+          return !expense.debitDate.isBefore(start) &&
+              !expense.debitDate.isAfter(end);
+        }
+        final endDate = expense.endOfEndDate;
+        return !expense.debitDate.isAfter(end) &&
+            (endDate == null || !endDate.isBefore(start));
+      }).toList();
+      _expensesKey = _currentPeriodCacheKey;
+      _invalidateDerivedData();
+      _maybeShowRevenueEditor();
+      _notifyAfterFrame();
+      unawaited(_loadSelectedPeriodExpenses(forceRefresh: true));
+    } else {
+      _expenses = const [];
+      _expensesKey = null;
+      _invalidateDerivedData();
+      _maybeShowRevenueEditor();
+      _notifyAfterFrame();
     }
   }
+
+  void _onRevenueChanged() {
+    _dataRevision++;
+    _maybeShowRevenueEditor();
+    _notifyAfterFrame();
+  }
+
+  void _onProfileChanged() {
+    _dataRevision++;
+    _notifyAfterFrame();
+  }
+
+  bool _notificationScheduled = false;
+
+  void _notifyAfterFrame() {
+    if (isDisposed || _notificationScheduled) return;
+    _notificationScheduled = true;
+    scheduleMicrotask(() {
+      _notificationScheduled = false;
+      if (!isDisposed) notifyListeners();
+    });
+  }
+
+  int _dataRevision = 0;
+
+  int get dataRevision => _dataRevision;
+  OverviewUiState get uiState => _uiState;
+  bool get isSaving => _uiState.isSaving;
 
   void _syncSelectedAccount() {
     final accounts = _accountsService.accounts;
     if (accounts.isEmpty) return;
 
-    final currentId = _account?.id;
+    final currentId = _uiState.account?.id;
     Account? match;
     if (currentId != null) {
       for (final a in accounts) {
@@ -87,16 +190,15 @@ class OverviewViewModel extends BaseViewModel {
 
     if (match == null) {
       account = accounts.first;
-    } else if (!identical(match, _account)) {
-
-      _account = match;
-      _invalidatePeriodOccurrencesCache();
+    } else if (!identical(match, _uiState.account)) {
+      _uiState = _uiState.copyWith(account: match);
+      _invalidateDerivedData();
     }
 
-    final formAccountId = editingData.account?.id;
+    final formAccountId = expenseForm.data.account?.id;
     if (formAccountId != null && !accounts.any((a) => a.id == formAccountId)) {
-      editingData.account = null;
-      editingData.category = null;
+      expenseForm.data.account = null;
+      expenseForm.data.category = null;
     }
   }
 
@@ -105,160 +207,218 @@ class OverviewViewModel extends BaseViewModel {
   String get currencyCode => _profileService.currency;
   String get localeName => _profileService.locale.languageCode;
 
-  Future<void> loadAccounts({bool needLoading = true}) async {
-    if (hasAccountsLoaded) return;
-    if (needLoading) setLoading(true);
+  Future<void> loadInitialData() async {
+    setLoading(true);
     try {
       await _accountsService.loadAccounts();
+      final accounts = _accountsService.accounts;
+      if (accounts.isEmpty) return;
+
+      final selectedAccount = accounts.first;
+      _setSelectedAccount(selectedAccount, trackEvent: false);
+      _ensureRevenueLoaded();
+      unawaited(_ensureInheritedRevenueLoaded());
+
+      // Once the account is known, period data can load independently. The
+      // repository keeps this data-source orchestration out of the ViewModel.
+      final loadedExpenses = await _repository.loadInitialData(
+        selectedAccount,
+        _uiState.selectedPeriod,
+      );
+      final accountId = selectedAccount.id!;
+      _expenses = loadedExpenses;
+      _expensesKey = _currentPeriodCacheKey;
+      _invalidateDerivedData();
+      unawaited(
+        _repository.preloadOtherAccounts(
+          accounts,
+          accountId,
+          _uiState.selectedPeriod,
+        ),
+      );
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
-      if (needLoading) setLoading(false);
-      if (!isDisposed) notifyListeners();
+      setLoading(false);
     }
   }
 
   Future<void> refreshAll() async {
-    final accountId = _account?.id;
+    AnalyticsService.instance.track('overview_refresh');
+    try {
+      await _accountsService.loadAccounts(forceRefresh: true);
+      final accountId = _uiState.account?.id;
 
-    await _accountsService.loadAccounts(forceRefresh: true);
+      if (accountId != null) {
+        await _repository.refresh(_uiState.account!, _uiState.selectedPeriod);
+        _inheritedRevenueByAccount
+            .removeWhere((key, _) => key.startsWith('${accountId}_'));
+        await _ensureInheritedRevenueLoaded();
+      }
 
-    if (accountId != null) {
-      await Future.wait([
-        _categoriesService.listCategoriesByAccount(accountId, forceRefresh: true),
-        _expensesService.listExpensesByAccount(accountId, forceRefresh: true),
-        _accountBudgetsService.loadRevenue(
-          accountId,
-          _selectedPeriod.year,
-          _selectedPeriod.month,
-          forceRefresh: true,
-        ),
-      ]);
-      _inheritedRevenueByAccount.remove(accountId);
-      await _ensureInheritedRevenueLoaded();
+      _invalidateDerivedData();
+      _lastRevenueEvaluationKey = null;
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     }
-
-    _invalidatePeriodOccurrencesCache();
-    _lastRevenueEvaluationKey = null;
-    _maybeShowRevenueEditor();
-    if (!isDisposed) notifyListeners();
   }
 
-  Account? get account => _account;
+  Account? get account => _uiState.account;
+
+  void _setSelectedAccount(Account account, {required bool trackEvent}) {
+    if (_uiState.account?.id == account.id) return;
+
+    _uiState = _uiState.copyWith(account: account, clearAccount: false);
+    _expenses = const [];
+    _expensesKey = null;
+    _dataRevision++;
+    _invalidateDerivedData();
+    if (!isDisposed) notifyListeners();
+
+    if (trackEvent) {
+      AnalyticsService.instance.track('account_switched');
+    }
+  }
 
   set account(Account? value) {
-    if (_account?.id == value?.id) return;
-    _account = value;
-    _invalidatePeriodOccurrencesCache();
-    if (!isDisposed) notifyListeners();
+    if (_uiState.account?.id == value?.id) return;
 
-    if (value?.id == null) return;
+    if (value == null) {
+      _uiState = _uiState.copyWith(clearAccount: true);
+      _dataRevision++;
+      _invalidateDerivedData();
+      if (!isDisposed) notifyListeners();
+      return;
+    }
 
-    if (!_categoriesService.hasLoadedAccount(value!.id!)) {
-      _categoriesService.listCategoriesByAccount(value.id!);
-    }
-    if (!hasExpensesLoaded) {
-      loadExpenses();
-    }
+    _setSelectedAccount(value, trackEvent: true);
+    unawaited(_loadSelectedPeriodExpenses());
     _ensureRevenueLoaded();
-    _ensureInheritedRevenueLoaded();
+    unawaited(_ensureInheritedRevenueLoaded());
     _maybeShowRevenueEditor();
   }
 
-  Period get selectedPeriod => _selectedPeriod;
+  Period get selectedPeriod => _uiState.selectedPeriod;
   Period get minPeriod => Period.current().addMonths(-12);
-  Period get maxPeriod =>
-      Period.fromDate(DateTime.now().add(const Duration(days: AppConstants.maxFutureExpenseDays)));
+  Period get maxPeriod => Period.fromDate(
+    DateTime.now().add(const Duration(days: AppConstants.maxFutureExpenseDays)),
+  );
 
   set selectedPeriod(Period value) {
-    if (_selectedPeriod == value) return;
-    _selectedPeriod = value;
-    _invalidatePeriodOccurrencesCache();
+    if (_uiState.selectedPeriod == value) return;
+    _uiState = _uiState.copyWith(selectedPeriod: value);
+    _dataRevision++;
+    _invalidateDerivedData();
     if (!isDisposed) notifyListeners();
+    AnalyticsService.instance.track('overview_period_changed');
     _ensureRevenueLoaded();
     _ensureInheritedRevenueLoaded();
+    _loadSelectedPeriodExpenses();
     _maybeShowRevenueEditor();
   }
 
   void _ensureRevenueLoaded() {
-    if (_account?.id == null) return;
-    if (!_accountBudgetsService.hasLoaded(_account!.id!, _selectedPeriod.year, _selectedPeriod.month)) {
-      _accountBudgetsService.loadRevenue(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
-    }
+    final accountId = _uiState.account?.id;
+    if (accountId == null) return;
+    final year = _uiState.selectedPeriod.year;
+    final month = _uiState.selectedPeriod.month;
+    if (_accountBudgetsService.hasLoaded(accountId, year, month)) return;
+
+    unawaited(_loadRevenueInBackground(accountId, year, month));
+  }
+
+  Future<void> _loadRevenueInBackground(
+    String accountId,
+    int year,
+    int month,
+  ) async {
+    await _repository.loadRevenueInBackground(accountId, year, month);
   }
 
   final Map<String, double?> _inheritedRevenueByAccount = {};
-  final Set<String> _loadingInheritedRevenue = {};
 
-  Future<void> _ensureInheritedRevenueLoaded() async {
-    final accountId = _account?.id;
-    if (accountId == null) return;
-    if (_inheritedRevenueByAccount.containsKey(accountId)) return;
-    if (!_loadingInheritedRevenue.add(accountId)) return;
-
-    try {
-      final value = await _accountBudgetsService.getMostRecentRevenue(accountId);
-      if (isDisposed || _account?.id != accountId) return;
-      _inheritedRevenueByAccount[accountId] = value;
-      _maybeShowRevenueEditor();
-    } finally {
-      _loadingInheritedRevenue.remove(accountId);
-    }
-    if (!isDisposed) notifyListeners();
+  String get _inheritedRevenueKey {
+    final accountId = _uiState.account?.id;
+    final period = _uiState.selectedPeriod;
+    return '${accountId}_${period.year}_${period.month}';
   }
 
-  bool get showRevenueEditor => _showRevenueEditor;
+  Future<void> _ensureInheritedRevenueLoaded() async {
+    final accountId = _uiState.account?.id;
+    if (accountId == null) return;
+    final key = _inheritedRevenueKey;
+    if (_inheritedRevenueByAccount.containsKey(key)) return;
+
+    try {
+      final value = await _repository.getMostRecentRevenue(
+        accountId,
+        before: _uiState.selectedPeriod,
+      );
+      if (isDisposed ||
+          accountId != _uiState.account?.id ||
+          key != _inheritedRevenueKey) {
+        return;
+      }
+      _inheritedRevenueByAccount[key] = value;
+      _lastRevenueEvaluationKey = null;
+      _maybeShowRevenueEditor();
+      notifyListeners();
+    } catch (e) {
+      AppLogger.debug('Inherited revenue unavailable: $e');
+    }
+  }
+
+  bool get showRevenueEditor => _uiState.showRevenueEditor;
 
   void openRevenueEditor() {
-    _showRevenueEditor = true;
+    _uiState = _uiState.copyWith(showRevenueEditor: true);
+    AnalyticsService.instance.track('revenue_editor_opened');
     if (!isDisposed) notifyListeners();
   }
 
   void closeRevenueEditor() {
-    _showRevenueEditor = false;
+    _uiState = _uiState.copyWith(showRevenueEditor: false);
+    AnalyticsService.instance.track('revenue_editor_closed');
     if (!isDisposed) notifyListeners();
   }
 
   void _maybeShowRevenueEditor() {
-    final accountId = _account?.id;
+    final accountId = _uiState.account?.id;
     if (accountId == null) return;
     if (!isRevenueLoaded) return;
-    if (!_inheritedRevenueByAccount.containsKey(accountId)) {
-      _ensureInheritedRevenueLoaded();
-      return;
-    }
+    // Do not prompt while the estimate is still loading: otherwise the editor
+    // can briefly open and its evaluation is cached before the estimate wins.
+    if (!_inheritedRevenueByAccount.containsKey(_inheritedRevenueKey)) return;
 
-    final key = '${accountId}_${_selectedPeriod.year}_${_selectedPeriod.month}';
+    final key =
+        '${accountId}_${_uiState.selectedPeriod.year}_${_uiState.selectedPeriod.month}';
     if (_lastRevenueEvaluationKey == key) return;
     _lastRevenueEvaluationKey = key;
 
-    final shouldShow = effectiveRevenue <= 0;
-    if (_showRevenueEditor != shouldShow) {
-      _showRevenueEditor = shouldShow;
+    final shouldShow = revenue <= 0 && (inheritedRevenue ?? 0) <= 0;
+    if (_uiState.showRevenueEditor != shouldShow) {
+      _uiState = _uiState.copyWith(showRevenueEditor: shouldShow);
       if (!isDisposed) notifyListeners();
     }
   }
 
-  String formatRevenue(double value) {
-    return formatCurrency(
-      amount: value,
-      currencyCode: currencyCode,
-      localeName: localeName,
-      decimalPlaces: amountDecimalPlaces,
-    );
-  }
-
   double get revenue {
-    if (_account?.id == null) return 0;
+    if (_uiState.account?.id == null) return 0;
     final value = _accountBudgetsService.getRevenue(
-      _account!.id!,
-      _selectedPeriod.year,
-      _selectedPeriod.month,
+      _uiState.account!.id!,
+      _uiState.selectedPeriod.year,
+      _uiState.selectedPeriod.month,
     );
     return normalizeAmount(value, decimalPlaces: amountDecimalPlaces);
   }
 
   bool get isRevenueLoaded {
-    if (_account?.id == null) return false;
-    return _accountBudgetsService.hasLoaded(_account!.id!, _selectedPeriod.year, _selectedPeriod.month);
+    if (_uiState.account?.id == null) return false;
+    return _accountBudgetsService.hasLoaded(
+      _uiState.account!.id!,
+      _uiState.selectedPeriod.year,
+      _uiState.selectedPeriod.month,
+    );
   }
 
   int get amountDecimalPlaces => _profileService.amountDecimalPlaces;
@@ -266,7 +426,7 @@ class OverviewViewModel extends BaseViewModel {
   bool get hasRevenue => revenue > 0;
 
   double? get inheritedRevenue {
-    final value = _inheritedRevenueByAccount[_account?.id];
+    final value = _inheritedRevenueByAccount[_inheritedRevenueKey];
     if (value == null) return null;
     return normalizeAmount(value, decimalPlaces: amountDecimalPlaces);
   }
@@ -276,64 +436,115 @@ class OverviewViewModel extends BaseViewModel {
   double get effectiveRevenue => hasRevenue ? revenue : (inheritedRevenue ?? 0);
 
   Future<void> setRevenue(double value) async {
-    if (_account?.id == null) return;
-    final valueToSave = normalizeAmount(value, decimalPlaces: amountDecimalPlaces);
-    await _accountBudgetsService.setRevenue(
-      _account!.id!,
-      _selectedPeriod.year,
-      _selectedPeriod.month,
-      valueToSave,
-    );
-    _inheritedRevenueByAccount.remove(_account!.id);
-    _ensureInheritedRevenueLoaded();
-  }
-
-  List<Expense> get expenses {
-    if (_account?.id == null) return [];
-    return _expensesService.getExpensesForAccount(_account!.id!);
-  }
-
-  void _invalidatePeriodOccurrencesCache() {
-    _cachedPeriodOccurrences = null;
-    _periodOccurrencesCacheKey = null;
+    if (_uiState.account?.id == null) return;
+    try {
+      await _accountBudgetsService.setRevenue(
+        _uiState.account!.id!,
+        _uiState.selectedPeriod.year,
+        _uiState.selectedPeriod.month,
+        value,
+      );
+      _inheritedRevenueByAccount
+          .removeWhere((key, _) => key.startsWith('${_uiState.account!.id}_'));
+      _ensureInheritedRevenueLoaded();
+      setSuccessMessage(
+        const AppUserMessage.success(AppMessageKey.budgetSaved),
+      );
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+    }
   }
 
   String get _currentPeriodCacheKey =>
-      '${_account?.id}_${_selectedPeriod.year}_${_selectedPeriod.month}';
+      '${_uiState.account?.id}_${_uiState.selectedPeriod.year}_${_uiState.selectedPeriod.month}';
+
+  List<Expense> get expenses {
+    if (_uiState.account?.id == null ||
+        _expensesKey != _currentPeriodCacheKey) {
+      return const [];
+    }
+    return _expenses;
+  }
+
+  void _invalidateDerivedData() {
+    _derivedDataKey = null;
+    _cachedOccurrences = null;
+    _cachedCategorySummaries = null;
+  }
 
   List<ExpenseOccurrence> get periodOccurrences {
-    if (_account?.id == null) return [];
+    if (_uiState.account?.id == null) return const [];
     final key = _currentPeriodCacheKey;
-    if (_cachedPeriodOccurrences != null && _periodOccurrencesCacheKey == key) {
-      return _cachedPeriodOccurrences!;
+    if (_derivedDataKey == key && _cachedOccurrences != null) {
+      return _cachedOccurrences!;
     }
-    final result = <ExpenseOccurrence>[];
-    for (final expense in expenses) {
-      result.addAll(expandExpenseOccurrences(expense, _selectedPeriod));
-    }
-    result.sort((a, b) {
-      if (a.isDebited != b.isDebited) return a.isDebited ? 1 : -1;
-      return a.date.compareTo(b.date);
-    });
-    _cachedPeriodOccurrences = result;
-    _periodOccurrencesCacheKey = key;
+
+    final result = _occurrenceCalculator.forPeriod(
+      expenses,
+      _uiState.selectedPeriod,
+    );
+
+    _derivedDataKey = key;
+    _cachedOccurrences = result;
+    _cachedCategorySummaries = null;
     return result;
   }
 
   bool get hasExpensesLoaded =>
-      _account?.id != null && _expensesService.hasLoadedAccount(_account!.id!);
+      _uiState.account?.id != null && _expensesKey == _currentPeriodCacheKey;
 
-  bool get isSaving => _isSaving;
+  Future<void> _loadSelectedPeriodExpenses({bool forceRefresh = false}) async {
+    final accountId = _uiState.account?.id;
+    if (accountId == null) return;
+    final key = _currentPeriodCacheKey;
 
-  Future<void> loadExpenses({bool needLoading = true}) async {
-    if (_account?.id == null) return;
-    if (needLoading) setLoading(true);
+    if (!forceRefresh && _expensesKey == key) return;
+    if (_loadingExpensesKey == key && _expensesLoad != null) {
+      await _expensesLoad;
+      return;
+    }
+
+    _loadingExpensesKey = key;
+    final future = _loadPeriodExpenses(
+      accountId,
+      key,
+      forceRefresh: forceRefresh,
+    );
+    _expensesLoad = future;
     try {
-      await _expensesService.listExpensesByAccount(_account!.id!);
-      _invalidatePeriodOccurrencesCache();
+      await future;
     } finally {
-      if (needLoading) setLoading(false);
+      if (identical(_expensesLoad, future)) {
+        _expensesLoad = null;
+        _loadingExpensesKey = null;
+      }
+    }
+  }
+
+  Future<void> _loadPeriodExpenses(
+    String accountId,
+    String key, {
+    required bool forceRefresh,
+  }) async {
+    try {
+      final expenses = await _repository.loadPeriodExpenses(
+        accountId,
+        _uiState.selectedPeriod,
+        forceRefresh: forceRefresh,
+      );
+      if (isDisposed ||
+          _uiState.account?.id != accountId ||
+          _currentPeriodCacheKey != key) {
+        return;
+      }
+      _expenses = expenses;
+      _expensesKey = key;
+      _dataRevision++;
+      _invalidateDerivedData();
+      AnalyticsService.instance.track('overview_expense_loaded');
       if (!isDisposed) notifyListeners();
+    } catch (e) {
+      AppLogger.debug('Background expense load unavailable: $e');
     }
   }
 
@@ -347,9 +558,11 @@ class OverviewViewModel extends BaseViewModel {
   double get remaining => effectiveRevenue - totalExpenses;
 
   int? get remainingWeekendsInPeriod {
-    if (_selectedPeriod.isBefore(Period.current())) return null;
-    if (_selectedPeriod == Period.current()) return _selectedPeriod.remainingWeekends();
-    return _selectedPeriod.totalWeekends();
+    if (_uiState.selectedPeriod.isBefore(Period.current())) return null;
+    if (_uiState.selectedPeriod == Period.current()) {
+      return _uiState.selectedPeriod.remainingWeekends();
+    }
+    return _uiState.selectedPeriod.totalWeekends();
   }
 
   double? get weeklyBudget {
@@ -360,67 +573,42 @@ class OverviewViewModel extends BaseViewModel {
   }
 
   List<CategoryExpenseSummary> get categorySummaries {
-    final byCategory = <String, List<ExpenseOccurrence>>{};
-    for (final occurrence in periodOccurrences) {
-      byCategory.putIfAbsent(occurrence.categoryId, () => []).add(occurrence);
+    final key = _currentPeriodCacheKey;
+    if (_derivedDataKey == key && _cachedCategorySummaries != null) {
+      return _cachedCategorySummaries!;
     }
 
-    final summaries = <CategoryExpenseSummary>[];
-    for (final entry in byCategory.entries) {
-      final category = _categoriesService.getCategoryById(entry.key);
-      if (category == null) continue;
-
-      double debited = 0;
-      double undebited = 0;
-      int undebitedCount = 0;
-      for (final occurrence in entry.value) {
-        if (occurrence.isDebited) {
-          debited += occurrence.amount;
-        } else {
-          undebited += occurrence.amount;
-          undebitedCount++;
-        }
-      }
-
-      summaries.add(CategoryExpenseSummary(
-        category: category,
-        total: debited + undebited,
-        debited: debited,
-        undebited: undebited,
-        undebitedCount: undebitedCount,
-      ));
-    }
-
-    summaries.sort((a, b) => b.total.compareTo(a.total));
+    final summaries = _summaryCalculator.summarizeByCategory(
+      occurrences: periodOccurrences,
+      resolveCategory: _categoriesService.getCategoryById,
+    );
+    _cachedCategorySummaries = summaries;
     return summaries;
   }
 
   List<Category> categoriesForSelectedAccount() {
-    final accountId = editingData.account?.id;
+    final accountId = expenseForm.data.account?.id;
     if (accountId == null) return [];
     return _categoriesService.getCategoriesForAccount(accountId);
   }
 
   void startNewExpense() {
-    editingData.nameController.clear();
-    editingData.amountController.clear();
-    editingData.account = _account;
-    editingData.debitDate = DateTime.now();
-    editingData.recurrence = RecurrenceType.none;
-    editingData.showAdvancedOptions = false;
-
-    final categories = categoriesForSelectedAccount();
-    editingData.category = categories.isNotEmpty ? categories.first : null;
-
-    if (!isDisposed) notifyListeners();
+    final account = _uiState.account;
+    final accountId = account?.id;
+    final categories = accountId == null
+        ? const <Category>[]
+        : _categoriesService.getCategoriesForAccount(accountId);
+    expenseForm.resetForCreation(
+      account: account,
+      category: categories.isNotEmpty ? categories.first : null,
+    );
+    AnalyticsService.instance.track('expense_form_opened');
   }
 
   Future<void> selectFormAccount(Account formAccount) async {
-    if (editingData.account?.id == formAccount.id) return;
+    if (expenseForm.data.account?.id == formAccount.id) return;
 
-    editingData.account = formAccount;
-    editingData.category = null;
-    if (!isDisposed) notifyListeners();
+    expenseForm.setAccount(formAccount);
 
     if (formAccount.id != null &&
         !_categoriesService.hasLoadedAccount(formAccount.id!)) {
@@ -429,87 +617,74 @@ class OverviewViewModel extends BaseViewModel {
 
     final categories = categoriesForSelectedAccount();
     if (categories.isNotEmpty) {
-      editingData.category = categories.first;
-      if (!isDisposed) notifyListeners();
+      expenseForm.setCategory(categories.first);
     }
   }
 
   void selectFormCategory(Category category) {
-    editingData.category = category;
-    if (!isDisposed) notifyListeners();
+    expenseForm.setCategory(category);
   }
 
-  void setDebitDate(DateTime date) {
-    editingData.debitDate = date;
-    if (!isDisposed) notifyListeners();
-  }
+  void setDebitDate(DateTime date) => expenseForm.setDebitDate(date);
 
-  void setRecurrence(RecurrenceType recurrence) {
-    editingData.recurrence = recurrence;
-    if (!isDisposed) notifyListeners();
-  }
+  void setEndDate(DateTime date) => expenseForm.setEndDate(date);
 
-  void toggleAdvancedOptions() {
-    editingData.showAdvancedOptions = !editingData.showAdvancedOptions;
-    if (!isDisposed) notifyListeners();
-  }
+  void clearEndDate() => expenseForm.clearEndDate();
 
-  String? validate(AppLocalizations tr) {
-    if (editingData.account == null) return tr.accountRequired;
-    if (editingData.category == null) return tr.categoryRequired;
-    if (editingData.nameController.text.trim().isEmpty) return tr.nameRequired;
+  void setRecurrence(RecurrenceType recurrence) =>
+      expenseForm.setRecurrence(recurrence, preventPastStart: true);
 
-    final amount = parseAmount(
-      editingData.amountController.text,
-      decimalPlaces: _profileService.amountDecimalPlaces,
-    );
-    if (amount == null) return tr.amountInvalid;
+  void toggleAdvancedOptions() => expenseForm.toggleAdvancedOptions();
 
-    return null;
-  }
+  String? validate(AppLocalizations tr) =>
+      expenseForm.validate(tr, requireAccountAndCategory: true);
 
   Future<bool> createExpense() async {
-    if (_isSaving) return false;
-    final formAccount = editingData.account;
-    final category = editingData.category;
+    if (_uiState.isSaving) return false;
+    final formAccount = expenseForm.data.account;
+    final category = expenseForm.data.category;
     if (formAccount?.id == null || category?.id == null) return false;
 
-    final amount = parseAmount(
-      editingData.amountController.text,
-      decimalPlaces: _profileService.amountDecimalPlaces,
-    );
+    final amount = expenseForm.parseEnteredAmount();
     if (amount == null) return false;
 
-    _isSaving = true;
+    _uiState = _uiState.copyWith(isSaving: true);
     notifyListeners();
 
     try {
       final expense = Expense(
         accountId: formAccount!.id!,
         categoryId: category!.id!,
-        name: editingData.nameController.text.trim(),
+        name: expenseForm.data.nameController.text.trim(),
         amount: amount,
-        debitDate: editingData.debitDate,
-        recurrence: editingData.recurrence,
+        debitDate: expenseForm.data.debitDate,
+        endDate: expenseForm.data.effectiveEndDate,
+        recurrence: expenseForm.data.recurrence,
       );
 
       await _expensesService.createExpense(expense);
+      setSuccessMessage(
+        const AppUserMessage.success(AppMessageKey.expenseSaved),
+      );
       return true;
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+      return false;
     } finally {
-      _isSaving = false;
+      _uiState = _uiState.copyWith(isSaving: false);
       if (!isDisposed) notifyListeners();
     }
   }
 
   @override
   void dispose() {
-    _accountsService.changeNotifier.removeListener(_onServiceChanged);
-    _categoriesService.removeListener(_onServiceChanged);
-    _expensesService.removeListener(_onServiceChanged);
-    _accountBudgetsService.removeListener(_onServiceChanged);
-    _profileService.removeListener(_onServiceChanged);
-    editingData.nameController.dispose();
-    editingData.amountController.dispose();
+    _accountsService.changeNotifier.removeListener(_onAccountsChanged);
+    _categoriesService.removeListener(_onCategoriesChanged);
+    _expensesService.removeListener(_onExpensesChanged);
+    _accountBudgetsService.removeListener(_onRevenueChanged);
+    _profileService.removeListener(_onProfileChanged);
+    expenseForm.removeListener(_onFormChanged);
+    expenseForm.dispose();
     super.dispose();
   }
 }

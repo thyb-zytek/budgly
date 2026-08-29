@@ -4,15 +4,15 @@ import 'package:budgly/src/pages/settings/accounts/view_model.dart';
 import 'package:budgly/src/pages/settings/categories/view_model.dart';
 import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_form.dart';
-import 'package:budgly/src/pages/settings/categories/widgets/empty_categories.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
-import 'package:budgly/src/core/theme/component_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_view.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesTab extends StatefulWidget {
@@ -27,6 +27,7 @@ class CategoriesTab extends StatefulWidget {
 class _CategoriesTabState extends State<CategoriesTab>
     with AutomaticKeepAliveClientMixin<CategoriesTab> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final ScrollController _scrollController = ScrollController();
   late AccountsViewModel _accountsViewModel;
   late CategoriesViewModel _categoriesViewModel;
 
@@ -77,24 +78,33 @@ class _CategoriesTabState extends State<CategoriesTab>
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    _accountsViewModel.removeListener(_syncSelectedAccount);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    return Column(
+    return ViewModelFeedback(
+      viewModel: _categoriesViewModel,
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.lg, vertical: BudglySpacing.sm),
           child: EntityTitle(
             title: tr.categories,
             subtitle: tr.selectAccountToManageCategories,
           ),
         ),
         Expanded(
-          child: AnimatedBuilder(
-            animation: Listenable.merge([
+          child: ListenableBuilder(
+            listenable: Listenable.merge([
               _categoriesViewModel,
               _accountsViewModel,
             ]),
@@ -126,8 +136,8 @@ class _CategoriesTabState extends State<CategoriesTab>
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                      horizontal: BudglySpacing.lg,
+                      vertical: BudglySpacing.sm,
                     ),
                     child: Column(
                       spacing: 8,
@@ -149,10 +159,15 @@ class _CategoriesTabState extends State<CategoriesTab>
                         ),
                         Expanded(
                           child: categories.isEmpty
-                              ? EmptyCategories(
-                                  accountName: selectedAccount.name,
+                              ? EmptyState(
+                                  icon: Icons.category_rounded,
+                                  title: tr.noCategoryFound,
+                                  subtitle: tr.addCategoriesToAccount(
+                                    selectedAccount.name,
+                                  ),
                                 )
-                              : ListView.builder(
+                               : ListView.builder(
+                                  controller: _scrollController,
                                   padding: const EdgeInsets.only(bottom: 100),
                                   itemCount: categories.length,
                                   itemBuilder: (context, index) {
@@ -207,7 +222,18 @@ class _CategoriesTabState extends State<CategoriesTab>
                     heroTag: 'add_category',
                     label: tr.fabNewCategory,
                     disabled: _categoriesViewModel.isCreatingCategory,
-                    onPressed: () => _categoriesViewModel.addCategory(),
+                    onPressed: () {
+                      _categoriesViewModel.addCategory();
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            _scrollController.position.maxScrollExtent,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      });
+                    },
                   ),
                 ],
               );
@@ -215,6 +241,7 @@ class _CategoriesTabState extends State<CategoriesTab>
           ),
         ),
       ],
+      ),
     );
   }
 

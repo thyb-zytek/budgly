@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:budgly/src/core/constants/app_constants.dart';
-import 'package:budgly/src/core/loading/progressive_loader.dart';
+import 'package:budgly/src/core/errors/app_user_message.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
@@ -39,12 +40,8 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     if (_account == value) return;
     _account = value;
     notifyListeners();
-    if (value?.id != null) {
-
-      _ensureCategoryIcons();
-      if (!hasCategoriesLoaded) {
-        loadCategories();
-      }
+    if (value?.id != null && !hasCategoriesLoaded) {
+      unawaited(loadCategories());
     }
   }
 
@@ -93,41 +90,25 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     super.dispose();
   }
 
-  Future<void> _ensureCategoryIcons() async {
+  Future<void> loadCategories() async {
+    if (_account?.id == null) return;
+    setLoading(true);
     try {
-      await _categoriesService.loadAvailableIcons();
+      // Icons and categories are independent reads. Both services are
+      // local-first, so neither needs to wait for the other.
+      await Future.wait([
+        _categoriesService.loadAvailableIcons(),
+        _categoriesService.listCategoriesByAccount(_account!.id!),
+      ]);
       _editingData.availableIcons = _categoriesService.availableIcons;
     } catch (e, st) {
-      AppLogger.error('Failed to load category icons', e, st);
+      if (classifyError(e) == AppMessageKey.networkError) {
+        AppLogger.error('Failed to load categories while offline', e, st);
+      } else {
+        setError(e, stackTrace: st);
+      }
     } finally {
-      if (!isDisposed) notifyListeners();
-    }
-  }
-
-  Future<void> loadCategories({bool needLoading = true}) async {
-    if (_account?.id == null) return;
-    if (needLoading) setLoading(true);
-    try {
-      await ProgressiveLoader.loadEssentialOnly(
-        essentialData: () async {
-
-          try {
-            await _categoriesService.loadAvailableIcons();
-          } catch (e, st) {
-            AppLogger.error('Failed to load category icons', e, st);
-          }
-          _editingData.availableIcons = _categoriesService.availableIcons;
-
-          await _categoriesService.listCategoriesByAccount(_account!.id!);
-        },
-        secondaryData: () async {},
-        onProgress: (progress) {},
-      );
-    } catch (e, st) {
-      AppLogger.error('Failed to load categories', e, st);
-    } finally {
-      if (needLoading) setLoading(false);
-      if (!isDisposed) notifyListeners();
+      setLoading(false);
     }
   }
 
@@ -135,42 +116,53 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     if (_account?.id == null || _localCategories.isNotEmpty) return;
 
     setLoading(true);
+    try {
+      await _categoriesService.loadAvailableIcons();
+      _editingData.availableIcons = _categoriesService.availableIcons;
 
-    await _categoriesService.loadAvailableIcons();
-    _editingData.availableIcons = _categoriesService.availableIcons;
+      final defaultIcon = _editingData.availableIcons.firstWhere(
+        (i) => i.iconName == AppConstants.defaultCategoryIcon.iconName,
+        orElse: () => AppConstants.defaultCategoryIcon,
+      );
 
-    final defaultIcon = _editingData.availableIcons.firstWhere(
-      (i) => i.iconName == AppConstants.defaultCategoryIcon.iconName,
-      orElse: () => AppConstants.defaultCategoryIcon,
-    );
+      final category = Category(
+        id: null,
+        accountId: _account!.id!,
+        name: '',
+        color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
+        icon: defaultIcon,
+      );
 
-    final category = Category(
-      id: null,
-      accountId: _account!.id!,
-      name: '',
-      color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
-      icon: defaultIcon,
-    );
+      _editingData.color = category.color!;
+      _nameController.text = '';
+      _editingData.icon = category.icon!;
 
-    _editingData.color = category.color!;
-    _nameController.text = '';
-    _editingData.icon = category.icon!;
-
-    _localCategories.add(category);
-
-    setLoading(false);
-    if (!isDisposed) notifyListeners();
+      _localCategories.add(category);
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+    } finally {
+      setLoading(false);
+    }
   }
 
   @override
   Future<void> removeCategory(Category category) async {
-    if (category.id != null) {
+    if (category.id == null) {
+      _localCategories.removeWhere((c) => identical(c, category));
+      if (!isDisposed) notifyListeners();
+      return;
+    }
+
+    setLoading(true);
+    try {
       await ExpensesService.instance.deleteByCategoryId(category.id!);
       await _categoriesService.deleteCategory(category.id!);
-    } else {
-      _localCategories.removeWhere((c) => identical(c, category));
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.categoryDeleted));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+    } finally {
+      setLoading(false);
     }
-    if (!isDisposed) notifyListeners();
   }
 
   @override
@@ -189,6 +181,9 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
 
       _localCategories.removeWhere((c) => identical(c, category));
       _editingCategory = null;
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.categorySaved));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
       setLoading(false);
     }
@@ -207,6 +202,9 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
 
       await _categoriesService.updateCategory(updatedCategoryData);
       _editingCategory = null;
+      setSuccessMessage(const AppUserMessage.success(AppMessageKey.categorySaved));
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
       setLoading(false);
     }

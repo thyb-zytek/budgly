@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/l10n/app_localizations.dart';
 
@@ -15,9 +16,9 @@ class UserCard extends StatelessWidget {
       elevation: 0,
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(BudglySpacing.lg),
         child: Row(
-          spacing: 16,
+          spacing: BudglySpacing.lg,
           children: [
             CircleAvatar(
               radius: 32,
@@ -26,6 +27,7 @@ class UserCard extends StatelessWidget {
                   user.avatarUrl == null
                       ? null
                       : NetworkImage(user.avatarUrl!.toString()),
+              onForegroundImageError: (exception, stackTrace) {},
               child:
                   user.profile != null
                       ? Text(
@@ -39,12 +41,12 @@ class UserCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: BudglySpacing.xs,
                 children: [
                   Text(
                     user.profile?.fullName ?? tr.user,
                     style: theme.textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     user.email ?? tr.emailNotAvailable,
                     style: theme.textTheme.bodyMedium?.copyWith(

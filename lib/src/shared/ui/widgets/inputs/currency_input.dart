@@ -1,5 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class CurrencyInput extends StatelessWidget {
       labelText: labelText,
       type: InputType.currency,
       suffix: Padding(
-        padding: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.only(right: BudglySpacing.sm),
         child: Icon(
           currencyCode.currencyIcon,
           size: 20,

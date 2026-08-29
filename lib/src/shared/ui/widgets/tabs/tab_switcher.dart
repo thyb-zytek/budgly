@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class TabSwitcher extends StatelessWidget {
@@ -43,7 +44,7 @@ class TabSwitcher extends StatelessWidget {
                         : Colors.transparent,
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xs),
                 child: DefaultTextStyle(
                   style: TextStyle(
                     color:

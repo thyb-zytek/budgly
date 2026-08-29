@@ -1,4 +1,5 @@
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/account_view.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:budgly/src/shared/ui/widgets/selector.dart';
@@ -33,7 +34,7 @@ class AccountSelector extends StatelessWidget {
         maxHeight: 300,
         backgroundColor: backgroundColor,
         itemBuilder: (context, account) => Padding(
-          padding: const EdgeInsets.all(4.0),
+          padding: const EdgeInsets.all(BudglySpacing.xs),
           child: AccountView(account: account, color: Colors.transparent),
         ),
       );
@@ -62,7 +63,7 @@ class AccountSelector extends StatelessWidget {
             value: account,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Padding(
-              padding: const EdgeInsets.all(4.0),
+              padding: const EdgeInsets.all(BudglySpacing.xs),
               child: AccountView(account: account, color: Colors.transparent),
             ),
           ),
@@ -72,7 +73,7 @@ class AccountSelector extends StatelessWidget {
         backgroundColor: current.color,
         picture: current.pictureUrl,
         isLocalPicture: false,
-        size: 32,
+        size: 48,
       ),
     );
   }

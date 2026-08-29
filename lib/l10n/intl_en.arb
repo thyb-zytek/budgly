@@ -4,6 +4,10 @@
   "appDescription": "Manage your budget in a simple way.",
   "overviewLink": "Overview",
   "settingsLink": "Settings",
+  "syncIssueBanner": "Some changes could not be synced.",
+  "syncIssueRetry": "Retry",
+  "syncSuccessBanner": "All changes synced.",
+  "syncSyncingBanner": "Syncing changes...",
   "invalidCurrency": "Invalid currency amount.",
   "invalidDate": "Invalid date.",
   "userHasAccount": "Already have an account?",
@@ -61,6 +65,9 @@
   "add": "Add",
   "cancel": "Cancel",
   "commonError": "Error",
+  "serviceUnavailableTitle": "Service temporarily unavailable",
+  "serviceUnavailableMessage": "We're having trouble connecting you to our services right now. This could be due to an unstable internet connection or temporary maintenance.",
+  "reloadApp": "Reload",
   "cropImage": "Adjust image",
   "pickImage": "Pick image",
   "picture": "Picture",
@@ -114,14 +121,13 @@
   "accountUpdatedSuccessfully": "Account updated successfully",
   "logout": "Logout",
   "refreshProfile": "Refresh profile",
+  "profileRefreshed": "Profile refreshed",
+  "refreshProfileFailed": "Refresh failed",
   "changePassword": "Change password",
   "editPassword": "Edit password",
   "oldPassword": "Old password",
   "passwordChangeFailed": "Changing password failed",
   "passwordChangedSuccessfully": "Password changed successfully",
-  "serviceUnavailableTitle": "Service temporarily unavailable",
-  "serviceUnavailableMessage": "We're having trouble connecting you to our services right now. This could be due to an unstable internet connection or temporary maintenance.",
-  "reloadApp": "Reload",
   "avatarCustomization": "Avatar customization",
   "selectAccountToManageCategories": "Select an account to manage its categories",
   "categoryCustomization": "Category customization",
@@ -171,6 +177,10 @@
   "recurrenceBiYearly": "Every 2 years",
   "debitDate": "Debit date",
   "debitDateHelp": "Date on which this expense will be deducted from your balance.",
+  "endDate": "End date",
+  "endDateHelp": "This expense will stop repeating after this date (included).",
+  "addEndDate": "Add end date",
+  "endDateBeforeDebitDate": "The end date can't be before the debit date.",
   "revenue": "Revenue",
   "remaining": "Remaining",
   "remainingBasedOnRevenueHint": "Based on your revenue for this period",
@@ -219,6 +229,14 @@
       }
     }
   },
+  "recurringEditFromDate": "Previous occurrences stay unchanged. The change applies from {date}.",
+  "@recurringEditFromDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "createdOnDate": "Created on",
   "debitedOnDate": "Debited on",
   "edit": "Edit",
@@ -242,9 +260,40 @@
       }
     }
   },
+  "confirmDeleteRecurringExpense": "Delete recurring expense: {expenseName}",
+  "@confirmDeleteRecurringExpense": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmDeleteRecurringExpenseMessage": "This expense is recurring on {date}. Do you want to delete only this occurrence or this and all future occurrences?",
+  "@confirmDeleteRecurringExpenseMessage": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteSingleOccurrence": "This occurrence only",
+  "deleteFutureOccurrences": "This and future occurrences",
   "expenseDeletedSuccessfully": "Expense deleted successfully",
   "expenseUpdatedSuccessfully": "Expense updated successfully",
   "expenseUpdateFailed": "Expense update failed",
+  "errorNetwork": "Connection problem. Check your network and try again.",
+  "errorPermission": "You don't have the required permissions for this action.",
+  "errorNotFound": "This item could not be found — it may have already been deleted.",
+  "errorValidation": "Some information looks invalid.",
+  "errorUnknown": "Something went wrong. Please try again.",
+  "accountSaved": "Account saved.",
+  "accountDeleted": "Account deleted.",
+  "categorySaved": "Category saved.",
+  "categoryDeleted": "Category deleted.",
+  "expenseSaved": "Expense saved.",
+  "expenseDeleted": "Expense deleted.",
+  "budgetSaved": "Budget updated.",
+  "pictureUpdateFailed": "The picture could not be saved, but everything else was.",
   "tutorialWelcome": "Welcome to Budgly!",
   "tutorialWelcomeDescription": "Set up your first account to start tracking your expenses.",
   "tutorialStepAccounts": "Create an account",
@@ -260,15 +309,24 @@
   "tutorialStepProgress": "Step {current} of {total}",
   "@tutorialStepProgress": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "tutorialCategoryCount": "{count, plural, =1{1 category} other{{count} categories}}",
   "@tutorialCategoryCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "expenseCreatedSuccessfully": "Expense added successfully"
+  "expenseCreatedSuccessfully": "Expense added successfully",
+  "semanticDonutChart": "Expense donut chart by category",
+  "semanticColorPicker": "Color picker",
+  "semanticSwipeTabs": "Swipeable tab navigation"
 }

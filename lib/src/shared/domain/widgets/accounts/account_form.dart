@@ -1,11 +1,11 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/avatar_customization_sheet.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:flutter/material.dart';
 
 class AccountForm extends StatefulWidget {
@@ -55,10 +55,9 @@ class _AccountFormState extends State<AccountForm>
     initPulseHintAnimations();
 
     if (widget.account?.id == null) {
-      Future.delayed(
-        const Duration(milliseconds: 300),
-        () => _nameFocusNode.requestFocus(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nameFocusNode.requestFocus();
+    });
     }
   }
 
@@ -109,26 +108,13 @@ class _AccountFormState extends State<AccountForm>
     });
   }
 
-  Widget _buildAvatar(String initial) {
-    return wrapWithPulseHint(
-      Avatar(
-        initial: initial,
-        backgroundColor: _tempColor,
-        picture: _tempPicture,
-        isLocalPicture: _isTempLocalPicture,
-        size: 52,
-        onTap: widget.enabled ? () => _openAvatarPicker(context, initial) : null,
-        showEditBadge: widget.enabled,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
 
-    return AnimatedBuilder(
-      animation: widget.viewModel,
+    return ListenableBuilder(
+      listenable: widget.viewModel,
       builder: (context, child) {
         if (widget.compact) {
           return Row(
@@ -140,7 +126,24 @@ class _AccountFormState extends State<AccountForm>
                 builder: (context, value, _) {
                   final initial =
                       value.text.isNotEmpty ? value.text[0] : 'A';
-                  return _buildAvatar(initial.toUpperCase());
+                  return PulseHint(
+                    pulseAnimation: pulseAnimation,
+                    hintAnimation: hintAnimation,
+                    child: Avatar(
+                      initial: initial.toUpperCase(),
+                      backgroundColor: _tempColor,
+                      picture: _tempPicture,
+                      isLocalPicture: _isTempLocalPicture,
+                      size: 52,
+                      onTap: widget.enabled
+                          ? () => _openAvatarPicker(
+                              context,
+                              initial.toUpperCase(),
+                            )
+                          : null,
+                      showEditBadge: widget.enabled,
+                    ),
+                  );
                 },
               ),
               Expanded(
@@ -151,7 +154,6 @@ class _AccountFormState extends State<AccountForm>
                   hotValidating: (v) =>
                       v == null || v.trim().isEmpty ? tr.nameRequired : null,
                   textInputAction: TextInputAction.done,
-                  onChange: (_) => setState(() {}),
                 ),
               ),
             ],
@@ -167,7 +169,24 @@ class _AccountFormState extends State<AccountForm>
             builder: (context, value, _) {
               final initial =
                   value.text.isNotEmpty ? value.text[0] : 'A';
-              return _buildAvatar(initial.toUpperCase());
+              return PulseHint(
+                    pulseAnimation: pulseAnimation,
+                    hintAnimation: hintAnimation,
+                    child: Avatar(
+                      initial: initial.toUpperCase(),
+                      backgroundColor: _tempColor,
+                      picture: _tempPicture,
+                      isLocalPicture: _isTempLocalPicture,
+                      size: 52,
+                      onTap: widget.enabled
+                          ? () => _openAvatarPicker(
+                              context,
+                              initial.toUpperCase(),
+                            )
+                          : null,
+                      showEditBadge: widget.enabled,
+                    ),
+                  );
             },
           ),
           nameController: widget.viewModel.editingData.nameController,

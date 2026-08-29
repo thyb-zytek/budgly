@@ -2,6 +2,7 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/preference_section.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class CurrencyForm extends StatelessWidget {
@@ -37,7 +38,7 @@ class CurrencyForm extends StatelessWidget {
           tabs: reversedCurrencies
               .map(
                 (currency) => Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(BudglySpacing.sm),
                   child: Icon(
                     currency.currencyIcon,
                     size: 22,

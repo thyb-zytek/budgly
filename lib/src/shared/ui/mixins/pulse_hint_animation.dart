@@ -74,7 +74,22 @@ mixin PulseHintAnimationMixin<T extends StatefulWidget> on TickerProviderStateMi
     pulseController?.dispose();
   }
 
-  Widget wrapWithPulseHint(Widget child) {
+}
+
+class PulseHint extends StatelessWidget {
+  final Widget child;
+  final Animation<double>? pulseAnimation;
+  final Animation<double>? hintAnimation;
+
+  const PulseHint({
+    super.key,
+    required this.child,
+    this.pulseAnimation,
+    this.hintAnimation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     Widget result = child;
     if (pulseAnimation != null) {
       result = ScaleTransition(scale: pulseAnimation!, child: result);

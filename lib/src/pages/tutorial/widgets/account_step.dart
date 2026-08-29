@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/errors/app_user_message.dart';
+import 'package:budgly/src/core/logging/logger.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/pages/tutorial/view_model.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/account_form.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AccountStep extends StatefulWidget {
@@ -53,7 +55,11 @@ class _AccountStepState extends State<AccountStep> {
             Account(name: vm.accountNameController.text.trim(), color: vm.accountColor));
       }
 
-      if (!mounted || vm.createdAccount == null) return;
+      if (!mounted) return;
+      if (vm.createdAccount == null) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
 
       setState(() => _isSubmitting = false);
 
@@ -67,12 +73,13 @@ class _AccountStepState extends State<AccountStep> {
       );
       await Future.delayed(const Duration(milliseconds: 400));
       if (mounted) widget.onNext();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to save account in tutorial', e, stackTrace);
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       showAppSnackBar(
         context,
-        message: e.toString(),
+        message: AppUserMessage.error(classifyError(e)).resolve(context),
         type: SnackBarType.error,
       );
     }
@@ -93,6 +100,7 @@ class _AccountStepState extends State<AccountStep> {
           content: AbsorbPointer(
             absorbing: _isSubmitting,
             child: Column(
+              spacing: BudglySpacing.md,
               children: [
                 AccountForm(
                   formKey: _formKey,
@@ -103,7 +111,6 @@ class _AccountStepState extends State<AccountStep> {
                   withHint: vm.createdAccount?.id == null,
                   enabled: !_isSubmitting,
                 ),
-                const SizedBox(height: 12),
                 Text(
                   tr.tapToCustomize,
                   textAlign: TextAlign.center,
@@ -122,8 +129,7 @@ class _AccountStepState extends State<AccountStep> {
               return SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  style: ButtonType.primary.filledStyle(theme),
-                  onPressed: enabled ? _submit : null,
+                                    onPressed: enabled ? _submit : null,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: _isSubmitting
@@ -139,8 +145,7 @@ class _AccountStepState extends State<AccountStep> {
                         : Text(
                             tr.tutorialNext,
                             key: const ValueKey('label'),
-                            style: ButtonType.primary
-                                .labelStyle(theme),
+
                           ),
                   ),
                 ),
