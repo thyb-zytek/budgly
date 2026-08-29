@@ -16,7 +16,7 @@ class ExpenseOccurrence {
   String get id => expense.id ?? '';
   String get categoryId => expense.categoryId;
   String get name => expense.name;
-  double get amount => expense.amountAt(date);
+  double get amount => expense.amount;
   RecurrenceType get recurrence => expense.recurrence;
 
   String get key => '$id@${Expense.isoDate(date)}';
@@ -53,12 +53,21 @@ List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
     return result;
   }
 
-  final anchorDay = expense.debitDate.day;
+  final endOfEndDate = expense.endOfEndDate;
+  if (endOfEndDate != null && endOfEndDate.isBefore(from)) {
+    return result;
+  }
+  final effectiveTo = endOfEndDate != null && endOfEndDate.isBefore(to)
+      ? endOfEndDate
+      : to;
+
+  final anchorDay = expense.recurrenceAnchorDay;
   var date = expense.recurrence.firstOccurrenceOnOrAfter(
     expense.debitDate,
     from,
+    anchorDay: expense.recurrenceAnchorDay,
   );
-  while (!date.isAfter(to)) {
+  while (!date.isAfter(effectiveTo)) {
     if (!date.isBefore(from)) {
       result.add(
         ExpenseOccurrence(
@@ -78,3 +87,4 @@ List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
 
   return result;
 }
+

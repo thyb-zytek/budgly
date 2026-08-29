@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -70,7 +71,7 @@ extension InputTypeStyles on InputType {
 
     if (this == InputType.date) {
       prefixIcon = const Padding(
-        padding: EdgeInsets.only(top: 16),
+        padding: EdgeInsets.only(top: BudglySpacing.lg),
         child: Icon(Icons.calendar_today),
       );
     }

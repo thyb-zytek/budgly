@@ -1,8 +1,7 @@
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/material.dart';
 
-class AccountsStore extends ChangeNotifier with LoadingNotifier {
+class AccountsStore extends ChangeNotifier {
   static AccountsStore? _instance;
 
   static AccountsStore get instance {
@@ -19,16 +18,33 @@ class AccountsStore extends ChangeNotifier with LoadingNotifier {
   AccountsStore._();
 
   void setAccounts(List<Account> accounts) {
-    _accounts = List.from(accounts);
-    _accounts.sort((a, b) => a.name.compareTo(b.name));
+    final next = List<Account>.from(accounts)
+      ..sort((a, b) => a.name.compareTo(b.name));
+    if (_hasLoaded && _sameAccounts(_accounts, next)) return;
+
+    _accounts = next;
+    _hasLoaded = true;
     notifyListeners();
   }
 
-  void setLoaded(bool loaded) {
-    if (_hasLoaded == loaded) return;
-    _hasLoaded = loaded;
-    notifyListeners();
+  bool _sameAccounts(List<Account> a, List<Account> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      final left = a[i];
+      final right = b[i];
+      if (left.id != right.id ||
+          left.userId != right.userId ||
+          left.name != right.name ||
+          left.picture != right.picture ||
+          left.pictureUrl != right.pictureUrl ||
+          left.color != right.color) {
+        return false;
+      }
+    }
+    return true;
   }
+
+
 
   Account? getAccountById(String id) {
     for (final account in _accounts) {
@@ -53,11 +69,13 @@ class AccountsStore extends ChangeNotifier with LoadingNotifier {
   }
 
   void removeAccount(String accountId) {
+    final before = _accounts.length;
     _accounts.removeWhere((account) => account.id == accountId);
-    notifyListeners();
+    if (_accounts.length != before) notifyListeners();
   }
 
   void clearLocalAccounts() {
+    if (_accounts.isEmpty && !_hasLoaded) return;
     _accounts.clear();
     _hasLoaded = false;
     notifyListeners();

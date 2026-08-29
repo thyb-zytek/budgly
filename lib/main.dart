@@ -1,17 +1,19 @@
 import 'dart:async';
 
-import 'package:budgly/src/core/auth/google_sign_in.dart';
-import 'package:budgly/src/core/logging/logger.dart';
-
-import 'src/app.dart';
-import 'src/services/profile/profile_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'src/app.dart';
+import 'src/core/auth/google_sign_in.dart';
+import 'src/services/analytics/analytics_service.dart';
+import 'src/services/offline/sync_manager.dart';
+import 'src/services/profile/profile_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +23,7 @@ Future<void> main() async {
   });
 
   await Future.wait([
-    dotenv.load(fileName: "assets/.env"),
+    dotenv.load(fileName: 'assets/.env'),
     Firebase.initializeApp(),
   ]);
 
@@ -31,65 +33,64 @@ Future<void> main() async {
     throw Exception('Missing Supabase environment variables');
   }
 
-  await Supabase.initialize(
-    url: supabaseUrl,
-    publishableKey: supabaseKey,
-    authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
-    accessToken: () async {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return null;
-      return user.getIdToken();
-    },
-  );
-
-  // Load local preferences before restoring/syncing the user profile.
-  // Otherwise the profile sync can load the server value and a late
-  // SharedPreferences init can overwrite it with a stale local value.
-  await ProfileService.instance.init();
-  await _restoreSession();
+  await Future.wait([
+    _initializeCrashlytics(),
+    ProfileService.instance.init(),
+    Supabase.initialize(
+      url: supabaseUrl,
+      publishableKey: supabaseKey,
+      authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
+      accessToken: () async {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) return null;
+        return user.getIdToken();
+      },
+    ),
+  ]);
 
   runApp(const BudglyApp());
+
+  SyncManager.instance.start();
+  unawaited(ProfileService.instance.refreshUserProfileInBackground());
   unawaited(GoogleSignInInitializer.ensureInitialized());
+  unawaited(_initializeAnalytics());
 }
 
-Future<void> _restoreSession() async {
+Future<void> _initializeAnalytics() async {
+  final posthogKey = dotenv.env['POSTHOG_API_KEY'];
+  if (posthogKey != null && posthogKey.trim().isNotEmpty) {
+    await AnalyticsService.instance.initialize(
+      projectToken: posthogKey,
+      host: dotenv.env['POSTHOG_HOST'] ?? 'https://eu.i.posthog.com',
+    );
+  }
+  AnalyticsService.instance.track('app_started');
+
   final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+  if (user != null) {
+    await AnalyticsService.instance.identify(user.uid);
+  }
+}
 
-  try {
-    await user.reload();
-  } on FirebaseAuthException catch (e) {
-    const invalidatingCodes = {
-      'user-disabled',
-      'user-not-found',
-      'user-token-expired',
-      'invalid-user-token',
-    };
-    if (invalidatingCodes.contains(e.code)) {
-      await FirebaseAuth.instance.signOut();
-      return;
+Future<void> _initializeCrashlytics() async {
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final isOverflow = details.toString().contains('RenderFlex overflowed');
+    if (!isOverflow) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
     }
-    await _hydrateProfile();
-    return;
-  } catch (_) {
-    await _hydrateProfile();
-    return;
-  }
+    previousOnError?.call(details);
+  };
 
-  final refreshedUser = FirebaseAuth.instance.currentUser;
-  if (refreshedUser == null) return;
-
-  if (!refreshedUser.emailVerified) {
-    await FirebaseAuth.instance.signOut();
-    return;
-  }
-
-  await _hydrateProfile();
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    FirebaseCrashlytics.instance.recordError(
+      error,
+      stackTrace,
+      fatal: true,
+    );
+    return true;
+  };
 }
-Future<void> _hydrateProfile() async {
-  try {
-    await ProfileService.instance.loadUserProfile();
-  } catch (_) {
-    AppLogger.error("Failed to load user profile");
-  }
-}
+

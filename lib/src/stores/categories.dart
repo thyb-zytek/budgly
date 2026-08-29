@@ -1,9 +1,8 @@
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/material.dart';
 
-class CategoriesStore extends ChangeNotifier with LoadingNotifier {
+class CategoriesStore extends ChangeNotifier {
   static CategoriesStore? _instance;
 
   static CategoriesStore get instance {
@@ -24,17 +23,49 @@ class CategoriesStore extends ChangeNotifier with LoadingNotifier {
   CategoriesStore._();
 
   void setAvailableIcons(List<CategoryIcon> icons) {
-    _availableIcons = List.from(icons);
-    if (icons.isNotEmpty) {
-      _iconsLoaded = true;
+    if (_iconsLoaded && _availableIcons.length == icons.length) {
+      var same = true;
+      for (var i = 0; i < icons.length; i++) {
+        if (_availableIcons[i] != icons[i]) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return;
     }
+
+    _availableIcons = List.from(icons);
+    _iconsLoaded = icons.isNotEmpty;
     notifyListeners();
   }
 
   void setCategoriesForAccount(String accountId, List<Category> categories) {
+    final previous = _categoriesByAccount[accountId];
+    if (_hasLoadedByAccount[accountId] == true &&
+        previous != null &&
+        _sameCategories(previous, categories)) {
+      return;
+    }
     _categoriesByAccount[accountId] = List.from(categories);
     _hasLoadedByAccount[accountId] = true;
     notifyListeners();
+  }
+
+  bool _sameCategories(List<Category> a, List<Category> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      final left = a[i];
+      final right = b[i];
+      if (left.id != right.id ||
+          left.name != right.name ||
+          left.color != right.color ||
+          left.iconCode != right.iconCode ||
+          left.icon != right.icon ||
+          left.accountId != right.accountId) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool hasLoadedAccount(String accountId) {
@@ -87,12 +118,18 @@ class CategoriesStore extends ChangeNotifier with LoadingNotifier {
   }
 
   void clearAccountCache(String accountId) {
-    _categoriesByAccount.remove(accountId);
-    _hasLoadedByAccount.remove(accountId);
-    notifyListeners();
+    final removedCategories = _categoriesByAccount.remove(accountId);
+    final removedLoaded = _hasLoadedByAccount.remove(accountId);
+    if (removedCategories != null || removedLoaded != null) notifyListeners();
   }
 
   void clearAll() {
+    if (_categoriesByAccount.isEmpty &&
+        _hasLoadedByAccount.isEmpty &&
+        _availableIcons.isEmpty &&
+        !_iconsLoaded) {
+      return;
+    }
     _categoriesByAccount.clear();
     _hasLoadedByAccount.clear();
     _availableIcons = [];

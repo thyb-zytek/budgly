@@ -45,7 +45,11 @@ enum RecurrenceType {
     return addMonthsClamped(date, -months, anchorDay: anchorDay ?? date.day);
   }
 
-  DateTime firstOccurrenceOnOrAfter(DateTime anchor, DateTime target) {
+  DateTime firstOccurrenceOnOrAfter(
+    DateTime anchor,
+    DateTime target, {
+    int? anchorDay,
+  }) {
     var date = anchor;
     if (date.isBefore(target)) {
       final days = _days;
@@ -63,11 +67,18 @@ enum RecurrenceType {
             (target.year - date.year) * 12 + (target.month - date.month);
         final steps = delta ~/ months;
         if (steps > 0) {
-          date = addMonthsClamped(date, steps * months, anchorDay: anchor.day);
+          date = addMonthsClamped(
+            date,
+            steps * months,
+            anchorDay: anchorDay ?? anchor.day,
+          );
         }
       }
       while (date.isBefore(target)) {
-        final next = nextOccurrenceAfter(date, anchorDay: anchor.day);
+        final next = nextOccurrenceAfter(
+          date,
+          anchorDay: anchorDay ?? anchor.day,
+        );
         if (!next.isAfter(date)) break;
         date = next;
       }

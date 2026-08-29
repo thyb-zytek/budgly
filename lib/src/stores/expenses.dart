@@ -1,8 +1,7 @@
-import 'package:budgly/src/core/loading/loading_notifier.dart';
 import 'package:flutter/foundation.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 
-class ExpensesStore extends ChangeNotifier with LoadingNotifier {
+class ExpensesStore extends ChangeNotifier {
   static ExpensesStore? _instance;
 
   static ExpensesStore get instance {
@@ -15,12 +14,17 @@ class ExpensesStore extends ChangeNotifier with LoadingNotifier {
   final Map<String, List<Expense>> _expensesByAccount = {};
   final Set<String> _loadedAccounts = {};
 
-  Map<String, List<Expense>> get expensesByAccount => _expensesByAccount;
+  List<Expense> getExpensesForAccount(String accountId) =>
+      List.unmodifiable(_expensesByAccount[accountId] ?? const []);
 
   bool hasLoadedAccount(String accountId) => _loadedAccounts.contains(accountId);
 
-  List<Expense> getExpensesForAccount(String accountId) {
-    return List.unmodifiable(_expensesByAccount[accountId] ?? const []);
+  void setExpensesForAccount(String accountId, List<Expense> expenses) {
+    final sorted = List<Expense>.from(expenses)
+      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _expensesByAccount[accountId] = sorted;
+    _loadedAccounts.add(accountId);
+    notifyListeners();
   }
 
   Expense? getExpenseById(String expenseId) {
@@ -32,14 +36,6 @@ class ExpensesStore extends ChangeNotifier with LoadingNotifier {
     return null;
   }
 
-  void setExpensesForAccount(String accountId, List<Expense> expenses) {
-    final sorted = List<Expense>.from(expenses)
-      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
-    _expensesByAccount[accountId] = sorted;
-    _loadedAccounts.add(accountId);
-    notifyListeners();
-  }
-
   void addExpense(Expense expense) {
     final list = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
     list.add(expense);
@@ -47,8 +43,22 @@ class ExpensesStore extends ChangeNotifier with LoadingNotifier {
     notifyListeners();
   }
 
-  void updateExpense(Expense expense) {
+  void replaceExpenseWithVersions({
+    required Expense previous,
+    required Expense next,
+  }) {
+    for (final list in _expensesByAccount.values) {
+      list.removeWhere((expense) => expense.id == previous.id);
+    }
 
+    final list = _expensesByAccount.putIfAbsent(next.accountId, () => []);
+    list.add(previous);
+    list.add(next);
+    list.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    notifyListeners();
+  }
+
+  void updateExpense(Expense expense) {
     for (final list in _expensesByAccount.values) {
       list.removeWhere((e) => e.id == expense.id);
     }
@@ -60,14 +70,11 @@ class ExpensesStore extends ChangeNotifier with LoadingNotifier {
   }
 
   void removeExpense(String expenseId, String accountId) {
-    _expensesByAccount[accountId]?.removeWhere((e) => e.id == expenseId);
-    notifyListeners();
-  }
-
-  void clearAccountCache(String accountId) {
-    _expensesByAccount.remove(accountId);
-    _loadedAccounts.remove(accountId);
-    notifyListeners();
+    final list = _expensesByAccount[accountId];
+    if (list == null) return;
+    final before = list.length;
+    list.removeWhere((e) => e.id == expenseId);
+    if (list.length != before) notifyListeners();
   }
 
   void clearCategoryCache(String categoryId) {
@@ -80,7 +87,14 @@ class ExpensesStore extends ChangeNotifier with LoadingNotifier {
     if (changed) notifyListeners();
   }
 
+  void clearAccountCache(String accountId) {
+    final removedExpenses = _expensesByAccount.remove(accountId) != null;
+    final removedLoaded = _loadedAccounts.remove(accountId);
+    if (removedExpenses || removedLoaded) notifyListeners();
+  }
+
   void clearAll() {
+    if (_expensesByAccount.isEmpty && _loadedAccounts.isEmpty) return;
     _expensesByAccount.clear();
     _loadedAccounts.clear();
     notifyListeners();

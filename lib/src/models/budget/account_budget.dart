@@ -1,3 +1,4 @@
+import 'package:budgly/src/models/budget/period.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AccountBudget {
@@ -16,6 +17,8 @@ class AccountBudget {
     required this.revenue,
     this.updatedAt,
   });
+
+  Period get period => Period(year: year, month: month);
 
   factory AccountBudget.fromMap(String id, Map<String, dynamic> map) {
     return AccountBudget(
