@@ -1,5 +1,5 @@
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:flutter/material.dart';
 
@@ -21,8 +21,8 @@ class AccountView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      color: color,
+    return ColoredBox(
+      color: color ?? Colors.transparent,
       child: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -35,12 +35,14 @@ class AccountView extends StatelessWidget {
                 picture: account.pictureUrl?.isNotEmpty == true
                     ? account.pictureUrl
                     : null,
-                isLocalPicture: account.pictureUrl == null,
+                isLocalPicture: account.pictureUrl == null ||
+                    account.pictureUrl!.startsWith('/') ||
+                    account.pictureUrl!.startsWith('file://'),
                 backgroundColor: account.color,
                 size: 52,
               ),
               Padding(
-                padding: const EdgeInsets.only(right: 8.0),
+                padding: const EdgeInsets.only(right: BudglySpacing.sm),
                 child: Text(account.name, style: theme.textTheme.titleLarge),
               ),
             ],
@@ -54,15 +56,13 @@ class AccountView extends StatelessWidget {
                   IconButton(
                     icon: Icon(Icons.edit_rounded, size: 32),
                     onPressed: onEdit,
-                    color: ButtonType.primary.iconButtonColor(theme),
-                    style: ButtonType.primary.iconButtonStyle(theme),
+                    color: theme.colorScheme.primary,
                   ),
                 if (onDelete != null)
                   IconButton(
                     icon: Icon(Icons.delete_rounded, size: 32),
                     onPressed: onDelete,
-                    color: ButtonType.error.iconButtonColor(theme),
-                    style: ButtonType.error.iconButtonStyle(theme),
+                    color: theme.colorScheme.error,
                   ),
               ],
             ),

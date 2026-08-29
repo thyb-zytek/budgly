@@ -51,15 +51,6 @@ class StepIndicator extends StatelessWidget {
                           ? theme.colorScheme.primary.withAlpha(120)
                           : theme.colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(4),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: theme.colorScheme.primary.withAlpha(70),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
                 ),
               );
             }),

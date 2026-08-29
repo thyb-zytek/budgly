@@ -24,26 +24,18 @@ class LocaleForm extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.3,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(50),
-          shape: BoxShape.rectangle,
           color: theme.colorScheme.surfaceContainerHighest,
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(50),
-            color: theme.colorScheme.surfaceContainerHighest,
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Selector<Locale>(
-            items: const [Locale('en'), Locale('fr')],
-            selectedItem: currentLocale,
-            onSelect: onLocaleChanged,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            itemBuilder: (context, locale) =>
-                Text(locale.languageCode.toUpperCase()),
-          ),
+        child: Selector<Locale>(
+          items: const [Locale('en'), Locale('fr')],
+          selectedItem: currentLocale,
+          onSelect: onLocaleChanged,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          itemBuilder: (context, locale) =>
+              Text(locale.languageCode.toUpperCase()),
         ),
       ),
     );

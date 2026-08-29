@@ -2,6 +2,7 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class CustomizationPicker extends StatefulWidget {
@@ -83,7 +84,7 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
           }).toList(),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOut,
@@ -96,7 +97,7 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+          padding: const EdgeInsets.fromLTRB(BudglySpacing.xl, 0, BudglySpacing.xl, BudglySpacing.sm),
           child: Row(
             spacing: 16,
             children: [
@@ -106,17 +107,17 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
                   onPressed: widget.onCancel,
                   child: Text(
                     tr.cancel,
-                    style: ButtonType.error.labelStyle(theme, dense: true),
                   ),
                 ),
               ),
               Expanded(
                 child: FilledButton(
-                  style: ButtonType.primary.filledStyle(theme, dense: true),
+                  style: FilledButton.styleFrom(
+              padding: BudglyButtonDimensions.densePadding,
+            ),
                   onPressed: widget.onValidate,
                   child: Text(
                     tr.validate,
-                    style: ButtonType.primary.labelStyle(theme, dense: true),
                   ),
                 ),
               ),

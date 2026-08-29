@@ -4,7 +4,9 @@ import 'package:budgly/src/pages/settings/preferences/widgets/amount_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/currency_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/locale_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/theme_form.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:budgly/src/core/view_models/view_model_selector.dart';
 
 class PreferencesTab extends StatefulWidget {
   const PreferencesTab({super.key});
@@ -28,49 +30,62 @@ class _PreferencesTabState extends State<PreferencesTab> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 28, left: 16),
-            child: Text(
-              tr.appearance,
-              textAlign: TextAlign.start,
-              style: theme.textTheme.headlineLarge!,
+      padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 28, left: BudglySpacing.lg),
+              child: Text(
+                tr.appearance,
+                textAlign: TextAlign.start,
+                style: theme.textTheme.headlineLarge!,
+              ),
             ),
-          ),
-          ListenableBuilder(
-            listenable: _viewModel,
-            builder: (context, child) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ThemeForm(
-                    currentThemeMode: _viewModel.mode,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ViewModelSelector(
+                  model: _viewModel,
+                  selector: (model) => model.mode,
+                  builder: (context, mode) => ThemeForm(
+                    currentThemeMode: mode,
                     onThemeChanged: _viewModel.changeTheme,
                   ),
-                  LocaleForm(
-                    currentLocale: _viewModel.locale,
+                ),
+                ViewModelSelector(
+                  model: _viewModel,
+                  selector: (model) => model.locale,
+                  builder: (context, locale) => LocaleForm(
+                    currentLocale: locale,
                     onLocaleChanged: _viewModel.changeLocale,
                   ),
-                  CurrencyForm(
-                    currentCurrency: _viewModel.currency,
+                ),
+                ViewModelSelector(
+                  model: _viewModel,
+                  selector: (model) => model.currency,
+                  builder: (context, currency) => CurrencyForm(
+                    currentCurrency: currency,
                     supportedCurrencies: _viewModel.supportedCurrencies,
                     onCurrencyChanged: _viewModel.changeCurrency,
                   ),
-                  AmountForm(
-                    amountDecimalPlaces: _viewModel.amountDecimalPlaces,
+                ),
+                ViewModelSelector(
+                  model: _viewModel,
+                  selector: (model) => (model.currency, model.amountDecimalPlaces),
+                  builder: (context, value) => AmountForm(
+                    amountDecimalPlaces: value.$2,
                     onChanged: _viewModel.changeAmountDecimalPlaces,
-                    currency: _viewModel.currency,
+                    currency: value.$1,
                   ),
-                ],
-              );
-            },
-          ),
-        ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'tab_switcher.dart';
 
@@ -22,10 +24,9 @@ class SwipeTabs extends StatefulWidget {
   State<SwipeTabs> createState() => _SwipeTabsState();
 }
 
-class _SwipeTabsState extends State<SwipeTabs> with TickerProviderStateMixin {
+class _SwipeTabsState extends State<SwipeTabs> {
   late int _currentIndex;
   late PageController _pageController;
-  late TabController _tabController;
   Duration _animationDuration = const Duration(milliseconds: 500);
   Curve _animationCurve = Curves.fastLinearToSlowEaseIn;
 
@@ -36,11 +37,6 @@ class _SwipeTabsState extends State<SwipeTabs> with TickerProviderStateMixin {
     _pageController = PageController(
       initialPage: _currentIndex,
       keepPage: false,
-    );
-    _tabController = TabController(
-      length: widget.tabs.length,
-      vsync: this,
-      initialIndex: _currentIndex,
     );
   }
 
@@ -56,7 +52,6 @@ class _SwipeTabsState extends State<SwipeTabs> with TickerProviderStateMixin {
   @override
   void dispose() {
     _pageController.dispose();
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -78,12 +73,6 @@ class _SwipeTabsState extends State<SwipeTabs> with TickerProviderStateMixin {
   void _handleTabChange(int index) {
     if (_currentIndex == index) return;
 
-    _tabController.animateTo(
-      index,
-      duration: _animationDuration,
-      curve: _animationCurve,
-    );
-
     _pageController.jumpToPage(index);
 
     setState(() => _currentIndex = index);
@@ -92,27 +81,30 @@ class _SwipeTabsState extends State<SwipeTabs> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      spacing: 16,
-      children: [
-        Expanded(
-          child: PageView(
-            controller: _pageController,
-            onPageChanged: _handlePageChanged,
+    return Semantics(
+      label: AppLocalizations.of(context)?.semanticSwipeTabs,
+      child: Column(
+        spacing: 16,
+        children: [
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: _handlePageChanged,
 
-            pageSnapping: true,
-            children: widget.children,
+              pageSnapping: true,
+              children: widget.children,
+            ),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(bottom: 24),
-          child: TabSwitcher(
-            selectedIndex: _currentIndex,
-            onTabSelected: _handleTabChange,
-            tabs: widget.tabs,
+          Padding(
+            padding: EdgeInsets.only(bottom: BudglySpacing.xl),
+            child: TabSwitcher(
+              selectedIndex: _currentIndex,
+              onTabSelected: _handleTabChange,
+              tabs: widget.tabs,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

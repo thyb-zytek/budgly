@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class EntityTitle extends StatelessWidget {
@@ -10,7 +11,7 @@ class EntityTitle extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: BudglySpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,

@@ -1,5 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_badge.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
 import 'package:flutter/material.dart';
 
@@ -10,18 +10,15 @@ class WelcomeStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
 
     return TutorialStepScaffold(
       badge: TutorialStepBadge(
         size: 128,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+        child: SizedBox(
           width: 280,
           height: 280,
-          child: Image.asset('assets/images/logo.png'),
+          child: Image.asset('assets/images/logo.webp'),
         ),
       ),
       title: tr.tutorialWelcome,
@@ -29,11 +26,9 @@ class WelcomeStep extends StatelessWidget {
       primaryAction: SizedBox(
         width: double.infinity,
         child: FilledButton(
-          style: ButtonType.primary.filledStyle(theme),
-          onPressed: onNext,
+                    onPressed: onNext,
           child: Text(
             tr.tutorialGetStarted,
-            style: ButtonType.primary.labelStyle(theme),
           ),
         ),
       ),

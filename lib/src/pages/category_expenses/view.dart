@@ -1,16 +1,22 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/core/view_models/view_model_selector.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/models/budget/period.dart';
-import 'package:budgly/src/pages/category_expenses/widgets/expense_card.dart';
-import 'package:budgly/src/pages/category_expenses/widgets/expense_edit_sheet.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_editor_sheet.dart';
+import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
+import 'package:intl/intl.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/swipe_hint_wrapper.dart';
+import 'package:budgly/src/pages/category_expenses/widgets/category_expenses_content.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
-import 'package:budgly/src/shared/domain/widgets/categories/category_expenses.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
 
 class CategoryExpensesPage extends StatefulWidget {
@@ -32,6 +38,7 @@ class CategoryExpensesPage extends StatefulWidget {
 class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
   final GlobalKey<SwipeHintWrapperState> _swipeHintKey =
       GlobalKey<SwipeHintWrapperState>();
+  final ScrollController _scrollController = ScrollController();
 
   late final CategoryExpensesViewModel _viewModel;
 
@@ -44,21 +51,243 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
       period: widget.period,
     );
     _viewModel.ensureDataLoaded();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.extentAfter < 500) {
+      _viewModel.loadMore();
+    }
   }
 
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _viewModel.dispose();
     super.dispose();
   }
 
   void _openEditSheet(ExpenseOccurrence occurrence) {
+    final tr = AppLocalizations.of(context)!;
     _viewModel.startEditing(occurrence);
     showAppBottomSheet(
       context,
-      builder: (context) => ExpenseEditSheet(viewModel: _viewModel),
+      builder: (context) => ExpenseEditorSheet(
+        listenable: _viewModel,
+        editingData: _viewModel.expenseForm.data,
+        title: tr.editExpense,
+        currencyCode: _viewModel.currencyCode,
+        localeName: _viewModel.localeName,
+        validate: (tr) => _viewModel.expenseForm.validate(tr, requireAccountAndCategory: true),
+        onSubmit: _viewModel.saveEditing,
+        submitFailureMessage: tr.expenseUpdateFailed,
+        onToggleAdvanced: _viewModel.expenseForm.toggleAdvancedOptions,
+        onDateChanged: _viewModel.expenseForm.setDebitDate,
+        onRecurrenceChanged: _viewModel.expenseForm.setRecurrence,
+        onEndDateChanged: _viewModel.expenseForm.setEndDate,
+        onEndDateCleared: _viewModel.expenseForm.clearEndDate,
+        isSaving: () => _viewModel.isSaving,
+        isSubmitEnabled: () => _viewModel.categoriesForAccount().isNotEmpty &&
+            _viewModel.expenseForm.data.account != null &&
+            _viewModel.expenseForm.data.category != null,
+        titleLeadingBuilder: (context) {
+          final occ = _viewModel.editingOccurrence;
+          if (occ == null) return const SizedBox(width: 40);
+          final scheme = Theme.of(context).colorScheme;
+          return IconButton.filled(
+            style: IconButton.styleFrom(
+              backgroundColor: scheme.error,
+              foregroundColor: scheme.onError,
+              minimumSize: const Size(40, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: _viewModel.isSaving ? null : _deleteEditingExpense,
+            icon: const Icon(Icons.delete_outline, size: 20),
+            tooltip: tr.delete,
+          );
+        },
+        titleTrailingBuilder: (context) {
+          final occ = _viewModel.editingOccurrence;
+          if (occ == null) return const SizedBox(width: 40);
+          final theme = Theme.of(context);
+          final scheme = theme.colorScheme;
+          final isDebited = occ.isDebited;
+          final successColors = ButtonType.success.colors(theme);
+          return IconButton.filled(
+            style: IconButton.styleFrom(
+              backgroundColor: isDebited ? scheme.secondary : successColors.background,
+              foregroundColor: isDebited ? scheme.onSecondary : successColors.foreground,
+              minimumSize: const Size(40, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: _viewModel.isSaving ? null : _toggleEditingDebited,
+            icon: Icon(
+              isDebited ? Icons.remove_circle_outline : Icons.check_circle_outline,
+              size: 20,
+            ),
+            tooltip: isDebited ? tr.expenseMarkedAsPending : tr.markAsDebited,
+          );
+        },
+        preFieldsBuilder: (context) {
+          final theme = Theme.of(context);
+          final occ = _viewModel.editingOccurrence;
+          final categories = _viewModel.categoriesForAccount();
+          final accounts = _viewModel.formAccounts;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  SectionLabel(tr.account),
+                  FramedContainer(
+                    child: AccountSelector(
+                      accounts: accounts,
+                      selectedAccount: _viewModel.expenseForm.data.account,
+                      backgroundColor: theme.colorScheme.surface,
+                      onSelect: _viewModel.selectFormAccount,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  SectionLabel(tr.category),
+                  categories.isEmpty
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.errorContainer.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            spacing: 8,
+                            children: [
+                              Icon(Icons.error_outline, size: 18, color: theme.colorScheme.error),
+                              Expanded(
+                                child: Text(
+                                  tr.noCategoryForAccount,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : FramedContainer(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: CategorySelector(
+                            categories: categories,
+                            selectedCategory: _viewModel.expenseForm.data.category,
+                            onSelect: _viewModel.selectFormCategory,
+                          ),
+                        ),
+                ],
+              ),
+              if (occ != null && occ.recurrence.isRecurring)
+                Text(
+                  tr.recurringEditFromDate(
+                    DateFormat.yMMMMd(_viewModel.localeName).format(occ.date),
+                  ),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              if (occ != null && occ.recurrence.isRecurring)
+                Text(
+                  tr.markDebitedOccurrence(
+                    DateFormat.yMMMMd(_viewModel.localeName).format(occ.date),
+                  ),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          );
+        },
+        onSubmitSuccess: () {
+          final messenger = ScaffoldMessenger.of(context);
+          Navigator.pop(context);
+          messenger.showSnackBar(
+            buildAppSnackBar(
+              tr.expenseUpdatedSuccessfully,
+              SnackBarType.success,
+            ),
+          );
+        },
+      ),
     );
   }
+
+  Future<void> _toggleEditingDebited() async {
+    final tr = AppLocalizations.of(context)!;
+    final wasDebited = _viewModel.editingOccurrence?.isDebited ?? false;
+    final success = await _viewModel.toggleEditingOccurrenceDebited();
+    if (!mounted || !success) return;
+
+    showAppSnackBar(
+      context,
+      message: wasDebited
+          ? tr.expenseMarkedAsPending
+          : tr.expenseMarkedAsDebited,
+      type: wasDebited ? SnackBarType.pending : SnackBarType.success,
+    );
+  }
+
+  Future<void> _deleteEditingExpense() async {
+    final tr = AppLocalizations.of(context)!;
+    final occurrence = _viewModel.editingOccurrence;
+    if (occurrence == null) return;
+
+    var success = false;
+    bool? confirmed;
+
+    if (occurrence.recurrence.isRecurring) {
+      final choice = await showRecurringDeleteOptions(
+        context,
+        expenseName: occurrence.name,
+        dateLabel: DateFormat.yMMMMd(_viewModel.localeName).format(occurrence.date),
+      );
+      if (choice == null) return;
+      if (choice == RecurringDeleteChoice.single) {
+        success = await _viewModel.deleteSingleOccurrence(occurrence);
+        confirmed = success;
+      } else {
+        success = await _viewModel.deleteFutureOccurrences(occurrence);
+        confirmed = success;
+      }
+    } else {
+      confirmed = await showConfirmDelete(
+        context,
+        title: tr.confirmDeleteExpense(occurrence.name),
+        content: tr.confirmDeleteExpenseMessage(occurrence.name),
+        onConfirm: () async {
+          success = await _viewModel.deleteEditingExpense();
+        },
+      );
+      if (confirmed != true) return;
+    }
+
+    if (!mounted || !success) return;
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      buildAppSnackBar(tr.expenseDeletedSuccessfully, SnackBarType.success),
+    );
+  }
+
 
   Future<void> _toggleDebited(ExpenseOccurrence occurrence) async {
     final tr = AppLocalizations.of(context)!;
@@ -80,13 +309,33 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
     final tr = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
 
-    final deleted = await showConfirmDelete(
-      context,
-      title: tr.confirmDeleteExpense(occurrence.name),
-      content: tr.confirmDeleteExpenseMessage(occurrence.name),
-      onConfirm: () => _viewModel.deleteOccurrence(occurrence),
-    );
-    if (deleted != true || !mounted) return;
+    var success = false;
+
+    if (occurrence.recurrence.isRecurring) {
+      final choice = await showRecurringDeleteOptions(
+        context,
+        expenseName: occurrence.name,
+        dateLabel: DateFormat.yMMMMd(_viewModel.localeName).format(occurrence.date),
+      );
+      if (choice == null) return;
+      if (choice == RecurringDeleteChoice.single) {
+        success = await _viewModel.deleteSingleOccurrence(occurrence);
+      } else {
+        success = await _viewModel.deleteFutureOccurrences(occurrence);
+      }
+    } else {
+      final deleted = await showConfirmDelete(
+        context,
+        title: tr.confirmDeleteExpense(occurrence.name),
+        content: tr.confirmDeleteExpenseMessage(occurrence.name),
+        onConfirm: () async {
+          success = await _viewModel.deleteOccurrence(occurrence);
+        },
+      );
+      if (deleted != true) return;
+    }
+
+    if (!mounted || !success) return;
 
     messenger.showSnackBar(
       buildAppSnackBar(tr.expenseDeletedSuccessfully, SnackBarType.success),
@@ -97,77 +346,45 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
 
-    return ListenableBuilder(
-      listenable: _viewModel,
-      builder: (context, child) {
-        if (_viewModel.isLoading || _viewModel.category == null) {
-          return const Scaffold(body: AppLoadingIndicator());
-        }
-
-        final occurrences = _viewModel.occurrences;
-        final summary = _viewModel.summarize(occurrences);
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(summary.category.name ?? ''),
+    return Scaffold(
+      appBar: AppBar(
+        title: ViewModelSelector<CategoryExpensesViewModel, String>(
+          model: _viewModel,
+          selector: (model) => model.category?.name ?? '',
+          builder: (context, name) => Text(
+            name,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          body: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                sliver: SliverToBoxAdapter(
-                  child: CategoryExpenses(
-                    summary: summary,
-                    currencyCode: _viewModel.currencyCode,
-                    localeName: _viewModel.localeName,
-                    decimalPlaces: _viewModel.amountDecimalPlaces,
-                  ),
-                ),
-              ),
-              if (occurrences.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: EmptyState(
-                    icon: Icons.receipt_long_rounded,
-                    title: tr.noExpensesForCategory,
-                    subtitle: tr.noExpensesForCategoryHint,
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-                  sliver: SliverList.separated(
-                    itemCount: occurrences.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final occurrence = occurrences[index];
-                      final card = ExpenseCard(
-                        occurrence: occurrence,
-                        currencyCode: _viewModel.currencyCode,
-                        localeName: _viewModel.localeName,
-                        decimalPlaces: _viewModel.amountDecimalPlaces,
-                        accountColor: _viewModel.accountColor,
-                        onTap: () => _openEditSheet(occurrence),
-                        onEdit: () => _openEditSheet(occurrence),
-                        onToggleDebited: () => _toggleDebited(occurrence),
-                        onDelete: () => _deleteOccurrence(occurrence),
-                        onUserInteracted: () =>
-                            _swipeHintKey.currentState?.stop(),
-                      );
-                      return index == 0
-                          ? SwipeHintWrapper(
-                              key: _swipeHintKey,
-                              isDebited: occurrence.isDebited,
-                              child: card,
-                            )
-                          : card;
-                    },
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+        ),
+      ),
+      body: ViewModelFeedback(
+        viewModel: _viewModel,
+        child: ViewModelSelector<CategoryExpensesViewModel, bool>(
+        model: _viewModel,
+        selector: (model) => model.isLoading,
+        builder: (context, isLoading) {
+          if (isLoading || _viewModel.category == null) {
+            return const AppLoadingIndicator();
+          }
+
+          return ViewModelSelector<CategoryExpensesViewModel, int>(
+            model: _viewModel,
+            selector: (model) => model.dataRevision,
+            builder: (context, _) => CategoryExpensesContent(
+              viewModel: _viewModel,
+              translations: tr,
+              swipeHintKey: _swipeHintKey,
+              onEdit: _openEditSheet,
+              onToggleDebited: _toggleDebited,
+              onDelete: _deleteOccurrence,
+              scrollController: _scrollController,
+            ),
+          );
+        },
+        ),
+      ),
     );
   }
 }

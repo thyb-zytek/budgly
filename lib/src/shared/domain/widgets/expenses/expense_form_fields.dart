@@ -13,6 +13,8 @@ class ExpenseFormFields extends StatelessWidget {
   final VoidCallback onToggleAdvanced;
   final ValueChanged<DateTime> onDateChanged;
   final ValueChanged<RecurrenceType> onRecurrenceChanged;
+  final ValueChanged<DateTime> onEndDateChanged;
+  final VoidCallback onEndDateCleared;
 
   const ExpenseFormFields({
     super.key,
@@ -22,6 +24,8 @@ class ExpenseFormFields extends StatelessWidget {
     required this.onToggleAdvanced,
     required this.onDateChanged,
     required this.onRecurrenceChanged,
+    required this.onEndDateChanged,
+    required this.onEndDateCleared,
   });
 
   @override
@@ -62,6 +66,8 @@ class ExpenseFormFields extends StatelessWidget {
           onToggleAdvanced: onToggleAdvanced,
           onDateChanged: onDateChanged,
           onRecurrenceChanged: onRecurrenceChanged,
+          onEndDateChanged: onEndDateChanged,
+          onEndDateCleared: onEndDateCleared,
         ),
       ],
     );

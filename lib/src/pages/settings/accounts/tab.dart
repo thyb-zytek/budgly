@@ -5,9 +5,10 @@ import 'package:budgly/src/shared/domain/widgets/accounts/account_form.dart';
 import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
-import 'package:budgly/src/core/theme/component_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/account_view.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
 
 class AccountsTab extends StatefulWidget {
@@ -22,6 +23,7 @@ class AccountsTab extends StatefulWidget {
 class _AccountsTabState extends State<AccountsTab>
     with AutomaticKeepAliveClientMixin<AccountsTab> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -38,6 +40,12 @@ class _AccountsTabState extends State<AccountsTab>
         !widget.accountsViewModel.hasAccountsLoaded) {
       widget.accountsViewModel.loadAccounts();
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _confirmDelete(Account account) {
@@ -58,8 +66,10 @@ class _AccountsTabState extends State<AccountsTab>
     super.build(context);
     final tr = AppLocalizations.of(context)!;
 
-    return AnimatedBuilder(
-      animation: widget.accountsViewModel,
+    return ViewModelFeedback(
+      viewModel: widget.accountsViewModel,
+      child: ListenableBuilder(
+      listenable: widget.accountsViewModel,
       builder: (context, child) {
         if (widget.accountsViewModel.isLoading) {
           return const AppLoadingIndicator();
@@ -70,7 +80,7 @@ class _AccountsTabState extends State<AccountsTab>
         return Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(BudglySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -81,12 +91,13 @@ class _AccountsTabState extends State<AccountsTab>
                   Expanded(
                     child: accounts.isNotEmpty
                         ? ListView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.only(bottom: 100),
                             itemCount: accounts.length,
                             itemBuilder: (context, index) {
                               final account = accounts[index];
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.only(bottom: BudglySpacing.sm),
                                 child: Card(
                                   key: ValueKey(
                                     account.id ?? identityHashCode(account),
@@ -130,11 +141,23 @@ class _AccountsTabState extends State<AccountsTab>
               heroTag: 'add_account',
               label: tr.fabNewAccount,
               disabled: widget.accountsViewModel.isCreatingAccount,
-              onPressed: widget.accountsViewModel.addAccount,
+              onPressed: () {
+                widget.accountsViewModel.addAccount();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
+              },
             ),
           ],
         );
       },
+      ),
     );
   }
 

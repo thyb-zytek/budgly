@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:flutter/material.dart';
 
@@ -49,10 +50,8 @@ class CategoryIconView extends StatelessWidget {
                 child: Material(
                   color: theme.colorScheme.primary,
                   shape: const CircleBorder(),
-                  elevation: 2,
-                  shadowColor: Colors.black26,
                   child: Padding(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(BudglySpacing.xs),
                     child: Icon(
                       Icons.edit_rounded,
                       size: size < 60 ? 11 : 13,

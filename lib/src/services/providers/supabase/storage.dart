@@ -1,6 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:budgly/src/core/logging/logger.dart';
+import 'package:budgly/src/core/validation/upload_validation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 import 'client.dart';
@@ -26,6 +27,11 @@ class StorageSupabase {
             ? fileName
             : '${fileName ?? 'avatar'}.$fileExtension';
 
+    validateUploadConstraints(
+      sizeBytes: await file.length(),
+      fileExtension: fileExtension,
+    );
+
     final objectName = '$userId/${prefix != null ? '$prefix/' : ''}$name';
 
     await _client.storage.from(bucketId).upload(objectName, file);
@@ -40,13 +46,6 @@ class StorageSupabase {
     return _client.storage
         .from(bucketId)
         .createSignedUrl(filePath, validityInSeconds);
-  }
-
-  Future<Uint8List> getFileContent({
-    required String bucketId,
-    required String filePath,
-  }) async {
-    return _client.storage.from(bucketId).download(filePath);
   }
 
   Future<bool> deleteFile({
@@ -66,6 +65,8 @@ class StorageSupabase {
       if (files.isEmpty) return;
       final paths = files.map((f) => '$folderPath/${f.name}').toList();
       await _client.storage.from(bucketId).remove(paths);
-    } catch (_) {}
+    } catch (e, st) {
+      AppLogger.error('Failed to delete storage folder', e, st);
+    }
   }
 }

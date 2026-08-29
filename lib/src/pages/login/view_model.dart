@@ -1,15 +1,23 @@
 import 'package:budgly/src/core/auth/auth_event.dart';
-import 'package:budgly/src/core/auth/auth_state.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
+import 'package:budgly/src/core/auth/auth_state.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/auth/auth_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum AuthDestination { overview, tutorial }
 
 class LoginViewModel extends BaseViewModel {
+  static const String _hasLaunchedKey = 'hasLaunched';
+
   final AuthService _authService;
   final ProfileService _profileService;
+  final AccountsService _accountsService;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -22,8 +30,10 @@ class LoginViewModel extends BaseViewModel {
     this.onAuthenticated,
     AuthService? authService,
     ProfileService? profileService,
+    AccountsService? accountsService,
   })  : _authService = authService ?? AuthService.instance,
-        _profileService = profileService ?? ProfileService.instance {
+        _profileService = profileService ?? ProfileService.instance,
+        _accountsService = accountsService ?? AccountsService.instance {
     _initialize();
   }
 
@@ -40,7 +50,7 @@ class LoginViewModel extends BaseViewModel {
     super.dispose();
   }
 
-  Future<void> _initialize() async {
+  void _initialize() {
     final currentUser = _authService.currentUser;
 
     if (currentUser != null && !currentUser.emailVerified) {
@@ -56,6 +66,34 @@ class LoginViewModel extends BaseViewModel {
 
     if (isDisposed) return;
     _setState(formType: AuthForm.signIn, isLoading: false, isGoogleSignIn: false);
+  }
+
+  Future<void> initializeFormType() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasLaunched = prefs.getBool(_hasLaunchedKey) ?? false;
+    if (!isDisposed) {
+      handleEvent(
+        AuthEventParams(
+          type: AuthEvent.changeFormType,
+          formType: hasLaunched ? AuthForm.signIn : AuthForm.signUp,
+        ),
+      );
+    }
+    if (!hasLaunched) {
+      await prefs.setBool(_hasLaunchedKey, true);
+    }
+  }
+
+  Future<AuthDestination> resolvePostAuthDestination(User user) async {
+    try {
+      await _accountsService.loadAccounts();
+      if (_accountsService.accounts.isNotEmpty) {
+        return AuthDestination.overview;
+      }
+    } catch (e, st) {
+      AppLogger.error('Failed to load accounts for post-auth routing', e, st);
+    }
+    return AuthDestination.tutorial;
   }
 
   void _setState({
@@ -189,7 +227,7 @@ class LoginViewModel extends BaseViewModel {
     try {
       final user = await _authService.signInWithGoogle();
       await _profileService.loadUserProfile(forceRefresh: true);
-      onAuthenticated?.call(user);
+      if (!isDisposed) onAuthenticated?.call(user);
     } on AuthenticationException catch (e) {
       if (!isDisposed) {
         _setState(

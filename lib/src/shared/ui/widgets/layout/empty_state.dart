@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class EmptyState extends StatelessWidget {
@@ -18,18 +19,14 @@ class EmptyState extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           spacing: 12,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHigh,
-                shape: BoxShape.circle,
-              ),
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: theme.colorScheme.surfaceContainerHigh,
               child: Icon(
                 icon,
                 size: 30,

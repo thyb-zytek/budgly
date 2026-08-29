@@ -1,8 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/pages/login/widgets/auth_validators.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class LoginForm extends StatelessWidget {
@@ -61,7 +61,7 @@ class LoginForm extends StatelessWidget {
               children: [
                 if (errorCode != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: BudglySpacing.lg),
                     child: Text(
                       _getErrorMessageText(context),
                       style: theme.textTheme.bodyMedium!.copyWith(
@@ -115,13 +115,11 @@ class LoginForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: 24),
+          padding: EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
-            style: ButtonType.primary.filledStyle(theme),
-            onPressed: onSubmitForm,
+                        onPressed: onSubmitForm,
             child: Text(
               tr.signIn,
-              style: ButtonType.primary.labelStyle(theme),
             ),
           ),
         ),

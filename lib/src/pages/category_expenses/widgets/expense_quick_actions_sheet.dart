@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 Future<void> showExpenseQuickActionsSheet(
@@ -36,14 +37,16 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.lg),
         child: Row(
           spacing: 12,
           children: [
             if (edit != null)
               Expanded(
                 child: FilledButton(
-                  style: ButtonType.primary.filledStyle(theme, dense: true),
+                  style: FilledButton.styleFrom(
+              padding: BudglyButtonDimensions.densePadding,
+            ),
                   onPressed: () {
                     Navigator.pop(context);
                     edit();

@@ -71,17 +71,16 @@ class EntityForm extends StatelessWidget {
                   onPressed: onCancel,
                   child: Text(
                     tr.cancel,
-                    style: ButtonType.error.labelStyle(theme, dense: denseButtons),
                   ),
                 ),
               ),
               Expanded(
                 child: FilledButton(
-                  style: ButtonType.primary.filledStyle(theme, dense: denseButtons),
+                  style: denseButtons ? FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)) : null,
                   onPressed: _onSubmit,
                   child: Text(
                     tr.validate,
-                    style: ButtonType.primary.labelStyle(theme, dense: denseButtons),
+
                   ),
                 ),
               ),

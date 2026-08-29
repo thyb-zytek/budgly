@@ -2,14 +2,6 @@ import 'package:flutter/material.dart';
 
 enum SwipeDirection { forward, backward }
 
-/// Detects decisive horizontal swipes over its child and reports them as
-/// [SwipeDirection.forward] (leftwards) or [SwipeDirection.backward]
-/// (rightwards).
-///
-/// A pointer gesture counts as a swipe when the horizontal distance is
-/// dominant enough over the vertical one, covers a minimum distance, and
-/// is fast enough — slow long drags are ignored so vertical scrolling
-/// stays free.
 class HorizontalSwipeDetector extends StatefulWidget {
   final Widget child;
   final ValueChanged<SwipeDirection> onSwipe;

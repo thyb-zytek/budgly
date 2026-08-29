@@ -1,9 +1,12 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_badge.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/advanced_date_field.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_selector.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/date_field.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
 import 'package:flutter/material.dart';
 
 class ExpenseAdvancedOptions extends StatelessWidget {
@@ -12,6 +15,8 @@ class ExpenseAdvancedOptions extends StatelessWidget {
   final VoidCallback onToggleAdvanced;
   final ValueChanged<DateTime> onDateChanged;
   final ValueChanged<RecurrenceType> onRecurrenceChanged;
+  final ValueChanged<DateTime> onEndDateChanged;
+  final VoidCallback onEndDateCleared;
 
   const ExpenseAdvancedOptions({
     super.key,
@@ -20,19 +25,9 @@ class ExpenseAdvancedOptions extends StatelessWidget {
     required this.onToggleAdvanced,
     required this.onDateChanged,
     required this.onRecurrenceChanged,
+    required this.onEndDateChanged,
+    required this.onEndDateCleared,
   });
-
-  Widget _sectionLabel(BuildContext context, String text) {
-    final theme = Theme.of(context);
-    return Text(
-      text.toUpperCase(),
-      style: theme.textTheme.labelMedium?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.4,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,50 +40,90 @@ class ExpenseAdvancedOptions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextButton(
-          onPressed: onToggleAdvanced,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 12,
-            children: [
-              const Icon(Icons.event_repeat_rounded, size: 18),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    tr.expenseAdvancedOptions,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  if (isRecurring) ...[
-                    const SizedBox(height: 4),
-                    RecurrenceBadge(
-                      label: tr.recurrenceActiveSummary(
-                        recurrenceLabel(tr, data.recurrence),
-                      ),
-                    ),
-                  ]
-                ],
+        InkWell(
+          onTap: onToggleAdvanced,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
               ),
-            ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.event_repeat_rounded,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: BudglySpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 2,
+                    children: [
+                      Row(
+                        spacing: BudglySpacing.sm,
+                        children: [
+                          Text(
+                            tr.expenseAdvancedOptions,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (isRecurring)
+                            RecurrenceBadge(
+                              label: tr.recurrenceActiveSummary(
+                                recurrenceLabel(tr, data.recurrence),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (!isExpanded)
+                        Text(
+                          tr.expenseAdvancedOptionsHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: isExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 22,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),        
+        ),
         AnimatedSize(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
           child: isExpanded
               ? Padding(
-                  padding: const EdgeInsets.only(top: 14),
+                  padding: const EdgeInsets.only(top: 12),
                   child: Column(
-                    spacing: 18,
+                    spacing: BudglySpacing.lg,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 6,
+                        spacing: BudglySpacing.sm,
                         children: [
-                          _sectionLabel(context, tr.recurrence),
+                          SectionLabel(tr.recurrence),
                           RecurrenceSelector(
                             selectedRecurrence: data.recurrence,
                             onRecurrenceChanged: onRecurrenceChanged,
@@ -96,14 +131,40 @@ class ExpenseAdvancedOptions extends StatelessWidget {
                         ],
                       ),
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 6,
+                        spacing: BudglySpacing.lg,
                         children: [
-                          _sectionLabel(context, tr.debitDate),
-                          DateField(
-                            initialDate: data.debitDate,
-                            localeName: localeName,
-                            onDateChanged: onDateChanged,
+                          SizedBox(
+                            width: double.infinity,
+                            child: AdvancedDateField(
+                                      label: tr.debitDate,
+                                      child: DateField(
+                                        date: data.debitDate,
+                                        localeName: localeName,
+                                        onDateChanged: onDateChanged,
+                                      ),
+                                    ),
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.topCenter,
+                            child: isRecurring
+                                ? SizedBox(
+                                    width: double.infinity,
+                                    child: AdvancedDateField(
+                                      label: tr.endDate,
+                                      child: buildEndDateField(
+                                        context,
+                                        endDate: data.endDate,
+                                        recurrence: data.recurrence,
+                                        minimumDate: data.debitDate,
+                                        localeName: localeName,
+                                        onDateChanged: onEndDateChanged,
+                                        onCleared: onEndDateCleared,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                         ],
                       ),
@@ -116,3 +177,4 @@ class ExpenseAdvancedOptions extends StatelessWidget {
     );
   }
 }
+

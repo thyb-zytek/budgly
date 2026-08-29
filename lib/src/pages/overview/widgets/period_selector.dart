@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:flutter/material.dart';
 
@@ -6,12 +7,14 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
   final Period period;
   final Period minPeriod;
   final Period maxPeriod;
+  final int revision;
   final ValueChanged<Period> onChanged;
 
   PeriodSelector({
     required this.period,
     required this.minPeriod,
     required this.maxPeriod,
+    required this.revision,
     required this.onChanged,
   });
 
@@ -34,7 +37,10 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
       child: SizedBox(
         height: maxExtent,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: BudglySpacing.lg,
+            vertical: BudglySpacing.sm,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -91,7 +97,8 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant PeriodSelector oldDelegate) {
     return oldDelegate.period != period ||
         oldDelegate.minPeriod != minPeriod ||
-        oldDelegate.maxPeriod != maxPeriod;
+        oldDelegate.maxPeriod != maxPeriod ||
+        oldDelegate.revision != revision;
   }
 }
 

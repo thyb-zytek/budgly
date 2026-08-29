@@ -6,6 +6,7 @@ import 'package:budgly/src/pages/login/widgets/login_form.dart';
 import 'package:budgly/src/pages/login/widgets/reset_password_form.dart';
 import 'package:budgly/src/pages/login/widgets/signup_form.dart';
 import 'package:budgly/src/pages/login/widgets/verify_email.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class LoginFormSwitcher extends StatelessWidget {
@@ -93,7 +94,7 @@ class LoginFormSwitcher extends StatelessWidget {
         },
         if ([AuthForm.signUp, AuthForm.signIn, AuthForm.resetPassword].contains(formType))
           Padding(
-            padding: EdgeInsets.all(24).add(
+            padding: EdgeInsets.all(BudglySpacing.xl).add(
               EdgeInsets.only(bottom: isKeyboardOpen ? 8 : 0),
             ),
             child: GoogleSignInButton(

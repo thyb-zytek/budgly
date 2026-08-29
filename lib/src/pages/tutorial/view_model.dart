@@ -1,5 +1,6 @@
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/extensions/amount.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/account/account_editing_data.dart';
@@ -7,6 +8,7 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_editing_data.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/auth/auth_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
@@ -84,6 +86,10 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   bool get hasRevenue => _hasRevenue;
 
+  String get currencyCode => _profileService.currency;
+
+  int get amountDecimalPlaces => _profileService.amountDecimalPlaces;
+
   String get accountInitial {
     final name = accountNameController.text;
     return name.isNotEmpty ? name[0].toUpperCase() : 'C';
@@ -103,26 +109,37 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
     accountNameController = TextEditingController(text: '');
     categoryNameController = TextEditingController(text: '');
     revenueController = TextEditingController(text: '');
+    AnalyticsService.instance.track('onboarding_started');
+    AnalyticsService.instance.track('onboarding_step_started', {'step': 0});
     _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
     try {
       _prefs ??= await SharedPreferences.getInstance();
-      await _authService.reloadCurrentUser();
-
       var hasExistingAccount = false;
+
+      // Preferences, accounts and the static icon catalogue are independent.
+      // Keep startup work parallel and let the account-dependent work begin as
+      // soon as the local account list is available.
+      final accountsFuture = _accountsService.loadAccounts();
+      final iconsFuture = _categoriesService.loadAvailableIcons();
+
       try {
-        await _accountsService.loadAccounts();
+        await accountsFuture;
         if (_accountsService.accounts.isNotEmpty) {
           hasExistingAccount = true;
           await _adoptExistingAccount(_accountsService.accounts.first);
         }
-      } catch (_) {
-
+      } catch (e, stackTrace) {
+        AppLogger.error(
+          'Failed to adopt existing account in tutorial',
+          e,
+          stackTrace,
+        );
       }
 
-      await _categoriesService.loadAvailableIcons();
+      await iconsFuture;
       if (_categoriesService.availableIcons.isNotEmpty) {
         _categoryIcon = _categoryIcon ?? _categoriesService.availableIcons.firstWhere(
           (i) => i.iconName == AppConstants.defaultCategoryIcon.iconName,
@@ -148,23 +165,39 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
     if (account.id == null) return;
     try {
-      final existingCategories = await _categoriesService.listCategoriesByAccount(account.id!);
-      _createdCategories
-        ..clear()
-        ..addAll(existingCategories);
-      if (_createdCategories.isNotEmpty) _cycleCategoryDefaults();
-
       final now = DateTime.now();
-      await _budgetService.loadRevenue(account.id!, now.year, now.month);
-      _hasRevenue = _budgetService.getRevenue(account.id!, now.year, now.month) > 0;
-    } catch (_) {
-
+      await Future.wait([
+        _loadExistingCategories(account.id!),
+        _loadExistingRevenue(account.id!, now.year, now.month),
+      ]);
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to prefill tutorial from existing account', e, stackTrace);
     }
+  }
+
+  Future<void> _loadExistingCategories(String accountId) async {
+    final categories = await _categoriesService.listCategoriesByAccount(accountId);
+    _createdCategories
+      ..clear()
+      ..addAll(categories);
+    if (_createdCategories.isNotEmpty) _cycleCategoryDefaults();
+  }
+
+  Future<void> _loadExistingRevenue(
+    String accountId,
+    int year,
+    int month,
+  ) async {
+    await _budgetService.loadRevenue(accountId, year, month);
+    _hasRevenue = _budgetService.getRevenue(accountId, year, month) > 0;
   }
 
   void nextStep() {
     if (_currentStep < totalSteps - 1) {
+      final previousStep = _currentStep;
       _currentStep++;
+      AnalyticsService.instance.track('onboarding_step_completed', {'step': previousStep});
+      AnalyticsService.instance.track('onboarding_step_started', {'step': _currentStep});
       _persistStep();
       notifyListeners();
     }
@@ -173,14 +206,7 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
   void previousStep() {
     if (_currentStep > 0) {
       _currentStep--;
-      _persistStep();
-      notifyListeners();
-    }
-  }
-
-  void goToStep(int step) {
-    if (step >= 0 && step < totalSteps) {
-      _currentStep = step;
+      AnalyticsService.instance.track('onboarding_step_started', {'step': _currentStep});
       _persistStep();
       notifyListeners();
     }
@@ -192,11 +218,20 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
   }
 
   Future<void> completeTutorial() async {
-    _prefs ??= await SharedPreferences.getInstance();
-    final uid = _authService.currentUser?.id ?? 'anonymous';
-    await _prefs!.remove(AppConstants.tutorialStepKey(uid));
-    await _prefs!.setBool(AppConstants.tutorialCompletedKey(uid), true);
-    await ProfileService.instance.completeOnboarding();
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      final uid = _authService.currentUser?.id ?? 'anonymous';
+      await _prefs!.remove(AppConstants.tutorialStepKey(uid));
+      await _prefs!.setBool(AppConstants.tutorialCompletedKey(uid), true);
+      await ProfileService.instance.completeOnboarding();
+      AnalyticsService.instance.track('onboarding_completed');
+    } catch (e, stackTrace) {
+      // Getting the user stuck on the last onboarding screen would be worse
+      // than a local persistence hiccup — log it, but always let them
+      // proceed to the app. ProfileService.completeOnboarding() already
+      // has its own offline-first retry for the remote side.
+      AppLogger.error('Failed to finalize onboarding completion', e, stackTrace);
+    }
   }
 
   void setAccountColor(Color color) {
@@ -276,7 +311,10 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
         _createdAccount = await _uploadAndLinkImage(_createdAccount!, imageToUpload);
         _accountsService.updateLocalAccount(_createdAccount!);
       }
-      if (_createdAccount != null) await _persistStep();
+      if (_createdAccount != null) {
+        AnalyticsService.instance.track('tutorial_account_created');
+        await _persistStep();
+      }
     } finally {
       setLoading(false);
     }
@@ -344,10 +382,12 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
       );
       final created = await _categoriesService.createCategory(category);
       _createdCategories.add(created);
+      AnalyticsService.instance.track('tutorial_category_created');
       categoryNameController.clear();
       _cycleCategoryDefaults();
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Failed to create category in tutorial', e, st);
       return false;
     } finally {
       _isAddingCategory = false;
@@ -375,7 +415,8 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
     try {
       await _categoriesService.deleteCategory(category.id!);
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Failed to delete category in tutorial', e, st);
       _createdCategories.insert(index, category);
       notifyListeners();
     }
@@ -389,15 +430,13 @@ class TutorialViewModel extends BaseViewModel implements AccountFormViewModel, C
 
   Future<void> saveRevenue() async {
     if (_createdAccount?.id == null) return;
-    final value = parseAmount(
-      revenueController.text,
-      decimalPlaces: ProfileService.instance.amountDecimalPlaces,
-    );
+    final value = parseAmount(revenueController.text);
     if (value == null || value <= 0) return;
 
     final now = DateTime.now();
     await _budgetService.setRevenue(_createdAccount!.id!, now.year, now.month, value);
     _hasRevenue = true;
+    AnalyticsService.instance.track('tutorial_budget_created');
     notifyListeners();
   }
 

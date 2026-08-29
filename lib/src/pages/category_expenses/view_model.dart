@@ -1,32 +1,46 @@
-import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/extensions/amount.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
+import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/pages/category_expenses/ui_state.dart';
+import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
-import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
-import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
+import 'package:budgly/src/services/calculators/expense_summary_calculator.dart';
+import 'package:budgly/src/services/calculators/expense_occurrence_calculator.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CategoryExpensesViewModel extends BaseViewModel {
   final ExpensesService _expensesService;
   final CategoriesService _categoriesService;
   final ProfileService _profileService;
   final AccountsService _accountsService;
+  final ExpenseSummaryCalculator _summaryCalculator;
+  final ExpenseOccurrenceCalculator _occurrenceCalculator;
 
   final String accountId;
   final String categoryId;
   final Period period;
 
-  ExpenseOccurrence? _editingOccurrence;
-  bool _isSaving = false;
+  CategoryExpensesUiState _uiState = const CategoryExpensesUiState();
 
-  late final ExpenseEditingData editingData;
+  final ExpenseFormController expenseForm = ExpenseFormController();
+
+  final List<Expense> _pagedExpenses = [];
+  List<ExpenseOccurrence>? _cachedOccurrences;
+  int _cachedOccurrencesRevision = -1;
+  DocumentSnapshot<Map<String, dynamic>>? _pageCursor;
+  bool _hasMorePages = true;
+  bool _isLoadingMore = false;
+  bool _hasLoadedFirstPage = false;
 
   CategoryExpensesViewModel({
     required this.accountId,
@@ -36,31 +50,55 @@ class CategoryExpensesViewModel extends BaseViewModel {
     CategoriesService? categoriesService,
     ProfileService? profileService,
     AccountsService? accountsService,
-  })  : _expensesService = expensesService ?? ExpensesService.instance,
-        _categoriesService = categoriesService ?? CategoriesService.instance,
-        _profileService = profileService ?? ProfileService.instance,
-        _accountsService = accountsService ?? AccountsService.instance {
-    editingData = ExpenseEditingData(
-      nameController: TextEditingController(),
-      amountController: TextEditingController(),
-    );
-    _expensesService.addListener(_onServiceChanged);
+    ExpenseSummaryCalculator? summaryCalculator,
+    ExpenseOccurrenceCalculator? occurrenceCalculator,
+  }) : _expensesService = expensesService ?? ExpensesService.instance,
+       _categoriesService = categoriesService ?? CategoriesService.instance,
+       _profileService = profileService ?? ProfileService.instance,
+       _accountsService = accountsService ?? AccountsService.instance,
+       _summaryCalculator =
+           summaryCalculator ?? const ExpenseSummaryCalculator(),
+       _occurrenceCalculator =
+           occurrenceCalculator ?? const ExpenseOccurrenceCalculator() {
+    expenseForm.addListener(_onFormChanged);
+    _expensesService.addListener(_onExpensesChanged);
+    _profileService.addListener(_onProfileChanged);
+    AnalyticsService.instance.track('screen_viewed', {
+      'screen': 'category_expenses',
+    });
   }
 
-  void _onServiceChanged() {
+  void _onFormChanged() {
+    if (!isDisposed) notifyListeners();
+  }
+
+  void _onExpensesChanged() {
+    _bumpDataRevision();
     _refreshEditingOccurrence();
     if (!isDisposed) notifyListeners();
   }
 
+  void _onProfileChanged() {
+    if (!isDisposed) notifyListeners();
+  }
+
+  void _bumpDataRevision() {
+    _uiState = _uiState.copyWith(dataRevision: _uiState.dataRevision + 1);
+    _cachedOccurrences = null;
+    _cachedOccurrencesRevision = -1;
+  }
+
   void _refreshEditingOccurrence() {
-    final current = _editingOccurrence;
+    final current = _uiState.editingOccurrence;
     if (current == null) return;
     final fresh = _expensesService.getExpenseById(current.id);
     if (fresh == null) return;
-    _editingOccurrence = ExpenseOccurrence(
-      expense: fresh,
-      date: current.date,
-      isDebited: fresh.isDebitedAt(current.date),
+    _uiState = _uiState.copyWith(
+      editingOccurrence: ExpenseOccurrence(
+        expense: fresh,
+        date: current.date,
+        isDebited: fresh.isDebitedAt(current.date),
+      ),
     );
   }
 
@@ -73,44 +111,107 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   Color? get accountColor => _accountsService.getAccountById(accountId)?.color;
 
-  bool get isSaving => _isSaving;
+  CategoryExpensesUiState get uiState => _uiState;
+  bool get isSaving => _uiState.isSaving;
+  int get dataRevision => _uiState.dataRevision;
+  bool get hasMorePages => _hasMorePages;
+  bool get isLoadingMore => _isLoadingMore;
 
-  ExpenseOccurrence? get editingOccurrence => _editingOccurrence;
-  bool get isEditingRecurring =>
-      _editingOccurrence?.recurrence.isRecurring ?? false;
-
+  ExpenseOccurrence? get editingOccurrence => _uiState.editingOccurrence;
   Future<void> ensureDataLoaded() async {
     if (!_categoriesService.hasLoadedAccount(accountId)) {
       setLoading(true);
-      await _categoriesService.listCategoriesByAccount(accountId);
-      setLoading(false);
+      try {
+        await _categoriesService.listCategoriesByAccount(accountId);
+      } catch (e, stackTrace) {
+        setError(e, stackTrace: stackTrace);
+      } finally {
+        setLoading(false);
+      }
     }
-    if (!_expensesService.hasLoadedAccount(accountId)) {
-      setLoading(true);
-      await _expensesService.listExpensesByAccount(accountId);
-      setLoading(false);
+    if (!_hasLoadedFirstPage) {
+      await loadMore();
     }
     if (!isDisposed) notifyListeners();
   }
 
-  List<ExpenseOccurrence> get occurrences {
-    final expenses = _expensesService
-        .getExpensesForAccount(accountId)
-        .where((e) => e.categoryId == categoryId)
-        .toList();
-    if (expenses.isEmpty) return const [];
+  Future<void> loadMore() async {
+    if (_isLoadingMore || !_hasMorePages) return;
+    final isFirstPage = !_hasLoadedFirstPage;
+    _isLoadingMore = true;
+    if (isFirstPage) setLoading(true);
+    if (!isDisposed) notifyListeners();
 
-    final start = period.startOfMonth;
-    final end = period.endOfMonth;
-
-    final result = <ExpenseOccurrence>[];
-    for (final expense in expenses) {
-      result.addAll(expandExpenseOccurrencesBetween(expense, start, end));
+    try {
+      final page = await _expensesService.listCategoryPeriodPage(
+        accountId,
+        categoryId,
+        period,
+        startAfter: _pageCursor,
+        includeRecurring: !_hasLoadedFirstPage,
+      );
+      final existingIds = _pagedExpenses.map((expense) => expense.id).toSet();
+      for (final expense in page.expenses) {
+        if (existingIds.contains(expense.id)) continue;
+        _pagedExpenses.add(expense);
+      }
+      _pageCursor = page.cursor;
+      _hasMorePages = page.hasMore;
+      _hasLoadedFirstPage = true;
+      _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+      _bumpDataRevision();
+    } catch (e, stackTrace) {
+      if (isFirstPage) {
+        // Offline: fall back to the locally-cached expenses for this category
+        // so the list is not empty until a manual refresh succeeds.
+        final local = _expensesService
+            .getExpensesForAccount(accountId)
+            .where((expense) => expense.categoryId == categoryId)
+            .toList();
+        if (local.isNotEmpty) {
+          _pagedExpenses.addAll(local);
+          _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+          _hasLoadedFirstPage = true;
+          _hasMorePages = false;
+          _uiState = _uiState.copyWith(
+            dataRevision: _uiState.dataRevision + 1,
+          );
+        } else {
+          setError(e, stackTrace: stackTrace);
+        }
+      } else {
+        // Avoid spamming a snackbar on every scroll-triggered pagination
+        // retry over a flaky connection — the user can just keep scrolling
+        // to retry, and hasMorePages stays true so nothing is lost.
+        AppLogger.error('Failed to load expense page', e, stackTrace);
+      }
+    } finally {
+      _isLoadingMore = false;
+      AnalyticsService.instance.track('expense_page_loaded', {
+        'source': 'pagination',
+      });
+      if (isFirstPage) {
+        setLoading(false);
+      } else if (!isDisposed) {
+        notifyListeners();
+      }
     }
-    result.sort((a, b) {
-      if (a.isDebited != b.isDebited) return a.isDebited ? 1 : -1;
-      return a.date.compareTo(b.date);
-    });
+  }
+
+  List<ExpenseOccurrence> get occurrences {
+    if (_pagedExpenses.isEmpty) return const [];
+    if (_cachedOccurrencesRevision == _uiState.dataRevision &&
+        _cachedOccurrences != null) {
+      return _cachedOccurrences!;
+    }
+
+    final result = _occurrenceCalculator.between(
+      _pagedExpenses,
+      period.startOfMonth,
+      period.endOfMonth,
+    );
+    _cachedOccurrences = result;
+    _cachedOccurrencesRevision = _uiState.dataRevision;
     return result;
   }
 
@@ -120,200 +221,363 @@ class CategoryExpensesViewModel extends BaseViewModel {
   }
 
   CategoryExpenseSummary summarize(List<ExpenseOccurrence> occurrences) {
-    final cat = category!;
-    double total = 0;
-    double debited = 0;
-    double undebited = 0;
-    int undebitedCount = 0;
-    for (final occurrence in occurrences) {
-      total += occurrence.amount;
-      if (occurrence.isDebited) {
-        debited += occurrence.amount;
-      } else {
-        undebited += occurrence.amount;
-        undebitedCount++;
-      }
+    final cat = category;
+    if (cat == null) {
+      throw StateError('Category is not available');
     }
-
-    return CategoryExpenseSummary(
+    return _summaryCalculator.summarize(
       category: cat,
-      total: total,
-      debited: debited,
-      undebited: undebited,
-      undebitedCount: undebitedCount,
+      occurrences: occurrences,
     );
   }
 
   void startEditing(ExpenseOccurrence occurrence) {
-    _editingOccurrence = occurrence;
-    editingData.nameController.text = occurrence.name;
-    editingData.amountController.text = _formatAmountInput(occurrence.amount);
-    editingData.debitDate = occurrence.expense.debitDate;
-    editingData.recurrence = occurrence.recurrence;
-    editingData.showAdvancedOptions = occurrence.recurrence.isRecurring;
-    if (!isDisposed) notifyListeners();
-  }
-
-  static String _formatAmountInput(double value) {
-    final text = value.toString();
-    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
-  }
-
-  void setDebitDate(DateTime date) {
-    editingData.debitDate = date;
-    if (!isDisposed) notifyListeners();
-  }
-
-  void setRecurrence(RecurrenceType recurrence) {
-    editingData.recurrence = recurrence;
-    if (!isDisposed) notifyListeners();
-  }
-
-  void toggleAdvancedOptions() {
-    editingData.showAdvancedOptions = !editingData.showAdvancedOptions;
-    if (!isDisposed) notifyListeners();
-  }
-
-  String? validate(AppLocalizations tr) {
-    if (editingData.nameController.text.trim().isEmpty) return tr.nameRequired;
-    final amount = parseAmount(
-      editingData.amountController.text,
-      decimalPlaces: _profileService.amountDecimalPlaces,
+    AnalyticsService.instance.track('category_expense_tap');
+    _uiState = _uiState.copyWith(editingOccurrence: occurrence);
+    expenseForm.loadFromOccurrence(
+      occurrence,
+      category: _categoriesService.getCategoryById(occurrence.categoryId),
+      account: _accountsService.getAccountById(occurrence.expense.accountId),
     );
-    if (amount == null) return tr.amountInvalid;
-    return null;
+  }
+
+  List<Category> categoriesForAccount() {
+    final formAccountId = expenseForm.data.account?.id ?? accountId;
+    return _categoriesService.getCategoriesForAccount(formAccountId);
+  }
+
+  List<Account> get formAccounts => _accountsService.accounts;
+
+  Future<void> selectFormAccount(Account account) async {
+    if (expenseForm.data.account?.id == account.id) return;
+    expenseForm.setAccount(account);
+    if (account.id != null &&
+        !_categoriesService.hasLoadedAccount(account.id!)) {
+      await _categoriesService.listCategoriesByAccount(account.id!);
+    }
+    final categories = categoriesForAccount();
+    if (categories.isNotEmpty) {
+      if (expenseForm.data.category == null ||
+          !categories.any((c) => c.id == expenseForm.data.category!.id)) {
+        expenseForm.setCategory(categories.first);
+      }
+    } else {
+      expenseForm.data.category = null;
+      expenseForm.notifyListeners();
+    }
+  }
+
+  void selectFormCategory(Category category) {
+    expenseForm.setCategory(category);
   }
 
   Future<bool> saveEditing() async {
-    if (_isSaving) return false;
-    final occurrence = _editingOccurrence;
+    if (_uiState.isSaving) return false;
+    final occurrence = _uiState.editingOccurrence;
     if (occurrence == null) return false;
 
-    final amount = parseAmount(
-      editingData.amountController.text,
-      decimalPlaces: _profileService.amountDecimalPlaces,
-    );
+    final amount = expenseForm.parseEnteredAmount();
     if (amount == null) return false;
 
-    _isSaving = true;
+    _uiState = _uiState.copyWith(isSaving: true);
     if (!isDisposed) notifyListeners();
 
     try {
-      var updatedExpense = occurrence.expense;
-
-      if (occurrence.recurrence.isRecurring &&
-          amount != occurrence.amount) {
-        updatedExpense = updatedExpense.withRecurringAmountChange(
-          occurrence.date,
-          amount,
-        );
-      } else if (!occurrence.recurrence.isRecurring) {
-        updatedExpense = updatedExpense.copyWith(amount: amount);
-      }
-
-      updatedExpense = updatedExpense.copyWith(
-        name: editingData.nameController.text.trim(),
-        debitDate: editingData.debitDate,
-        recurrence: editingData.recurrence,
+      final updated = occurrence.expense.copyWith(
+        accountId: expenseForm.data.account?.id ?? occurrence.expense.accountId,
+        categoryId: expenseForm.data.category?.id ?? occurrence.expense.categoryId,
+        name: expenseForm.data.nameController.text.trim(),
+        amount: amount,
+        debitDate: expenseForm.data.debitDate,
+        endDate: expenseForm.data.effectiveEndDate,
+        clearEndDate: expenseForm.data.effectiveEndDate == null,
+        recurrence: expenseForm.data.recurrence,
       );
 
-      await _expensesService.updateExpense(updatedExpense);
+      final moved =
+          updated.accountId != occurrence.expense.accountId ||
+          updated.categoryId != occurrence.expense.categoryId;
+      final savedExpense = occurrence.expense.isRecurring
+          ? await _expensesService.updateRecurringExpenseFromOccurrence(
+              original: occurrence.expense,
+              updated: updated,
+              effectiveDate: occurrence.date,
+            )
+          : await _expensesService.updateExpense(updated, previous: occurrence.expense);
+      if (moved) {
+        _removePagedExpenseWhenMoved(
+          occurrence.expense,
+          savedExpense,
+        );
+      } else if (occurrence.expense.isRecurring &&
+          savedExpense.id != occurrence.expense.id &&
+          occurrence.expense.id != null &&
+          savedExpense.id != null) {
+        // The recurring series was split into two expenses — reflect BOTH in
+        // the local page list by replacing the original with its versions, so
+        // the card updates without leaving and re-entering the screen.
+        final previous = _expensesService.getExpenseById(
+          occurrence.expense.id!,
+        );
+        final next = _expensesService.getExpenseById(savedExpense.id!);
+        if (previous != null && next != null) {
+          _replacePagedExpenseWithSplit(
+            occurrence.expense.id!,
+            previous,
+            next,
+          );
+        }
+      } else {
+        _replacePagedExpense(occurrence.expense.id, savedExpense);
+      }
       return true;
-    } catch (_) {
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
       return false;
     } finally {
-      _isSaving = false;
+      _uiState = _uiState.copyWith(isSaving: false);
       if (!isDisposed) notifyListeners();
+    }
+  }
+
+  void _replacePagedExpense(String? expenseId, Expense updatedExpense) {
+    if (expenseId == null) return;
+    var didChange = false;
+    final editingOccurrence = _uiState.editingOccurrence;
+    if (editingOccurrence?.expense.id == expenseId) {
+      _uiState = _uiState.copyWith(
+        editingOccurrence: ExpenseOccurrence(
+          expense: updatedExpense,
+          date: editingOccurrence!.date,
+          isDebited: updatedExpense.isDebitedAt(editingOccurrence.date),
+        ),
+      );
+      didChange = true;
+    }
+
+    final index = _pagedExpenses.indexWhere(
+      (expense) => expense.id == expenseId,
+    );
+    if (index != -1) {
+      _pagedExpenses[index] = updatedExpense;
+      _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+      didChange = true;
+    }
+    if (didChange) {
+      _bumpDataRevision();
+    }
+  }
+
+  void _replacePagedExpenseWithSplit(
+    String expenseId,
+    Expense previous,
+    Expense next,
+  ) {
+    _pagedExpenses.removeWhere((expense) => expense.id == expenseId);
+    _pagedExpenses.add(previous);
+    _pagedExpenses.add(next);
+    _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _bumpDataRevision();
+  }
+
+  void _removePagedExpenseWhenMoved(Expense original, Expense savedExpense) {
+    final before = _pagedExpenses.length;
+    _pagedExpenses.removeWhere(
+      (expense) =>
+          expense.id == original.id || expense.id == savedExpense.id,
+    );
+    if (_pagedExpenses.length != before) {
+      _uiState = _uiState.copyWith(
+        clearEditingOccurrence:
+            _uiState.editingOccurrence?.expense.id == original.id,
+        dataRevision: _uiState.dataRevision + 1,
+      );
     }
   }
 
   Future<bool> deleteEditingExpense() async {
-    if (_isSaving) return false;
-    final occurrence = _editingOccurrence;
-    if (occurrence == null || occurrence.id.isEmpty) return false;
+    final occurrence = _uiState.editingOccurrence;
+    if (occurrence == null) return false;
+    return deleteOccurrence(occurrence);
+  }
 
-    _isSaving = true;
+  Future<bool> deleteOccurrence(ExpenseOccurrence occurrence) async {
+    if (_uiState.isSaving) return false;
+    if (occurrence.id.isEmpty) return false;
+    if (occurrence.recurrence.isRecurring) {
+      return deleteSingleOccurrence(occurrence);
+    }
+
+    _uiState = _uiState.copyWith(isSaving: true);
     if (!isDisposed) notifyListeners();
 
     try {
-      return await _expensesService.deleteExpense(
-        occurrence.id,
-        accountId,
-      );
-    } catch (_) {
+      final success =
+          await _expensesService.deleteExpense(occurrence.id, accountId);
+      if (success) {
+        _pagedExpenses.removeWhere((expense) => expense.id == occurrence.id);
+        _uiState = _uiState.copyWith(
+          clearEditingOccurrence:
+              _uiState.editingOccurrence?.id == occurrence.id,
+          dataRevision: _uiState.dataRevision + 1,
+        );
+      }
+      return success;
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
       return false;
     } finally {
-      _isSaving = false;
+      _uiState = _uiState.copyWith(isSaving: false);
       if (!isDisposed) notifyListeners();
     }
   }
 
-  Future<bool> deleteOccurrence(ExpenseOccurrence occurrence) async {
-    if (_isSaving) return false;
+  Future<bool> deleteSingleOccurrence(ExpenseOccurrence occurrence) async {
+    if (_uiState.isSaving) return false;
     if (occurrence.id.isEmpty) return false;
 
-    _isSaving = true;
+    _uiState = _uiState.copyWith(isSaving: true);
     if (!isDisposed) notifyListeners();
 
     try {
-      return await _expensesService.deleteExpense(
-        occurrence.id,
-        accountId,
+      final success = await _expensesService.deleteSingleOccurrence(
+        expense: occurrence.expense,
+        occurrenceDate: occurrence.date,
       );
-    } catch (_) {
+      if (success) {
+        _syncPagedAfterRecurringDelete(occurrence);
+      }
+      return success;
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
       return false;
     } finally {
-      _isSaving = false;
+      _uiState = _uiState.copyWith(isSaving: false);
       if (!isDisposed) notifyListeners();
+    }
+  }
+
+  Future<bool> deleteFutureOccurrences(ExpenseOccurrence occurrence) async {
+    if (_uiState.isSaving) return false;
+    if (occurrence.id.isEmpty) return false;
+
+    _uiState = _uiState.copyWith(isSaving: true);
+    if (!isDisposed) notifyListeners();
+
+    try {
+      final success = await _expensesService.deleteFutureOccurrences(
+        expense: occurrence.expense,
+        occurrenceDate: occurrence.date,
+      );
+      if (success) {
+        _syncPagedAfterRecurringDelete(occurrence);
+      }
+      return success;
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
+      return false;
+    } finally {
+      _uiState = _uiState.copyWith(isSaving: false);
+      if (!isDisposed) notifyListeners();
+    }
+  }
+
+  void _syncPagedAfterRecurringDelete(ExpenseOccurrence occurrence) {
+    final updated = _expensesService.getExpenseById(occurrence.id);
+    final isFirst = DateTime(
+          occurrence.date.year,
+          occurrence.date.month,
+          occurrence.date.day,
+        ).isAtSameMomentAs(
+          DateTime(
+            occurrence.expense.debitDate.year,
+            occurrence.expense.debitDate.month,
+            occurrence.expense.debitDate.day,
+          ),
+        );
+
+    if (updated == null) {
+      _pagedExpenses.removeWhere((e) => e.id == occurrence.id);
+      _uiState = _uiState.copyWith(
+        clearEditingOccurrence: _uiState.editingOccurrence?.id == occurrence.id,
+        dataRevision: _uiState.dataRevision + 1,
+      );
+      return;
+    }
+
+    final index = _pagedExpenses.indexWhere((e) => e.id == occurrence.id);
+    if (index != -1) {
+      _pagedExpenses[index] = updated;
+      // If this was a split (single deletion not first with future), the
+      // new tail expense was added to the store with a new id.
+      // We need to add it to the paged list if it belongs to this period/category.
+      // Find any new expense that wasn't in the list.
+      for (final expense in _expensesService
+          .getExpensesForAccount(updated.accountId)) {
+        if (expense.id != null &&
+            !_pagedExpenses.any((e) => e.id == expense.id) &&
+            expense.categoryId == categoryId &&
+            expense.accountId == accountId) {
+          // Only add if the expense overlaps the current period.
+          final start = period.startOfMonth;
+          final end = period.endOfMonth;
+          final endOfExpense = expense.endOfEndDate;
+          final overlaps = !expense.debitDate.isAfter(end) &&
+              (endOfExpense == null || !endOfExpense.isBefore(start));
+          if (overlaps) {
+            _pagedExpenses.add(expense);
+          }
+        }
+      }
+      _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    } else if (!isFirst) {
+      // Future deletion with truncation already handled via update.
+    }
+
+    _uiState = _uiState.copyWith(
+      clearEditingOccurrence: _uiState.editingOccurrence?.id == occurrence.id &&
+          updated.id != occurrence.id,
+      dataRevision: _uiState.dataRevision + 1,
+    );
+    if (_pagedExpenses.any((e) => e.id == updated.id) == false &&
+        _uiState.editingOccurrence?.id == occurrence.id) {
+      _uiState = _uiState.copyWith(clearEditingOccurrence: true);
     }
   }
 
   Future<bool> toggleEditingOccurrenceDebited() async {
-    if (_isSaving) return false;
-    final occurrence = _editingOccurrence;
+    final occurrence = _uiState.editingOccurrence;
     if (occurrence == null) return false;
-
-    _isSaving = true;
-    if (!isDisposed) notifyListeners();
-
-    try {
-      await _expensesService.toggleOccurrenceDebited(
-        occurrence.expense,
-        occurrence.date,
-      );
-      return true;
-    } catch (_) {
-      return false;
-    } finally {
-      _isSaving = false;
-      if (!isDisposed) notifyListeners();
-    }
+    return toggleDebited(occurrence);
   }
 
   Future<bool> toggleDebited(ExpenseOccurrence occurrence) async {
-    if (_isSaving) return false;
-    _isSaving = true;
+    if (_uiState.isSaving) return false;
+    _uiState = _uiState.copyWith(isSaving: true);
     if (!isDisposed) notifyListeners();
 
     try {
-      await _expensesService.toggleOccurrenceDebited(
+      final updatedExpense = await _expensesService.toggleOccurrenceDebited(
         occurrence.expense,
         occurrence.date,
       );
+      _replacePagedExpense(occurrence.expense.id, updatedExpense);
       return true;
-    } catch (_) {
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
       return false;
     } finally {
-      _isSaving = false;
+      _uiState = _uiState.copyWith(isSaving: false);
       if (!isDisposed) notifyListeners();
     }
   }
 
   @override
   void dispose() {
-    _expensesService.removeListener(_onServiceChanged);
-    editingData.nameController.dispose();
-    editingData.amountController.dispose();
+    _expensesService.removeListener(_onExpensesChanged);
+    _profileService.removeListener(_onProfileChanged);
+    expenseForm.removeListener(_onFormChanged);
+    expenseForm.dispose();
     super.dispose();
   }
 }

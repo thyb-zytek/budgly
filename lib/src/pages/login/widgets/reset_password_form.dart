@@ -1,8 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/pages/login/widgets/auth_validators.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class ResetPasswordForm extends StatelessWidget {
@@ -70,13 +70,11 @@ class ResetPasswordForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: 24),
+          padding: EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
-            style: ButtonType.primary.filledStyle(theme),
-            onPressed: onSubmitForm,
+                        onPressed: onSubmitForm,
             child: Text(
               tr.sendEmail,
-              style: ButtonType.primary.labelStyle(theme),
             ),
           ),
         ),

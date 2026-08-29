@@ -1,8 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/pages/login/widgets/auth_validators.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class SignUpForm extends StatelessWidget {
@@ -90,13 +90,11 @@ class SignUpForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).viewInsets.bottom > 0 ? 24 : 8),
+          padding: EdgeInsets.only(top: MediaQuery.of(context).viewInsets.bottom > 0 ? BudglySpacing.xl : BudglySpacing.sm),
           child: FilledButton(
-            style: ButtonType.primary.filledStyle(theme),
-            onPressed: onSubmitForm,
+                        onPressed: onSubmitForm,
             child: Text(
               tr.signUp,
-              style: ButtonType.primary.labelStyle(theme),
             ),
           ),
         ),

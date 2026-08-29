@@ -1,5 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class FormActions extends StatelessWidget {
@@ -7,9 +7,10 @@ class FormActions extends StatelessWidget {
   final VoidCallback onSubmit;
   final String? cancelLabel;
   final String? submitLabel;
-  final ButtonType cancelType;
+  final bool destructiveCancel;
   final bool dense;
   final bool isLoading;
+  final bool isSubmitEnabled;
 
   const FormActions({
     super.key,
@@ -17,9 +18,10 @@ class FormActions extends StatelessWidget {
     required this.onSubmit,
     this.cancelLabel,
     this.submitLabel,
-    this.cancelType = ButtonType.error,
+    this.destructiveCancel = false,
     this.dense = true,
     this.isLoading = false,
+    this.isSubmitEnabled = true,
   });
 
   @override
@@ -31,16 +33,36 @@ class FormActions extends StatelessWidget {
       spacing: 12,
       children: [
         Expanded(
-          child: FilledButton(
-            style: cancelType.filledStyle(theme, dense: dense),
-            onPressed: isLoading ? null : onCancel,
-            child: Text(cancelLabel ?? tr.cancel),
-          ),
+          child: destructiveCancel
+              ? FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: theme.colorScheme.onError,
+                    padding: dense
+                        ? BudglyButtonDimensions.densePadding
+                        : BudglyButtonDimensions.normalPadding,
+                  ),
+                  onPressed: isLoading ? null : onCancel,
+                  child: Text(cancelLabel ?? tr.cancel),
+                )
+              : OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: dense
+                        ? BudglyButtonDimensions.densePadding
+                        : BudglyButtonDimensions.normalPadding,
+                  ),
+                  onPressed: isLoading ? null : onCancel,
+                  child: Text(cancelLabel ?? tr.cancel),
+                ),
         ),
         Expanded(
           child: FilledButton(
-            style: ButtonType.primary.filledStyle(theme, dense: dense),
-            onPressed: isLoading ? null : onSubmit,
+            style: dense
+                ? FilledButton.styleFrom(
+                    padding: BudglyButtonDimensions.densePadding,
+                  )
+                : null,
+            onPressed: (isLoading || !isSubmitEnabled) ? null : onSubmit,
             child: Text(submitLabel ?? tr.validate),
           ),
         ),

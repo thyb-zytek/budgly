@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:flutter/material.dart';
 
@@ -93,7 +94,7 @@ class _TextInputState extends State<TextInput> {
     hintText: widget.hintText,
     helperText: widget.helperText,
     errorText: widget.errorText,
-    contentPadding: EdgeInsets.all(16)
+    contentPadding: EdgeInsets.all(BudglySpacing.lg)
   );
 
   return widget.type.decorate(
@@ -115,7 +116,7 @@ class _TextInputState extends State<TextInput> {
     final tr = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+      padding: const EdgeInsets.only(bottom: BudglySpacing.sm, left: BudglySpacing.xs, right: BudglySpacing.xs),
       child: TextFormField(
         controller: widget.controller,
         focusNode: _focusNode,

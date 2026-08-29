@@ -5,7 +5,7 @@ import 'package:budgly/src/services/providers/supabase/client.dart';
 class AccountSupabase {
   Future<List<Account>> listByUserId(String userId) async {
     final response =
-        await supabase.from('accounts').select().eq('user_id', userId);
+        await supabase.from('accounts').select().eq('user_id', userId).timeout(const Duration(seconds: 8));
 
     return (response as List<dynamic>)
         .map((json) => Account.fromJson(json as Map<String, dynamic>))

@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
@@ -63,10 +64,7 @@ class _RevenueFormState extends State<RevenueForm> {
   }
 
   Future<void> _save() async {
-    final value = parseAmount(
-      _controller.text,
-      decimalPlaces: widget.viewModel.amountDecimalPlaces,
-    ) ?? 0;
+    final value = parseAmount(_controller.text) ?? 0;
     await widget.viewModel.setRevenue(value);
     widget.onClose();
   }
@@ -76,38 +74,36 @@ class _RevenueFormState extends State<RevenueForm> {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
 
-    return Material(
-      color: theme.scaffoldBackgroundColor,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 8,
-            children: [
-              CurrencyInput(
-                controller: _controller,
-                currencyCode: widget.viewModel.currencyCode,
-                labelText: tr.revenue,
-              ),
-              if (_prefilledFromEstimate)
-                Text(
-                  tr.revenueEstimatedHint,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer.withAlpha(180),
-                  ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.md, BudglySpacing.lg, 0),
+      child: Container(
+        padding: const EdgeInsets.all(BudglySpacing.lg),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: [
+            CurrencyInput(
+              controller: _controller,
+              currencyCode: widget.viewModel.currencyCode,
+              labelText: tr.revenue,
+            ),
+            if (_prefilledFromEstimate)
+              Text(
+                tr.revenueEstimatedHint,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer.withAlpha(180),
                 ),
-              FormActions(
-                onCancel: widget.onClose,
-                onSubmit: _save,
               ),
-            ],
-          ),
+            FormActions(
+              onCancel: widget.onClose,
+              onSubmit: _save,
+              destructiveCancel: true,
+            ),
+          ],
         ),
       ),
     );

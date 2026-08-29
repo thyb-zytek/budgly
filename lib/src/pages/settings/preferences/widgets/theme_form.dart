@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/preference_section.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class ThemeForm extends StatelessWidget {
@@ -37,7 +38,7 @@ class ThemeForm extends StatelessWidget {
     return PreferenceSection(
       title: tr.theme,
       child: Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.only(top: BudglySpacing.sm),
         child: TabSwitcher(
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
           spaceBetween: 8,
@@ -46,7 +47,7 @@ class ThemeForm extends StatelessWidget {
           tabs: ThemeMode.values
               .map(
                 (e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: BudglySpacing.sm, horizontal: BudglySpacing.xs),
                   child: Row(
                     spacing: 4,
                     children: [

@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/expense_quick_actions_sheet.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/expense_status_avatar.dart';
@@ -56,7 +57,7 @@ class ExpenseCard extends StatelessWidget {
 
     showExpenseQuickActionsSheet(
       context,
-      onEdit: onEdit,
+      onEdit: occurrence.isDebited ? null : onEdit,
       onDelete: onDelete,
     );
   }
@@ -116,14 +117,13 @@ class ExpenseCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             onUserInteracted?.call();
-            onTap();
+            if (!isDebited) onTap();
           },
           borderRadius: BorderRadius.circular(18),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              boxShadow: const [],
               color: isDebited
                   ? accent.withValues(alpha: 0.08)
                   : theme.colorScheme.surfaceContainerLow,
@@ -135,12 +135,13 @@ class ExpenseCard extends StatelessWidget {
               ),
             ),
             child: Row(
-              spacing: 12,
+              spacing: BudglySpacing.md,
               children: [
                 ExpenseStatusAvatar(color: accountColor, isDebited: isDebited),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: BudglySpacing.xs,
                     children: [
                       Text(
                         occurrence.name,
@@ -151,7 +152,6 @@ class ExpenseCard extends StatelessWidget {
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Row(
                         spacing: 6,
                         children: [
