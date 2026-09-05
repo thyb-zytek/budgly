@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+
+  schedule:
+    # Every Sunday at 03:00 UTC.
+    - cron: "0 3 * * 0"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-schedule:
+    name: Check scheduled run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+
+    steps:
+      - name: Check last commit
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LAST_COMMIT=$(gh api \
+            repos/${{ github.repository }}/commits/master \
+            --jq '.[0].commit.author.date')
+
+          LAST_COMMIT_EPOCH=$(date -d "$LAST_COMMIT" +%s)
+          NOW_EPOCH=$(date +%s)
+          AGE_DAYS=$(( (NOW_EPOCH - LAST_COMMIT_EPOCH) / 86400 ))
+
+          echo "Last commit: $LAST_COMMIT"
+          echo "Age: ${AGE_DAYS} days"
+
+          if [ "$AGE_DAYS" -ge 90 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  test:
+    name: Analyze & test
+    needs: check-schedule
+    if: |
+      always() &&
+      (
+        github.event_name != 'schedule' ||
+        needs.check-schedule.outputs.should_run == 'true'
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.0"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+  build:
+    name: Build APK
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.0"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: budgly-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 90
