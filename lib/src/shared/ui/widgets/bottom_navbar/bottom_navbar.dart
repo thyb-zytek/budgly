@@ -30,11 +30,11 @@ class _BottomNavBarState extends State<BottomNavBar> {
         },
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_rounded),
+            icon: const Icon(Icons.bar_chart_rounded),
             label: tr.overviewLink,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded),
+            icon: const Icon(Icons.settings_rounded),
             label: tr.settingsLink,
           ),
         ],

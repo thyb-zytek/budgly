@@ -14,6 +14,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
 
   final int slideDirection;
   final int revision;
+  final ThemeData theme;
 
   const CollapsingSummaryHeader({
     required this.viewModel,
@@ -22,6 +23,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
     this.onCategoryTap,
     this.slideDirection = 1,
     required this.revision,
+    required this.theme,
   });
 
   static const double _expandedExtent = 280;
@@ -59,7 +61,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
         height: height,
         width: double.infinity,
         child: Padding(
-          padding: EdgeInsets.all(BudglySpacing.sm),
+          padding: const EdgeInsets.all(BudglySpacing.sm),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
             switchInCurve: Curves.easeIn,
@@ -98,6 +100,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant CollapsingSummaryHeader oldDelegate) =>
+      oldDelegate.theme != theme ||
       oldDelegate.viewModel != viewModel ||
       oldDelegate.onSelectAccount != onSelectAccount ||
       oldDelegate.onEditRevenue != onEditRevenue ||

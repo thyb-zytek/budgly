@@ -58,15 +58,16 @@ class Avatar extends StatelessWidget {
     final innerRadius =
         effectiveBorderColor == null ? size / 2 : size / 2 - borderWidth;
 
+    final foregroundImage = picture == null
+        ? null
+        : isFilePicture
+            ? FileImage(pictureFile!)
+            : NetworkImage(picture!) as ImageProvider;
     Widget avatar = CircleAvatar(
       radius: innerRadius,
       backgroundColor: backgroundColor,
-      foregroundImage: picture == null
-          ? null
-          : isFilePicture
-          ? FileImage(pictureFile!)
-          : NetworkImage(picture!),
-      onForegroundImageError: (exception, stackTrace) {},
+      foregroundImage: foregroundImage,
+      onForegroundImageError: foregroundImage == null ? null : (exception, stackTrace) {},
       child: Text(
         initial,
         style: size < 100

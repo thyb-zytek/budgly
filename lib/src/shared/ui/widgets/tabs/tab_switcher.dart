@@ -9,7 +9,7 @@ class TabSwitcher extends StatelessWidget {
   final double? spaceBetween;
 
   const TabSwitcher({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onTabSelected,
     required this.tabs,

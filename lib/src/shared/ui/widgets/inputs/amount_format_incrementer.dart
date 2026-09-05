@@ -29,7 +29,7 @@ class AmountFormatIncrementer extends StatelessWidget {
   }
 
   String _exampleAmount(BuildContext context) {
-    final value = 0.0;
+    const value = 0.0;
 
     return formatCurrency(
       amount: value,

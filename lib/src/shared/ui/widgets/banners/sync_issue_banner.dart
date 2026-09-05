@@ -60,7 +60,7 @@ class _SyncIssueBannerState extends State<SyncIssueBanner> {
   Future<void> _retry() async {
     _cancelSuccessTimer();
     setState(() => _showSuccess = false);
-    await SyncManager.instance.flush();
+    await SyncManager.instance.flush(forceRetry: true);
     if (!mounted) return;
     if (!SyncManager.instance.hasStuckOperations) {
       setState(() => _showSuccess = true);
@@ -100,55 +100,52 @@ class _SyncIssueBannerState extends State<SyncIssueBanner> {
 
         return Material(
           color: background,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: BudglySpacing.lg,
-                vertical: BudglySpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  if (isLoading)
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: foreground,
-                      ),
-                    )
-                  else
-                    Icon(
-                      _showSuccess
-                          ? Icons.check_circle_rounded
-                          : Icons.sync_problem_rounded,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: BudglySpacing.lg,
+              vertical: BudglySpacing.sm,
+            ),
+            child: Row(
+              children: [
+                if (isLoading)
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
                       color: foreground,
-                      size: 20,
                     ),
-                  const SizedBox(width: BudglySpacing.sm),
-                  Expanded(
-                    child: Text(
-                      _showSuccess
-                          ? tr.syncSuccessBanner
-                          : isLoading
-                          ? tr.syncSyncingBanner
-                          : tr.syncIssueBanner,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: foreground,
-                      ),
+                  )
+                else
+                  Icon(
+                    _showSuccess
+                        ? Icons.check_circle_rounded
+                        : Icons.sync_problem_rounded,
+                    color: foreground,
+                    size: 20,
+                  ),
+                const SizedBox(width: BudglySpacing.sm),
+                Expanded(
+                  child: Text(
+                    _showSuccess
+                        ? tr.syncSuccessBanner
+                        : isLoading
+                        ? tr.syncSyncingBanner
+                        : tr.syncIssueBanner,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: foreground,
                     ),
                   ),
-                  if (!isLoading && !_showSuccess)
-                    TextButton(
-                      onPressed: _retry,
-                      child: Text(
-                        tr.syncIssueRetry,
-                        style: TextStyle(color: foreground),
-                      ),
+                ),
+                if (!isLoading && !_showSuccess)
+                  TextButton(
+                    onPressed: _retry,
+                    child: Text(
+                      tr.syncIssueRetry,
+                      style: TextStyle(color: foreground),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         );

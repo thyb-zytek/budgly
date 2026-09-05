@@ -27,7 +27,8 @@ class UserCard extends StatelessWidget {
                   user.avatarUrl == null
                       ? null
                       : NetworkImage(user.avatarUrl!.toString()),
-              onForegroundImageError: (exception, stackTrace) {},
+              onForegroundImageError:
+                  user.avatarUrl == null ? null : (exception, stackTrace) {},
               child:
                   user.profile != null
                       ? Text(

@@ -8,6 +8,7 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
   final Period minPeriod;
   final Period maxPeriod;
   final int revision;
+  final ThemeData theme;
   final ValueChanged<Period> onChanged;
 
   PeriodSelector({
@@ -15,6 +16,7 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
     required this.minPeriod,
     required this.maxPeriod,
     required this.revision,
+    required this.theme,
     required this.onChanged,
   });
 
@@ -95,7 +97,10 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant PeriodSelector oldDelegate) {
-    return oldDelegate.period != period ||
+    // The header colors come from [theme], so a theme change must rebuild the
+    // header even when the period (and thus the displayed label) did not move.
+    return oldDelegate.theme != theme ||
+        oldDelegate.period != period ||
         oldDelegate.minPeriod != minPeriod ||
         oldDelegate.maxPeriod != maxPeriod ||
         oldDelegate.revision != revision;

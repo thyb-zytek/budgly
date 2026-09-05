@@ -57,13 +57,13 @@ class CategoryView extends StatelessWidget {
             children: [
               if (onEdit != null)
                 IconButton(
-                  icon: Icon(Icons.edit_rounded, size: 32),
+                  icon: const Icon(Icons.edit_rounded, size: 32),
                   onPressed: onEdit,
                   color: theme.colorScheme.primary,
                 ),
               if (onDelete != null)
                 IconButton(
-                  icon: Icon(Icons.delete_rounded, size: 32),
+                  icon: const Icon(Icons.delete_rounded, size: 32),
                   onPressed: onDelete,
                   color: theme.colorScheme.error,
                 ),

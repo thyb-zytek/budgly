@@ -94,7 +94,7 @@ class _TextInputState extends State<TextInput> {
     hintText: widget.hintText,
     helperText: widget.helperText,
     errorText: widget.errorText,
-    contentPadding: EdgeInsets.all(BudglySpacing.lg)
+    contentPadding: const EdgeInsets.all(BudglySpacing.lg)
   );
 
   return widget.type.decorate(

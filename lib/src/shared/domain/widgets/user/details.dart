@@ -106,7 +106,7 @@ class _UserDetailsState extends State<UserDetails> {
                         spacing: 4,
                         children: [
                           IconButton(
-                            icon: Icon(Icons.check_circle_rounded, size: 32),
+                            icon: const Icon(Icons.check_circle_rounded, size: 32),
                             onPressed: () {
                               widget.onChangeName(_nameController.text);
                               setState(() {
@@ -116,7 +116,7 @@ class _UserDetailsState extends State<UserDetails> {
                             color: theme.colorScheme.primary,
                           ),
                           IconButton(
-                            icon: Icon(Icons.cancel_rounded, size: 32),
+                            icon: const Icon(Icons.cancel_rounded, size: 32),
                             onPressed: () => setState(() {
                               _isEditingName = false;
                               _nameController.text =
@@ -132,7 +132,7 @@ class _UserDetailsState extends State<UserDetails> {
                       top: 16,
                       child: IconButton(
                         onPressed: _displayEditName,
-                        icon: Icon(Icons.edit, size: 32),
+                        icon: const Icon(Icons.edit, size: 32),
                         color: theme.colorScheme.primary,
                       ),
                     ),
