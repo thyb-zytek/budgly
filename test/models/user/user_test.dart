@@ -73,4 +73,36 @@ void main() {
       expect(copy.isGoogleUser, isTrue);
     });
   });
+
+  test('fromJson and toJson round-trip profile and identity fields', () {
+    final user = User.fromJson({
+      'id': 'u-json',
+      'email': 'json@example.com',
+      'email_verified': true,
+      'avatar_url': 'https://example.com/avatar.png',
+      'profile': {
+        'user_id': 'u-json',
+        'email': 'json@example.com',
+        'full_name': 'Json User',
+        'accounts': [],
+      },
+    });
+
+    expect(user.id, 'u-json');
+    expect(user.email, 'json@example.com');
+    expect(user.emailVerified, isTrue);
+    expect(user.avatarUrl.toString(), 'https://example.com/avatar.png');
+    expect(user.hasProfile, isTrue);
+
+    final json = user.toJson();
+    expect(json['id'], 'u-json');
+    expect(json['email_verified'], isTrue);
+    expect(json['avatar_url'], 'https://example.com/avatar.png');
+    expect(json['profile'], isA<Map<String, dynamic>>());
+  });
+
+  test('empty id is not authenticated', () {
+    expect(User(id: '').isAuthenticated, isFalse);
+    expect(User(id: 'u1').isAuthenticated, isTrue);
+  });
 }

@@ -122,11 +122,11 @@ void main() {
 
   group('CategoriesStore.setAvailableIcons', () {
     test('stores icons and marks iconsLoaded', () {
-      final icon = CategoryIcon(
+      const icon = CategoryIcon(
         iconName: 'test',
         iconCode: 0xe001,
         iconPack: 'MaterialIcons',
-        labels: const {'en': 'Test'},
+        labels: {'en': 'Test'},
       );
 
       store.setAvailableIcons([icon]);

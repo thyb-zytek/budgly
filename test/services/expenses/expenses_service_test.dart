@@ -9,9 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// expense became visible on the server (pending write / slow network).
 class PendingWriteExpenseFirestore extends ExpenseFirestore {
   final List<Expense> serverExpenses = [];
+  bool acknowledgeCreate = false;
 
   @override
-  Future<Expense?> create(Expense expense) async => expense;
+  Future<Expense?> create(Expense expense) async => acknowledgeCreate ? expense : null;
 
   @override
   Future<List<Expense>> listByAccountAndPeriod(
@@ -83,6 +84,8 @@ void main() {
 
   test('optimistic shield is released once the server acknowledges the expense',
       () async {
+    firestore.acknowledgeCreate = true;
+
     await service.createExpense(expense());
     firestore.serverExpenses.add(expense());
 
@@ -118,4 +121,40 @@ void main() {
 
     expect(listed.map((e) => e.id).toSet(), {'e1', 'e2'});
   });
+
+  test(
+    'a stale server refresh does not drop a previously-created expense '
+    'when a second expense is created',
+    () async {
+      // Simulate the first expense being persisted (server acknowledges it
+      // locally) and the optimistic shield being released.
+      firestore.acknowledgeCreate = true;
+      await service.createExpense(expense());
+
+      // The server has not yet synced the expense to its query results.
+      // A background refresh triggered by the second creation must not
+      // drop the first expense.
+      final e2 = Expense(
+        id: 'e2',
+        accountId: 'a1',
+        categoryId: 'c2',
+        name: 'Transport',
+        amount: 12.0,
+        debitDate: DateTime(2026, 8, 15),
+      );
+      await service.createExpense(e2);
+
+      // Simulate a background refresh that returns stale server data.
+      final listed = await service.listExpensesForPeriod(
+        'a1',
+        period,
+        forceRefresh: true,
+      );
+
+      expect(
+        listed.map((e) => e.id).toSet(),
+        containsAll(['e1', 'e2']),
+      );
+    },
+  );
 }

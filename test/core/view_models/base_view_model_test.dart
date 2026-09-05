@@ -46,9 +46,12 @@ void main() {
       final vm = _TestViewModel();
       vm.fail(Exception('boom'));
       expect(vm.hasError, isTrue);
+      expect(vm.pendingUserMessage, isNotNull);
 
       vm.startLoading();
       expect(vm.hasError, isFalse);
+      expect(vm.error, isNull);
+      expect(vm.pendingUserMessage, isNull);
       expect(vm.isLoading, isTrue);
     });
 
@@ -119,6 +122,7 @@ void main() {
       vm.reset();
       expect(vm.hasError, isFalse);
       expect(vm.error, isNull);
+      expect(vm.pendingUserMessage, isNull);
       expect(vm.viewState, ViewState.idle);
     });
   });

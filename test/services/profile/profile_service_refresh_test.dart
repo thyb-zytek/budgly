@@ -16,15 +16,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     manager = SyncManager.instance;
     queue = SyncQueue.instance;
+    await manager.resetForTest();
     await queue.clear();
-    // Reset the shared SyncManager singleton to a deterministic (non-stuck)
-    // state before each test.
+    // Keep the shared SyncManager singleton deterministic between tests.
     manager.registerHandler('__test_reset__', (op) async {});
     await manager.flush();
   });
 
   tearDown(() async {
-    await manager.stop();
+    await manager.resetForTest();
   });
 
   test('returns true when online: every pending mutation reaches the server', () async {

@@ -26,14 +26,14 @@ void main() {
 
   group('AccountBudgetsStore basic operations', () {
     test('set and get budget', () {
-      final key = 'acc-1_2026_6';
+      const key = 'acc-1_2026_6';
       store.set(key, buildBudget());
       expect(store.get(key), isNotNull);
       expect(store.get(key)!.revenue, 2000);
     });
 
     test('hasLoaded returns true after set', () {
-      final key = 'acc-1_2026_6';
+      const key = 'acc-1_2026_6';
       store.set(key, buildBudget());
       expect(store.hasLoaded(key), isTrue);
     });
@@ -47,7 +47,7 @@ void main() {
     });
 
     test('clear removes specific key', () {
-      final key = 'acc-1_2026_6';
+      const key = 'acc-1_2026_6';
       store.set(key, buildBudget());
       store.clear(key);
       expect(store.hasLoaded(key), isFalse);
@@ -85,7 +85,7 @@ void main() {
 
   group('AccountBudgetsStore null budget', () {
     test('set with null budget and get it', () {
-      final key = 'acc-1_2026_6';
+      const key = 'acc-1_2026_6';
       store.set(key, null);
       expect(store.hasLoaded(key), isTrue);
       expect(store.get(key), isNull);
