@@ -9,7 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 class BudglyApp extends StatelessWidget {
   const BudglyApp({super.key});
 
-  static final MaterialTheme _theme = MaterialTheme();
+  static const MaterialTheme _theme = MaterialTheme();
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +42,19 @@ class BudglyApp extends StatelessWidget {
 
             return MediaQuery(
               data: mediaQuery.copyWith(textScaler: clampedTextScaler),
-              child: Column(
-                children: [
-                  const SyncIssueBanner(),
-                  Expanded(child: routerChild!),
-                ],
+              child: Material(
+                // Solid surface behind the top inset so the status-bar area
+                // never shows a see-through hole over the page below.
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      const SyncIssueBanner(),
+                      Expanded(child: routerChild!),
+                    ],
+                  ),
+                ),
               ),
             );
           },

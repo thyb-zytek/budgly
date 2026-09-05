@@ -9,15 +9,21 @@ import 'package:budgly/src/models/user/user.dart';
 import 'package:flutter/material.dart';
 
 class ProfileViewModel extends BaseViewModel {
-  final ProfileService _profileService = ProfileService.instance;
-  final AccountsService _accountsService = AccountsService.instance;
-  final CategoriesService _categoriesService = CategoriesService.instance;
+  final ProfileService _profileService;
+  final AccountsService _accountsService;
+  final CategoriesService _categoriesService;
 
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  ProfileViewModel() {
+  ProfileViewModel({
+    ProfileService? profileService,
+    AccountsService? accountsService,
+    CategoriesService? categoriesService,
+  })  : _profileService = profileService ?? ProfileService.instance,
+        _accountsService = accountsService ?? AccountsService.instance,
+        _categoriesService = categoriesService ?? CategoriesService.instance {
     _profileService.addListener(_onServiceChanged);
   }
 

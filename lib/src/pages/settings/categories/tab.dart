@@ -17,8 +17,13 @@ import 'package:flutter/material.dart';
 
 class CategoriesTab extends StatefulWidget {
   final AccountsViewModel accountsViewModel;
+  final CategoriesViewModel? injectedCategoriesViewModel;
 
-  const CategoriesTab({super.key, required this.accountsViewModel});
+  const CategoriesTab({
+    super.key,
+    required this.accountsViewModel,
+    this.injectedCategoriesViewModel,
+  });
 
   @override
   State<CategoriesTab> createState() => _CategoriesTabState();
@@ -30,12 +35,15 @@ class _CategoriesTabState extends State<CategoriesTab>
   final ScrollController _scrollController = ScrollController();
   late AccountsViewModel _accountsViewModel;
   late CategoriesViewModel _categoriesViewModel;
+  late final bool _ownsCategoriesViewModel;
 
   @override
   void initState() {
     super.initState();
     _accountsViewModel = widget.accountsViewModel;
-    _categoriesViewModel = CategoriesViewModel();
+    _ownsCategoriesViewModel = widget.injectedCategoriesViewModel == null;
+    _categoriesViewModel =
+        widget.injectedCategoriesViewModel ?? CategoriesViewModel();
     _accountsViewModel.addListener(_syncSelectedAccount);
     _loadData();
   }
@@ -81,6 +89,7 @@ class _CategoriesTabState extends State<CategoriesTab>
   void dispose() {
     _scrollController.dispose();
     _accountsViewModel.removeListener(_syncSelectedAccount);
+    if (_ownsCategoriesViewModel) _categoriesViewModel.dispose();
     super.dispose();
   }
 

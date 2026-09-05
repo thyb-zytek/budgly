@@ -26,6 +26,8 @@ abstract class BaseViewModel extends ChangeNotifier {
   @protected
   void setLoading([bool loading = true]) {
     if (loading) {
+      _error = null;
+      _pendingUserMessage = null;
       _setState(ViewState.loading);
       return;
     }
@@ -64,6 +66,7 @@ abstract class BaseViewModel extends ChangeNotifier {
   @protected
   void resetState() {
     _error = null;
+    _pendingUserMessage = null;
     _setState(ViewState.idle);
   }
 

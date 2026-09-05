@@ -16,7 +16,10 @@ import 'package:budgly/src/shared/domain/view_models/account_form_view_model.dar
 import 'package:flutter/material.dart';
 
 class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
-  final AccountsService _accountsService = AccountsService.instance;
+  final AccountsService _accountsService;
+  final CategoriesService _categoriesService;
+  final ExpensesService _expensesService;
+  final AccountBudgetsService _accountBudgetsService;
 
   final List<Account> _localAccounts = [];
   Account? _editingAccount;
@@ -28,6 +31,23 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
     color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
     picture: null,
   );
+
+  AccountsViewModel({
+    AccountsService? accountsService,
+    CategoriesService? categoriesService,
+    ExpensesService? expensesService,
+    AccountBudgetsService? accountBudgetsService,
+  })  : _accountsService = accountsService ?? AccountsService.instance,
+        _categoriesService = categoriesService ?? CategoriesService.instance,
+        _expensesService = expensesService ?? ExpensesService.instance,
+        _accountBudgetsService =
+            accountBudgetsService ?? AccountBudgetsService.instance {
+    _accountsService.changeNotifier.addListener(_onServiceChanged);
+  }
+
+  void _onServiceChanged() {
+    if (!isDisposed) notifyListeners();
+  }
 
   List<Account> get accounts => [..._accountsService.accounts, ..._localAccounts];
   bool get hasAccountsLoaded => _accountsService.hasLoaded;
@@ -59,6 +79,7 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
 
   @override
   void dispose() {
+    _accountsService.changeNotifier.removeListener(_onServiceChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -105,10 +126,10 @@ class AccountsViewModel extends BaseViewModel implements AccountFormViewModel {
 
   Future<void> _cleanupDeletedAccount(String accountId) async {
     try {
-      CategoriesService.instance.invalidateAccountCache(accountId);
+      _categoriesService.invalidateAccountCache(accountId);
       await Future.wait([
-        ExpensesService.instance.deleteByAccountId(accountId),
-        AccountBudgetsService.instance.deleteByAccountId(accountId),
+        _expensesService.deleteByAccountId(accountId),
+        _accountBudgetsService.deleteByAccountId(accountId),
         _accountsService.deleteAccountFolder(accountId),
       ]);
     } catch (e, stackTrace) {

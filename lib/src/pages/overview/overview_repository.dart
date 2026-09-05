@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
@@ -38,30 +36,6 @@ class OverviewRepository {
       expensesFuture,
     ]);
     return expensesFuture;
-  }
-
-  Future<void> preloadOtherAccounts(
-    List<Account> accounts,
-    String selectedAccountId,
-    Period period,
-  ) async {
-    try {
-      await Future.wait(
-        accounts
-            .where(
-              (account) =>
-                  account.id != null && account.id != selectedAccountId,
-            )
-            .map(
-              (account) => Future.wait([
-                categoriesService.listCategoriesByAccount(account.id!),
-                expensesService.listExpensesForPeriod(account.id!, period),
-              ]),
-            ),
-      );
-    } catch (e) {
-      AppLogger.debug('Background account preload unavailable: $e');
-    }
   }
 
   Future<void> refresh(Account account, Period period) async {

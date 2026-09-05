@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/expense/expense.dart';
@@ -16,7 +18,7 @@ import 'package:budgly/src/services/calculators/expense_summary_calculator.dart'
 import 'package:budgly/src/services/calculators/expense_occurrence_calculator.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_controller.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:budgly/src/pages/category_expenses/paged_expenses_state.dart';
 
 class CategoryExpensesViewModel extends BaseViewModel {
   final ExpensesService _expensesService;
@@ -34,13 +36,10 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   final ExpenseFormController expenseForm = ExpenseFormController();
 
-  final List<Expense> _pagedExpenses = [];
+  final _pagedState = PagedExpensesState();
   List<ExpenseOccurrence>? _cachedOccurrences;
+  int _occurrencesRevision = 0;
   int _cachedOccurrencesRevision = -1;
-  DocumentSnapshot<Map<String, dynamic>>? _pageCursor;
-  bool _hasMorePages = true;
-  bool _isLoadingMore = false;
-  bool _hasLoadedFirstPage = false;
 
   CategoryExpensesViewModel({
     required this.accountId,
@@ -68,22 +67,29 @@ class CategoryExpensesViewModel extends BaseViewModel {
     });
   }
 
-  void _onFormChanged() {
-    if (!isDisposed) notifyListeners();
-  }
+  void _onFormChanged() => _notifyAfterFrame();
 
   void _onExpensesChanged() {
     _bumpDataRevision();
     _refreshEditingOccurrence();
-    if (!isDisposed) notifyListeners();
+    _notifyAfterFrame();
   }
 
-  void _onProfileChanged() {
-    if (!isDisposed) notifyListeners();
+  bool _notificationScheduled = false;
+
+  void _notifyAfterFrame() {
+    if (isDisposed || _notificationScheduled) return;
+    _notificationScheduled = true;
+    scheduleMicrotask(() {
+      _notificationScheduled = false;
+      if (!isDisposed) notifyListeners();
+    });
   }
+
+  void _onProfileChanged() => _notifyAfterFrame();
 
   void _bumpDataRevision() {
-    _uiState = _uiState.copyWith(dataRevision: _uiState.dataRevision + 1);
+    _occurrencesRevision++;
     _cachedOccurrences = null;
     _cachedOccurrencesRevision = -1;
   }
@@ -113,9 +119,8 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   CategoryExpensesUiState get uiState => _uiState;
   bool get isSaving => _uiState.isSaving;
-  int get dataRevision => _uiState.dataRevision;
-  bool get hasMorePages => _hasMorePages;
-  bool get isLoadingMore => _isLoadingMore;
+  bool get hasMorePages => _pagedState.hasMore;
+  bool get isLoadingMore => _pagedState.isLoading;
 
   ExpenseOccurrence? get editingOccurrence => _uiState.editingOccurrence;
   Future<void> ensureDataLoaded() async {
@@ -129,16 +134,16 @@ class CategoryExpensesViewModel extends BaseViewModel {
         setLoading(false);
       }
     }
-    if (!_hasLoadedFirstPage) {
+    if (!_pagedState.hasLoadedFirstPage) {
       await loadMore();
     }
     if (!isDisposed) notifyListeners();
   }
 
   Future<void> loadMore() async {
-    if (_isLoadingMore || !_hasMorePages) return;
-    final isFirstPage = !_hasLoadedFirstPage;
-    _isLoadingMore = true;
+    if (_pagedState.isLoading || !_pagedState.hasMore) return;
+    final isFirstPage = !_pagedState.hasLoadedFirstPage;
+    _pagedState.isLoading = true;
     if (isFirstPage) setLoading(true);
     if (!isDisposed) notifyListeners();
 
@@ -147,18 +152,13 @@ class CategoryExpensesViewModel extends BaseViewModel {
         accountId,
         categoryId,
         period,
-        startAfter: _pageCursor,
-        includeRecurring: !_hasLoadedFirstPage,
+        startAfter: _pagedState.cursor,
+        includeRecurring: !_pagedState.hasLoadedFirstPage,
       );
-      final existingIds = _pagedExpenses.map((expense) => expense.id).toSet();
-      for (final expense in page.expenses) {
-        if (existingIds.contains(expense.id)) continue;
-        _pagedExpenses.add(expense);
-      }
-      _pageCursor = page.cursor;
-      _hasMorePages = page.hasMore;
-      _hasLoadedFirstPage = true;
-      _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+      _pagedState.append(page.expenses);
+      _pagedState.cursor = page.cursor;
+      _pagedState.hasMore = page.hasMore;
+      _pagedState.hasLoadedFirstPage = true;
       _bumpDataRevision();
     } catch (e, stackTrace) {
       if (isFirstPage) {
@@ -169,13 +169,11 @@ class CategoryExpensesViewModel extends BaseViewModel {
             .where((expense) => expense.categoryId == categoryId)
             .toList();
         if (local.isNotEmpty) {
-          _pagedExpenses.addAll(local);
-          _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
-          _hasLoadedFirstPage = true;
-          _hasMorePages = false;
-          _uiState = _uiState.copyWith(
-            dataRevision: _uiState.dataRevision + 1,
-          );
+          _pagedState.expenses.addAll(local);
+          _pagedState.expenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+          _pagedState.hasLoadedFirstPage = true;
+          _pagedState.hasMore = false;
+          _occurrencesRevision++;
         } else {
           setError(e, stackTrace: stackTrace);
         }
@@ -186,7 +184,7 @@ class CategoryExpensesViewModel extends BaseViewModel {
         AppLogger.error('Failed to load expense page', e, stackTrace);
       }
     } finally {
-      _isLoadingMore = false;
+      _pagedState.isLoading = false;
       AnalyticsService.instance.track('expense_page_loaded', {
         'source': 'pagination',
       });
@@ -199,19 +197,26 @@ class CategoryExpensesViewModel extends BaseViewModel {
   }
 
   List<ExpenseOccurrence> get occurrences {
-    if (_pagedExpenses.isEmpty) return const [];
-    if (_cachedOccurrencesRevision == _uiState.dataRevision &&
+    if (_pagedState.expenses.isEmpty) return const [];
+    if (_cachedOccurrencesRevision == _occurrencesRevision &&
         _cachedOccurrences != null) {
       return _cachedOccurrences!;
     }
 
     final result = _occurrenceCalculator.between(
-      _pagedExpenses,
+      _pagedState.expenses,
       period.startOfMonth,
       period.endOfMonth,
     );
+    // The shared occurrence calculator keeps its chronological ordering for
+    // calculations. The category expense screen presents the most recent
+    // occurrence first, matching the paginated expense list.
+    result.sort((a, b) {
+      if (a.isDebited != b.isDebited) return a.isDebited ? 1 : -1;
+      return b.date.compareTo(a.date);
+    });
     _cachedOccurrences = result;
-    _cachedOccurrencesRevision = _uiState.dataRevision;
+    _cachedOccurrencesRevision = _occurrencesRevision;
     return result;
   }
 
@@ -355,12 +360,12 @@ class CategoryExpensesViewModel extends BaseViewModel {
       didChange = true;
     }
 
-    final index = _pagedExpenses.indexWhere(
+    final index = _pagedState.expenses.indexWhere(
       (expense) => expense.id == expenseId,
     );
     if (index != -1) {
-      _pagedExpenses[index] = updatedExpense;
-      _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+      _pagedState.expenses[index] = updatedExpense;
+      _pagedState.expenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
       didChange = true;
     }
     if (didChange) {
@@ -373,24 +378,23 @@ class CategoryExpensesViewModel extends BaseViewModel {
     Expense previous,
     Expense next,
   ) {
-    _pagedExpenses.removeWhere((expense) => expense.id == expenseId);
-    _pagedExpenses.add(previous);
-    _pagedExpenses.add(next);
-    _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _pagedState.expenses.removeWhere((expense) => expense.id == expenseId);
+    _pagedState.expenses.add(previous);
+    _pagedState.expenses.add(next);
+    _pagedState.expenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     _bumpDataRevision();
   }
 
   void _removePagedExpenseWhenMoved(Expense original, Expense savedExpense) {
-    final before = _pagedExpenses.length;
-    _pagedExpenses.removeWhere(
+    final before = _pagedState.expenses.length;
+    _pagedState.expenses.removeWhere(
       (expense) =>
           expense.id == original.id || expense.id == savedExpense.id,
     );
-    if (_pagedExpenses.length != before) {
+    if (_pagedState.expenses.length != before) {
       _uiState = _uiState.copyWith(
         clearEditingOccurrence:
             _uiState.editingOccurrence?.expense.id == original.id,
-        dataRevision: _uiState.dataRevision + 1,
       );
     }
   }
@@ -415,12 +419,11 @@ class CategoryExpensesViewModel extends BaseViewModel {
       final success =
           await _expensesService.deleteExpense(occurrence.id, accountId);
       if (success) {
-        _pagedExpenses.removeWhere((expense) => expense.id == occurrence.id);
+        _pagedState.expenses.removeWhere((expense) => expense.id == occurrence.id);
         _uiState = _uiState.copyWith(
           clearEditingOccurrence:
               _uiState.editingOccurrence?.id == occurrence.id,
-          dataRevision: _uiState.dataRevision + 1,
-        );
+          );
       }
       return success;
     } catch (e, stackTrace) {
@@ -484,30 +487,18 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   void _syncPagedAfterRecurringDelete(ExpenseOccurrence occurrence) {
     final updated = _expensesService.getExpenseById(occurrence.id);
-    final isFirst = DateTime(
-          occurrence.date.year,
-          occurrence.date.month,
-          occurrence.date.day,
-        ).isAtSameMomentAs(
-          DateTime(
-            occurrence.expense.debitDate.year,
-            occurrence.expense.debitDate.month,
-            occurrence.expense.debitDate.day,
-          ),
-        );
 
     if (updated == null) {
-      _pagedExpenses.removeWhere((e) => e.id == occurrence.id);
+      _pagedState.expenses.removeWhere((e) => e.id == occurrence.id);
       _uiState = _uiState.copyWith(
         clearEditingOccurrence: _uiState.editingOccurrence?.id == occurrence.id,
-        dataRevision: _uiState.dataRevision + 1,
       );
       return;
     }
 
-    final index = _pagedExpenses.indexWhere((e) => e.id == occurrence.id);
+    final index = _pagedState.expenses.indexWhere((e) => e.id == occurrence.id);
     if (index != -1) {
-      _pagedExpenses[index] = updated;
+      _pagedState.expenses[index] = updated;
       // If this was a split (single deletion not first with future), the
       // new tail expense was added to the store with a new id.
       // We need to add it to the paged list if it belongs to this period/category.
@@ -515,7 +506,7 @@ class CategoryExpensesViewModel extends BaseViewModel {
       for (final expense in _expensesService
           .getExpensesForAccount(updated.accountId)) {
         if (expense.id != null &&
-            !_pagedExpenses.any((e) => e.id == expense.id) &&
+            !_pagedState.expenses.any((e) => e.id == expense.id) &&
             expense.categoryId == categoryId &&
             expense.accountId == accountId) {
           // Only add if the expense overlaps the current period.
@@ -525,21 +516,21 @@ class CategoryExpensesViewModel extends BaseViewModel {
           final overlaps = !expense.debitDate.isAfter(end) &&
               (endOfExpense == null || !endOfExpense.isBefore(start));
           if (overlaps) {
-            _pagedExpenses.add(expense);
+            _pagedState.expenses.add(expense);
           }
         }
       }
-      _pagedExpenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
-    } else if (!isFirst) {
-      // Future deletion with truncation already handled via update.
+      _pagedState.expenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     }
 
+    _occurrencesRevision++;
+    _cachedOccurrences = null;
+    _cachedOccurrencesRevision = -1;
     _uiState = _uiState.copyWith(
       clearEditingOccurrence: _uiState.editingOccurrence?.id == occurrence.id &&
           updated.id != occurrence.id,
-      dataRevision: _uiState.dataRevision + 1,
     );
-    if (_pagedExpenses.any((e) => e.id == updated.id) == false &&
+    if (_pagedState.expenses.any((e) => e.id == updated.id) == false &&
         _uiState.editingOccurrence?.id == occurrence.id) {
       _uiState = _uiState.copyWith(clearEditingOccurrence: true);
     }

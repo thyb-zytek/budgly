@@ -22,8 +22,10 @@ import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/pages/overview/ui_state.dart';
 import 'package:budgly/src/services/calculators/expense_summary_calculator.dart';
 import 'package:budgly/src/services/calculators/expense_occurrence_calculator.dart';
+import 'package:budgly/src/services/calculators/overview_metrics_calculator.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/pages/overview/overview_repository.dart';
+import 'package:budgly/src/pages/overview/period_expenses_load_state.dart';
 
 class OverviewViewModel extends BaseViewModel {
   final AccountsService _accountsService;
@@ -34,6 +36,7 @@ class OverviewViewModel extends BaseViewModel {
   final ProfileService _profileService;
   final ExpenseSummaryCalculator _summaryCalculator;
   final ExpenseOccurrenceCalculator _occurrenceCalculator;
+  final OverviewMetricsCalculator _metricsCalculator;
 
   OverviewUiState _uiState = OverviewUiState(selectedPeriod: Period.current());
 
@@ -44,8 +47,7 @@ class OverviewViewModel extends BaseViewModel {
   List<CategoryExpenseSummary>? _cachedCategorySummaries;
   List<Expense> _expenses = const [];
   String? _expensesKey;
-  String? _loadingExpensesKey;
-  Future<void>? _expensesLoad;
+  final _periodExpensesLoad = PeriodExpensesLoadState();
 
   final ExpenseFormController expenseForm = ExpenseFormController();
 
@@ -58,6 +60,7 @@ class OverviewViewModel extends BaseViewModel {
     ExpenseSummaryCalculator? summaryCalculator,
     ExpenseOccurrenceCalculator? occurrenceCalculator,
     OverviewRepository? repository,
+    OverviewMetricsCalculator? metricsCalculator,
   }) : _accountsService = accountsService ?? AccountsService.instance,
        _categoriesService = categoriesService ?? CategoriesService.instance,
        _expensesService = expensesService ?? ExpensesService.instance,
@@ -73,7 +76,8 @@ class OverviewViewModel extends BaseViewModel {
        _summaryCalculator =
            summaryCalculator ?? const ExpenseSummaryCalculator(),
        _occurrenceCalculator =
-           occurrenceCalculator ?? const ExpenseOccurrenceCalculator() {
+           occurrenceCalculator ?? const ExpenseOccurrenceCalculator(),
+       _metricsCalculator = metricsCalculator ?? const OverviewMetricsCalculator() {
     AnalyticsService.instance.track('screen_viewed', {'screen': 'overview'});
     expenseForm.addListener(_onFormChanged);
     _accountsService.changeNotifier.addListener(_onAccountsChanged);
@@ -88,19 +92,16 @@ class OverviewViewModel extends BaseViewModel {
   }
 
   void _onAccountsChanged() {
-    _dataRevision++;
     _syncSelectedAccount();
     _notifyAfterFrame();
   }
 
   void _onCategoriesChanged() {
-    _dataRevision++;
     _invalidateDerivedData();
     _notifyAfterFrame();
   }
 
   void _onExpensesChanged() {
-    _dataRevision++;
     final accountId = _uiState.account?.id;
     final cachedExpenses = accountId == null
         ? null
@@ -139,6 +140,7 @@ class OverviewViewModel extends BaseViewModel {
     } else {
       _expenses = const [];
       _expensesKey = null;
+      _periodExpensesLoad.invalidate();
       _invalidateDerivedData();
       _maybeShowRevenueEditor();
       _notifyAfterFrame();
@@ -146,13 +148,11 @@ class OverviewViewModel extends BaseViewModel {
   }
 
   void _onRevenueChanged() {
-    _dataRevision++;
     _maybeShowRevenueEditor();
     _notifyAfterFrame();
   }
 
   void _onProfileChanged() {
-    _dataRevision++;
     _notifyAfterFrame();
   }
 
@@ -167,9 +167,6 @@ class OverviewViewModel extends BaseViewModel {
     });
   }
 
-  int _dataRevision = 0;
-
-  int get dataRevision => _dataRevision;
   OverviewUiState get uiState => _uiState;
   bool get isSaving => _uiState.isSaving;
 
@@ -225,17 +222,11 @@ class OverviewViewModel extends BaseViewModel {
         selectedAccount,
         _uiState.selectedPeriod,
       );
-      final accountId = selectedAccount.id!;
       _expenses = loadedExpenses;
       _expensesKey = _currentPeriodCacheKey;
       _invalidateDerivedData();
-      unawaited(
-        _repository.preloadOtherAccounts(
-          accounts,
-          accountId,
-          _uiState.selectedPeriod,
-        ),
-      );
+      // Do not preload other accounts here. Their period data is loaded only
+      // when the user selects the account, keeping startup work bounded.
     } catch (e, stackTrace) {
       setError(e, stackTrace: stackTrace);
     } finally {
@@ -271,7 +262,7 @@ class OverviewViewModel extends BaseViewModel {
     _uiState = _uiState.copyWith(account: account, clearAccount: false);
     _expenses = const [];
     _expensesKey = null;
-    _dataRevision++;
+    _periodExpensesLoad.invalidate();
     _invalidateDerivedData();
     if (!isDisposed) notifyListeners();
 
@@ -285,8 +276,7 @@ class OverviewViewModel extends BaseViewModel {
 
     if (value == null) {
       _uiState = _uiState.copyWith(clearAccount: true);
-      _dataRevision++;
-      _invalidateDerivedData();
+        _invalidateDerivedData();
       if (!isDisposed) notifyListeners();
       return;
     }
@@ -307,7 +297,6 @@ class OverviewViewModel extends BaseViewModel {
   set selectedPeriod(Period value) {
     if (_uiState.selectedPeriod == value) return;
     _uiState = _uiState.copyWith(selectedPeriod: value);
-    _dataRevision++;
     _invalidateDerivedData();
     if (!isDisposed) notifyListeners();
     AnalyticsService.instance.track('overview_period_changed');
@@ -498,39 +487,16 @@ class OverviewViewModel extends BaseViewModel {
     if (accountId == null) return;
     final key = _currentPeriodCacheKey;
 
-    if (!forceRefresh && _expensesKey == key) return;
-    if (_loadingExpensesKey == key && _expensesLoad != null) {
-      await _expensesLoad;
-      return;
-    }
+    if (!forceRefresh && _periodExpensesLoad.isLoaded(key)) return;
 
-    _loadingExpensesKey = key;
-    final future = _loadPeriodExpenses(
-      accountId,
-      key,
-      forceRefresh: forceRefresh,
-    );
-    _expensesLoad = future;
     try {
-      await future;
-    } finally {
-      if (identical(_expensesLoad, future)) {
-        _expensesLoad = null;
-        _loadingExpensesKey = null;
-      }
-    }
-  }
-
-  Future<void> _loadPeriodExpenses(
-    String accountId,
-    String key, {
-    required bool forceRefresh,
-  }) async {
-    try {
-      final expenses = await _repository.loadPeriodExpenses(
-        accountId,
-        _uiState.selectedPeriod,
-        forceRefresh: forceRefresh,
+      final expenses = await _periodExpensesLoad.load(
+        key,
+        () => _repository.loadPeriodExpenses(
+          accountId,
+          _uiState.selectedPeriod,
+          forceRefresh: forceRefresh,
+        ),
       );
       if (isDisposed ||
           _uiState.account?.id != accountId ||
@@ -539,8 +505,8 @@ class OverviewViewModel extends BaseViewModel {
       }
       _expenses = expenses;
       _expensesKey = key;
-      _dataRevision++;
-      _invalidateDerivedData();
+      _periodExpensesLoad.markLoaded(key);
+        _invalidateDerivedData();
       AnalyticsService.instance.track('overview_expense_loaded');
       if (!isDisposed) notifyListeners();
     } catch (e) {
@@ -549,28 +515,20 @@ class OverviewViewModel extends BaseViewModel {
   }
 
   double get totalExpenses =>
-      periodOccurrences.fold(0.0, (sum, occurrence) => sum + occurrence.amount);
+      _metricsCalculator.totalExpenses(periodOccurrences);
 
-  double get pendingExpenses => periodOccurrences
-      .where((occurrence) => !occurrence.isDebited)
-      .fold(0.0, (sum, occurrence) => sum + occurrence.amount);
+  double get pendingExpenses =>
+      _metricsCalculator.pendingExpenses(periodOccurrences);
 
   double get remaining => effectiveRevenue - totalExpenses;
 
-  int? get remainingWeekendsInPeriod {
-    if (_uiState.selectedPeriod.isBefore(Period.current())) return null;
-    if (_uiState.selectedPeriod == Period.current()) {
-      return _uiState.selectedPeriod.remainingWeekends();
-    }
-    return _uiState.selectedPeriod.totalWeekends();
-  }
+  int? get remainingWeekendsInPeriod =>
+      _metricsCalculator.remainingWeekends(_uiState.selectedPeriod);
 
-  double? get weeklyBudget {
-    final weekends = remainingWeekendsInPeriod;
-    if (weekends == null) return null;
-
-    return remaining / (weekends > 0 ? weekends : 1);
-  }
+  double? get weeklyBudget => _metricsCalculator.weeklyBudget(
+        remaining: remaining,
+        remainingWeekends: remainingWeekendsInPeriod,
+      );
 
   List<CategoryExpenseSummary> get categorySummaries {
     final key = _currentPeriodCacheKey;

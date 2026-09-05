@@ -19,14 +19,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class OverviewPage extends StatefulWidget {
-  const OverviewPage({super.key});
+  final OverviewViewModel? injectedViewModel;
+
+  const OverviewPage({super.key, this.injectedViewModel});
 
   @override
   State<OverviewPage> createState() => _OverviewPageState();
 }
 
 class _OverviewPageState extends State<OverviewPage> {
-  final OverviewViewModel _viewModel = OverviewViewModel();
+  late final OverviewViewModel _viewModel;
+  late final bool _ownsViewModel;
   final ValueNotifier<int> _slideDirection = ValueNotifier(1);
   final ValueNotifier<bool> _showFabLabel = ValueNotifier(true);
   Timer? _fabLabelTimer;
@@ -34,6 +37,8 @@ class _OverviewPageState extends State<OverviewPage> {
   @override
   void initState() {
     super.initState();
+    _ownsViewModel = widget.injectedViewModel == null;
+    _viewModel = widget.injectedViewModel ?? OverviewViewModel();
     _loadData();
     _fabLabelTimer = Timer(const Duration(seconds: 8), () {
       _showFabLabel.value = false;
@@ -47,7 +52,7 @@ class _OverviewPageState extends State<OverviewPage> {
     _fabLabelTimer?.cancel();
     _showFabLabel.dispose();
     _slideDirection.dispose();
-    _viewModel.dispose();
+    if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
