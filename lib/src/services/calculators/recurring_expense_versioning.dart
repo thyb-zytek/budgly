@@ -24,6 +24,7 @@ class RecurringExpenseVersioning {
       return RecurringExpenseVersion(
         previous: original,
         next: updated.copyWith(
+          id: original.id,
           recurrenceAnchorDay: original.recurrenceAnchorDay,
         ),
       );

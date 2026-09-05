@@ -11,9 +11,12 @@ import 'package:budgly/src/services/analytics/analytics_service.dart';
 ///
 /// We intentionally do not add a connectivity dependency here. A failed
 /// request is cheap to retry and the manager retries on app resume and at a
-/// short interval while the app is running. This keeps the feature working on
-/// every Flutter target supported by Budgly without pretending that a network
-/// event is a reliable source of truth.
+/// short interval while the app is running. Both triggers run a *forced*
+/// flush so operations still inside a backoff window are replayed as soon as
+/// connectivity is likely back, instead of waiting out the full backoff before
+/// the next pass. This keeps the feature working on every Flutter target
+/// supported by Budgly without pretending that a network event is a reliable
+/// source of truth.
 ///
 /// [SyncManager] is also a [ChangeNotifier]: once an operation has failed
 /// [stuckAfterAttempts] times in a row, it is considered "stuck" — still
@@ -71,7 +74,11 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
     WidgetsBinding.instance.addObserver(this);
     // The primary triggers are mutations and app resume. The timer is only a
     // safety net, so it can stay relatively infrequent without affecting UX.
-    _timer = Timer.periodic(const Duration(minutes: 5), (_) => flush());
+    // Forced so a backed-off operation is retried instead of staying in its
+    // backoff window until long after connectivity has come back.
+    _timer = Timer.periodic(const Duration(minutes: 5), (_) {
+      unawaited(flush(forceRetry: true));
+    });
     unawaited(flush());
   }
 
@@ -86,22 +93,50 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(flush());
+      // Forced: coming back to the app is the most common moment where
+      // connectivity has returned, so skip backoff rather than waiting for
+      // the next periodic pass.
+      unawaited(flush(forceRetry: true));
     }
   }
 
-  Future<void> flush() async {
+  /// Waits for the currently running synchronization pass, if any.
+  ///
+  /// Consumers that must not race a logout or process teardown can await this
+  /// without starting another pass.
+  Future<void> waitForIdle() async {
+    final handle = _flushHandle;
+    if (handle != null) await handle;
+  }
+
+  /// Resets singleton state between tests. Production code should never call
+  /// this method; real handlers are registered again by service constructors.
+  @visibleForTesting
+  Future<void> resetForTest() async {
+    await stop();
+    await waitForIdle();
+    _handlers.clear();
+    _hasStuckOperations = false;
+    _stuckOperationsCount = 0;
+    _syncing = false;
+    _flushHandle = null;
+  }
+
+  Future<void> flush({bool forceRetry = false}) async {
     if (_handlers.isEmpty) return;
     // If a flush is already running, join it instead of returning silently so
     // an explicit "retry" always produces feedback.
     final inFlight = _flushHandle;
     if (inFlight != null) {
       await inFlight;
-      return;
+      // An explicit retry must not inherit the readiness decision of a
+      // normal flush that happened to be in flight. Once that pass completes,
+      // run a forced pass so backoff is genuinely bypassed.
+      if (!forceRetry) return;
     }
     _syncing = true;
     _notifyListenersSafely();
-    final handle = _runFlush();
+    final handle = _runFlush(forceRetry: forceRetry);
     _flushHandle = handle;
     try {
       await handle;
@@ -110,10 +145,13 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
     }
   }
 
-  Future<void> _runFlush() async {
+  Future<void> _runFlush({bool forceRetry = false}) async {
     try {
       final allOperations = await _queue.all();
-      final operations = allOperations.where((operation) => operation.isReady).toList();
+      final operations = (forceRetry
+              ? allOperations
+              : allOperations.where((operation) => operation.isReady))
+          .toList();
       if (operations.isNotEmpty) {
         AnalyticsService.instance.track('sync_started', {
           'pending_operations': operations.length,
@@ -123,14 +161,30 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
       // Account operations must be replayed before categories because a
       // category has a foreign key to accounts. If an account operation is
       // waiting for its backoff window, do not push child categories yet.
-      final accountBlocked = allOperations.any(
+      final accountBlocked = !forceRetry && allOperations.any(
         (operation) => operation.type == 'accounts' && !operation.isReady,
       );
+      final categoryBlocked = !forceRetry && allOperations.any(
+        (operation) => operation.type == 'categories' && !operation.isReady,
+      );
+      final parentBlocked = accountBlocked || categoryBlocked;
       final ordered = [
         ...operations.where((operation) => operation.type == 'accounts'),
         ...operations.where((operation) => operation.type == 'user_profiles'),
         if (!accountBlocked)
           ...operations.where((operation) => operation.type == 'categories'),
+        if (!parentBlocked)
+          ...operations.where((operation) => operation.type == 'expenses'),
+        // Preserve support for registered test/custom handlers and future
+        // entity types without accidentally dropping them from the replay
+        // pass. Only the known dependency chain above has special ordering.
+        ...operations.where(
+          (operation) =>
+              operation.type != 'accounts' &&
+              operation.type != 'user_profiles' &&
+              operation.type != 'categories' &&
+              operation.type != 'expenses',
+        ),
       ];
 
       for (final operation in ordered) {

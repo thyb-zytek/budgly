@@ -25,7 +25,8 @@ class AccountsService {
 
   final AccountSupabase _accountSupabase;
   final StorageSupabase _storageSupabase;
-  final fb.FirebaseAuth _auth;
+  final fb.FirebaseAuth? _authInput;
+  fb.FirebaseAuth get _auth => _authInput ?? fb.FirebaseAuth.instance;
   final String _bucketId = AppConstants.bucketAccounts;
 
   final Map<String, Future<void>> _inFlight = {};
@@ -44,7 +45,7 @@ class AccountsService {
     AccountsStore? store,
   }) : _accountSupabase = accountSupabase ?? AccountSupabase(),
        _storageSupabase = storageSupabase ?? StorageSupabase(),
-       _auth = auth ?? fb.FirebaseAuth.instance,
+       _authInput = auth,
        _store = store ?? AccountsStore.instance {
     SyncManager.instance.registerHandler('accounts', _handlePendingSync);
   }
@@ -210,8 +211,10 @@ class AccountsService {
 
     await _syncQueue.removeWhere(
       (operation) =>
-          operation.type == 'categories' &&
-          operation.payload['account_id']?.toString() == accountId,
+          (operation.type == 'categories' &&
+              operation.payload['account_id']?.toString() == accountId) ||
+          (operation.type == 'expenses' &&
+              operation.payload['accountId']?.toString() == accountId),
     );
     await _queueAndFlush(
       id: 'account:delete:$accountId',
@@ -253,9 +256,17 @@ class AccountsService {
         return;
       case 'update':
         final account = Account.fromJson(operation.payload);
-        await _accountSupabase
+        final updated = await _accountSupabase
             .update(account)
             .timeout(const Duration(seconds: 8));
+        if (updated == null) {
+          final recreated = await _accountSupabase
+              .create(account)
+              .timeout(const Duration(seconds: 8));
+          if (recreated == null) {
+            throw StateError('Failed to recreate account');
+          }
+        }
         await _uploadQueuedPicture(operation, account);
         return;
       case 'delete':

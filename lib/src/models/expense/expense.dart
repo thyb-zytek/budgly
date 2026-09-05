@@ -94,6 +94,51 @@ class Expense {
     };
   }
 
+  /// JSON representation used by the persistent offline mutation queue.
+  ///
+  /// Firestore's [Timestamp] and [FieldValue] types cannot be serialized by
+  /// [jsonEncode], so queued mutations use ISO-8601 strings instead.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'accountId': accountId,
+        'categoryId': categoryId,
+        'name': name,
+        'amount': amount,
+        'debitDate': debitDate.toIso8601String(),
+        'endDate': endDate?.toIso8601String(),
+        'recurrence': recurrence.name,
+        'recurrenceAnchorDay': recurrenceAnchorDay,
+        'isDebited': isDebited,
+        'debitedOccurrences': debitedOccurrences,
+        'createdAt': createdAt?.toIso8601String(),
+        'updatedAt': updatedAt?.toIso8601String(),
+      };
+
+  factory Expense.fromJson(Map<String, dynamic> json) => Expense(
+        id: json['id']?.toString(),
+        accountId: json['accountId'] as String,
+        categoryId: json['categoryId'] as String,
+        name: json['name'] as String? ?? '',
+        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+        debitDate: DateTime.parse(json['debitDate'].toString()),
+        endDate: json['endDate'] == null
+            ? null
+            : DateTime.parse(json['endDate'].toString()),
+        recurrence: RecurrenceType.fromString(json['recurrence'] as String?),
+        recurrenceAnchorDay: (json['recurrenceAnchorDay'] as num?)?.toInt(),
+        isDebited: json['isDebited'] as bool? ?? false,
+        debitedOccurrences: (json['debitedOccurrences'] as List?)
+                ?.map((value) => value.toString())
+                .toList() ??
+            const [],
+        createdAt: json['createdAt'] == null
+            ? null
+            : DateTime.parse(json['createdAt'].toString()),
+        updatedAt: json['updatedAt'] == null
+            ? null
+            : DateTime.parse(json['updatedAt'].toString()),
+      );
+
   Map<String, dynamic> toCreateMap() {
     return {
       ..._sharedFieldsMap(),

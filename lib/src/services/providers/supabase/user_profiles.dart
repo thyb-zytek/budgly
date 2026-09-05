@@ -5,7 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:budgly/src/services/providers/supabase/client.dart';
 
 class UserProfileSupabase {
-  sb.SupabaseClient get _client => supabase;
+  final sb.SupabaseClient? _injected;
+  late final sb.SupabaseClient _client = _injected ?? supabase;
+
+  UserProfileSupabase({sb.SupabaseClient? client}) : _injected = client;
 
   Future<UserProfile?> getProfile(String userId) async {
     try {

@@ -1,11 +1,16 @@
 import 'package:budgly/src/models/account/account.dart';
 
 import 'package:budgly/src/services/providers/supabase/client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 
 class AccountSupabase {
+  final sb.SupabaseClient? _injected;
+  late final sb.SupabaseClient _client = _injected ?? supabase;
+
+  AccountSupabase({sb.SupabaseClient? client}) : _injected = client;
   Future<List<Account>> listByUserId(String userId) async {
     final response =
-        await supabase.from('accounts').select().eq('user_id', userId).timeout(const Duration(seconds: 8));
+        await _client.from('accounts').select().eq('user_id', userId).timeout(const Duration(seconds: 8));
 
     return (response as List<dynamic>)
         .map((json) => Account.fromJson(json as Map<String, dynamic>))
@@ -14,7 +19,7 @@ class AccountSupabase {
 
   Future<Account?> create(Account account) async {
     final response =
-        await supabase
+        await _client
             .from('accounts')
             .insert(account.toJson())
             .select()
@@ -26,17 +31,17 @@ class AccountSupabase {
     final id = account.id;
     if (id == null) return null;
     final response =
-        await supabase
+        await _client
             .from('accounts')
             .update(account.toJson())
             .eq('id', id)
             .select()
-            .single();
-    return Account.fromJson(response);
+            .maybeSingle();
+    return response == null ? null : Account.fromJson(response);
   }
 
   Future<bool> delete(String accountId) async {
-    await supabase.from('accounts').delete().eq('id', accountId);
+    await _client.from('accounts').delete().eq('id', accountId);
     return true;
   }
 }
