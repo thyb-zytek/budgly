@@ -1,17 +1,31 @@
-# budgly
+# Budgly
 
-A new Flutter project.
+Application Flutter de suivi budgétaire personnel.
 
-## Getting Started
+## Documentation
 
-This project is a starting point for a Flutter application.
+La documentation du projet se trouve dans [`docs/README.md`](docs/README.md).
 
-A few resources to get you started if this is your first Flutter project:
+Elle couvre notamment :
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- l'architecture MVVM et les responsabilités des couches ;
+- la stratégie offline-first et la synchronisation ;
+- les dépenses récurrentes ;
+- les tests et la couverture ;
+- l'analytics PostHog ;
+- les conventions de développement.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Démarrage rapide
+
+```bash
+flutter pub get
+flutter gen-l10n
+flutter analyze
+flutter test
+```
+
+Pour lancer l'application, crée `assets/.env` à partir de `assets/.env.example` puis exécute :
+
+```bash
+flutter run
+```
