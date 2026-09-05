@@ -95,7 +95,6 @@ ios/!default.pbxuser
 ios/!default.perspectivev3
 
 # Generated files
-pubspec.lock
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_en.dart
 lib/l10n/app_localizations_fr.dart
