@@ -27,8 +27,8 @@ class SwipeTabs extends StatefulWidget {
 class _SwipeTabsState extends State<SwipeTabs> {
   late int _currentIndex;
   late PageController _pageController;
-  Duration _animationDuration = const Duration(milliseconds: 500);
-  Curve _animationCurve = Curves.fastLinearToSlowEaseIn;
+  final Duration _animationDuration = const Duration(milliseconds: 500);
+  final Curve _animationCurve = Curves.fastLinearToSlowEaseIn;
 
   @override
   void initState() {
@@ -96,7 +96,7 @@ class _SwipeTabsState extends State<SwipeTabs> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(bottom: BudglySpacing.xl),
+            padding: const EdgeInsets.only(bottom: BudglySpacing.xl),
             child: TabSwitcher(
               selectedIndex: _currentIndex,
               onTabSelected: _handleTabChange,

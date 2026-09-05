@@ -53,7 +53,7 @@ class _SelectorState<T> extends State<Selector<T>> {
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
       ),
       menuPadding: const EdgeInsets.all(8),
-      offset: Offset(MediaQuery.of(context).size.width, 8),
+      offset: const Offset(0, 8),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         decoration: BoxDecoration(
@@ -81,6 +81,7 @@ class _SelectorState<T> extends State<Selector<T>> {
       itemBuilder: (context) => [
         for (final item in widget.items)
           PopupMenuItem<T>(
+            key: ValueKey<T>(item),
             value: item,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: widget.itemBuilder(context, item),

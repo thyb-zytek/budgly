@@ -27,25 +27,36 @@ class AccountView extends StatelessWidget {
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            spacing: 16,
-            children: [
-              Avatar(
-                initial: account.initial,
-                picture: account.pictureUrl?.isNotEmpty == true
-                    ? account.pictureUrl
-                    : null,
-                isLocalPicture: account.pictureUrl == null ||
-                    account.pictureUrl!.startsWith('/') ||
-                    account.pictureUrl!.startsWith('file://'),
-                backgroundColor: account.color,
-                size: 52,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: BudglySpacing.sm),
-                child: Text(account.name, style: theme.textTheme.titleLarge),
-              ),
-            ],
+          Flexible(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 16,
+              children: [
+                Avatar(
+                  initial: account.initial,
+                  picture: account.pictureUrl?.isNotEmpty == true
+                      ? account.pictureUrl
+                      : null,
+                  isLocalPicture: account.pictureUrl == null ||
+                      account.pictureUrl!.startsWith('/') ||
+                      account.pictureUrl!.startsWith('file://'),
+                  backgroundColor: account.color,
+                  size: 52,
+                ),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: BudglySpacing.sm),
+                    child: Text(
+                      account.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           if (onEdit != null || onDelete != null)
             Row(
@@ -54,13 +65,13 @@ class AccountView extends StatelessWidget {
               children: [
                 if (onEdit != null)
                   IconButton(
-                    icon: Icon(Icons.edit_rounded, size: 32),
+                    icon: const Icon(Icons.edit_rounded, size: 32),
                     onPressed: onEdit,
                     color: theme.colorScheme.primary,
                   ),
                 if (onDelete != null)
                   IconButton(
-                    icon: Icon(Icons.delete_rounded, size: 32),
+                    icon: const Icon(Icons.delete_rounded, size: 32),
                     onPressed: onDelete,
                     color: theme.colorScheme.error,
                   ),

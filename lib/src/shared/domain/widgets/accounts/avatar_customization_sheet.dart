@@ -65,7 +65,7 @@ Future<bool> showAvatarCustomizationSheet(
                         });
                       }),
                       iconAlignment: IconAlignment.start,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.upload_rounded,
                         
                       ),

@@ -1,6 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/pages/overview/widgets/overview_expenses_sliver.dart';
 import 'package:budgly/src/pages/overview/widgets/collapsing_summary_header.dart';
@@ -39,19 +41,25 @@ class OverviewContent extends StatelessWidget {
         onRefresh: onRefresh,
         child: CustomScrollView(
           slivers: [
-            ViewModelSelector<OverviewViewModel, (Period, int)>(
+            ViewModelSelector<OverviewViewModel, Period>(
               model: viewModel,
-              selector: (model) => (model.selectedPeriod, model.dataRevision),
-              builder: (context, value) => SliverPersistentHeader(
-                pinned: true,
-                delegate: PeriodSelector(
-                  period: value.$1,
-                  minPeriod: viewModel.minPeriod,
-                  maxPeriod: viewModel.maxPeriod,
-                  revision: value.$2,
-                  onChanged: onPeriodChanged,
-                ),
-              ),
+              selector: (model) => model.selectedPeriod,
+              builder: (context, value) {
+                // Re-read the theme on every builder run so a theme change
+                // both rebuilds the selector and lets shouldRebuild notice it.
+                final theme = Theme.of(context);
+                return SliverPersistentHeader(
+                  pinned: true,
+                  delegate: PeriodSelector(
+                    period: value,
+                    minPeriod: viewModel.minPeriod,
+                    maxPeriod: viewModel.maxPeriod,
+                    revision: value.hashCode,
+                    theme: theme,
+                    onChanged: onPeriodChanged,
+                  ),
+                );
+              },
             ),
             ViewModelSelector<OverviewViewModel, bool>(
               model: viewModel,
@@ -74,37 +82,60 @@ class OverviewContent extends StatelessWidget {
                 ),
               ),
             ),
-            ViewModelSelector<OverviewViewModel, String?>(
+            ViewModelSelector<OverviewViewModel, (Account?, String, Period, List<CategoryExpenseSummary>, double, double, double, double, double?, String, String, int)>(
               model: viewModel,
-              selector: (model) =>
-                  '${model.account?.id}|${model.selectedPeriod}|${model.dataRevision}',
-              builder: (context, _) {
+              selector: (model) => (
+                model.account,
+                model.accounts
+                    .map((account) => '${account.id}|${account.name}|${account.color}|${account.pictureUrl}')
+                    .join(';;'),
+                model.selectedPeriod,
+                model.categorySummaries,
+                model.revenue,
+                model.effectiveRevenue,
+                model.totalExpenses,
+                model.remaining,
+                model.weeklyBudget,
+                model.currencyCode,
+                model.localeName,
+                model.amountDecimalPlaces,
+              ),
+              builder: (context, snapshot) {
                 if (viewModel.accounts.isEmpty) {
                   return const SliverToBoxAdapter();
                 }
                 return ValueListenableBuilder<int>(
                   valueListenable: slideDirection,
-                  builder: (context, direction, child) =>
-                      SliverPersistentHeader(
-                        pinned: true,
-                        delegate: CollapsingSummaryHeader(
-                          viewModel: viewModel,
-                          onSelectAccount: (account) =>
-                              viewModel.account = account,
-                          onEditRevenue: viewModel.openRevenueEditor,
-                          onCategoryTap: onCategoryTap,
-                          slideDirection: direction,
-                          revision: viewModel.dataRevision,
-                        ),
+                  builder: (context, direction, child) {
+                    final theme = Theme.of(context);
+                    return SliverPersistentHeader(
+                      pinned: true,
+                      delegate: CollapsingSummaryHeader(
+                        viewModel: viewModel,
+                        onSelectAccount: (account) =>
+                            viewModel.account = account,
+                        onEditRevenue: viewModel.openRevenueEditor,
+                        onCategoryTap: onCategoryTap,
+                        slideDirection: direction,
+                        revision: snapshot.hashCode,
+                        theme: theme,
                       ),
+                    );
+                  },
                 );
               },
             ),
             const SliverToBoxAdapter(child: SizedBox(height: BudglySpacing.lg)),
-            ViewModelSelector<OverviewViewModel, String>(
+            ViewModelSelector<OverviewViewModel, (Period, String?, List<CategoryExpenseSummary>, String, String, int)>(
               model: viewModel,
-              selector: (model) =>
-                  '${model.selectedPeriod}|${model.account?.id}|${model.dataRevision}',
+              selector: (model) => (
+                model.selectedPeriod,
+                model.account?.id,
+                model.categorySummaries,
+                model.currencyCode,
+                model.localeName,
+                model.amountDecimalPlaces,
+              ),
               builder: (context, _) => OverviewExpensesSliver(
                 viewModel: viewModel,
                 slideDirection: slideDirection,

@@ -17,6 +17,7 @@ class ColorWheel extends StatelessWidget {
 
         return Semantics(
           label: AppLocalizations.of(context)?.semanticColorPicker,
+          explicitChildNodes: true,
           child: MediaQuery(
           data: mediaQuery.copyWith(
             size: Size(availableWidth, availableWidth * 0.6),
