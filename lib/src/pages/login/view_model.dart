@@ -85,6 +85,13 @@ class LoginViewModel extends BaseViewModel {
   }
 
   Future<AuthDestination> resolvePostAuthDestination(User user) async {
+    // The persisted onboarding flag is the strongest signal for a returning
+    // user. An unfinished tutorial must be resumed even if an account already
+    // exists locally.
+    if (user.profile?.onboardingCompleted == false) {
+      return AuthDestination.tutorial;
+    }
+
     try {
       await _accountsService.loadAccounts();
       if (_accountsService.accounts.isNotEmpty) {
@@ -115,7 +122,7 @@ class LoginViewModel extends BaseViewModel {
     if (!isDisposed) notifyListeners();
   }
 
-  void handleEvent(AuthEventParams event) {
+  Future<void> handleEvent(AuthEventParams event) async {
     _setState(
       isLoading: ![
         AuthEvent.resendEmailVerification,
@@ -126,10 +133,10 @@ class LoginViewModel extends BaseViewModel {
       isGoogleSignIn: event.type == AuthEvent.googleSignIn,
     );
 
-    event.when(
+    await event.when(
       resendEmailVerification: _handleResendEmailVerification,
       reload: _handleReload,
-      submitForm: (isValid) => _handleSubmitForm(isValid),
+      submitForm: (isValid) => _handleSubmitForm(event.type, isValid),
       googleSignIn: _handleGoogleSignIn,
       signOut: _handleSignOut,
       changeFormType: _handleChangeFormType,
@@ -159,15 +166,15 @@ class LoginViewModel extends BaseViewModel {
     }
   }
 
-  Future<void> _handleSubmitForm(bool isValid) async {
+  Future<void> _handleSubmitForm(AuthEvent eventType, bool isValid) async {
     if (!isValid) {
       _setState(isLoading: false, isGoogleSignIn: false);
       return;
     }
 
     try {
-      switch (_state.formType) {
-        case AuthForm.signUp:
+      switch (eventType) {
+        case AuthEvent.signUp:
           final user = await _authService.signUpWithEmailAndPassword(
             _emailController.text,
             _passwordController.text,
@@ -182,7 +189,7 @@ class LoginViewModel extends BaseViewModel {
           }
           break;
 
-        case AuthForm.signIn:
+        case AuthEvent.signIn:
           final user = await _authService.signInWithEmailAndPassword(
             _emailController.text,
             _passwordController.text,
@@ -200,16 +207,17 @@ class LoginViewModel extends BaseViewModel {
           }
           break;
 
-        case AuthForm.resetPassword:
+        case AuthEvent.resetPassword:
           await _authService.resetPassword(_emailController.text);
           if (!isDisposed) {
             _setState(isLoading: false, formType: AuthForm.signIn, isGoogleSignIn: false);
           }
           break;
 
-        case AuthForm.verifyEmail:
-          _clearForm(keepEmail: true);
-          _setState(formType: AuthForm.signIn, isGoogleSignIn: false);
+        default:
+          if (!isDisposed) {
+            _setState(isLoading: false, isGoogleSignIn: false);
+          }
           break;
       }
     } on AuthenticationException catch (e) {

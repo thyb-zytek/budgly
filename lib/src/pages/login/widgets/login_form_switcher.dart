@@ -94,7 +94,7 @@ class LoginFormSwitcher extends StatelessWidget {
         },
         if ([AuthForm.signUp, AuthForm.signIn, AuthForm.resetPassword].contains(formType))
           Padding(
-            padding: EdgeInsets.all(BudglySpacing.xl).add(
+            padding: const EdgeInsets.all(BudglySpacing.xl).add(
               EdgeInsets.only(bottom: isKeyboardOpen ? 8 : 0),
             ),
             child: GoogleSignInButton(

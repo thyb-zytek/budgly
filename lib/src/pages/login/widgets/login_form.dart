@@ -20,7 +20,7 @@ class LoginForm extends StatelessWidget {
   final String? errorCode;
   final String? errorMessage;
 
-  LoginForm({
+  const LoginForm({
     super.key,
     required this.formKey,
     required this.onResetPassword,
@@ -98,9 +98,10 @@ class LoginForm extends StatelessWidget {
             ),
           ),
         ),
-        Row(
+        Wrap(
           spacing: 4,
-          mainAxisSize: MainAxisSize.max,
+          runSpacing: 0,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(tr.userHasNoAccount),
             TextButton(
@@ -115,7 +116,7 @@ class LoginForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: BudglySpacing.xl),
+          padding: const EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
                         onPressed: onSubmitForm,
             child: Text(

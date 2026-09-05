@@ -17,7 +17,7 @@ class SignUpForm extends StatelessWidget {
   final void Function() onSubmitForm;
   final void Function() onSignInPressed;
 
-  SignUpForm({
+  const SignUpForm({
     super.key,
     required this.formKey,
     required this.emailController,
@@ -73,9 +73,10 @@ class SignUpForm extends StatelessWidget {
             ),
           ),
         ),
-        Row(
+        Wrap(
           spacing: 4,
-          mainAxisSize: MainAxisSize.max,
+          runSpacing: 0,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(tr.userHasAccount),
             TextButton(

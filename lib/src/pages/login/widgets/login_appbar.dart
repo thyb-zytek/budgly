@@ -43,15 +43,16 @@ class LoginAppbar extends StatelessWidget {
             ),
           ],
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.lg),
-          child: Text(
-            tr.appDescription,
-            style: theme.textTheme.titleLarge!.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+        if (!isCompact)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.lg),
+            child: Text(
+              tr.appDescription,
+              style: theme.textTheme.titleLarge!.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
