@@ -204,7 +204,8 @@ class ProfileService implements Listenable {
   /// online and all local mutations reached the server), `false` when at least
   /// one operation is still pending (offline / server unreachable).
   static Future<bool> flushPendingMutations() async {
-    await SyncManager.instance.flush();
+    await SyncManager.instance.flush(forceRetry: true);
+    await SyncManager.instance.waitForIdle();
     return (await SyncQueue.instance.all()).isEmpty;
   }
 
@@ -352,6 +353,19 @@ class ProfileService implements Listenable {
   }
 
   Future<void> signOut() async {
+    // Re-register all replay handlers before waiting. This matters after an
+    // app restart where a persisted queue can exist before the corresponding
+    // screen/service has been constructed in memory.
+    AccountsService.instance;
+    CategoriesService.instance;
+    ExpensesService.instance;
+    AccountBudgetsService.instance;
+
+    final synced = await flushPendingMutations();
+    if (!synced) {
+      throw StateError('Pending offline changes must be synchronized before logout');
+    }
+
     await _authService.signOut();
     AccountsService.instance.clearLocalAccounts();
     CategoriesService.instance.invalidateCache();

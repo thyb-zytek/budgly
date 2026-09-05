@@ -83,7 +83,7 @@ class AccountBudgetFirestore {
     try {
       final snapshot = await _collection
           .where('accountId', isEqualTo: accountId)
-          .get(GetOptions(source: Source.cache));
+          .get(const GetOptions(source: Source.cache));
       if (snapshot.docs.isEmpty) return;
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {

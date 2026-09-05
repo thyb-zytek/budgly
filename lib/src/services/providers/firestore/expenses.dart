@@ -6,9 +6,18 @@ import 'package:budgly/src/services/providers/firestore/expense_page.dart';
 import 'package:budgly/src/models/budget/period.dart';
 
 class ExpenseFirestore {
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  ExpenseFirestore({FirebaseFirestore? firestore, FirebaseAuth? auth})
+      : _firestoreInput = firestore,
+        _authInput = auth;
+
+  final FirebaseFirestore? _firestoreInput;
+  final FirebaseAuth? _authInput;
+
+  FirebaseFirestore get _firestore => _firestoreInput ?? FirebaseFirestore.instance;
+  FirebaseAuth get _auth => _authInput ?? FirebaseAuth.instance;
+
   String get _currentUserId {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _auth.currentUser;
     if (user == null) {
       throw StateError('No authenticated user');
     }
@@ -35,11 +44,11 @@ class ExpenseFirestore {
         .where('recurrence', isEqualTo: 'none')
         .where('debitDate', isGreaterThanOrEqualTo: start)
         .where('debitDate', isLessThanOrEqualTo: end)
-        .orderBy('debitDate', descending: true)
-        .limit(limit);
+        .orderBy('debitDate', descending: true);
     if (startAfter != null) {
       oneOffQuery = oneOffQuery.startAfterDocument(startAfter);
     }
+    oneOffQuery = oneOffQuery.limit(limit);
 
     final oneOffFuture = oneOffQuery.get();
     final recurringFuture = includeRecurring
@@ -208,7 +217,7 @@ class ExpenseFirestore {
     try {
       final snapshot = await _collection
           .where('accountId', isEqualTo: accountId)
-          .get(GetOptions(source: Source.cache));
+          .get(const GetOptions(source: Source.cache));
       if (snapshot.docs.isEmpty) return;
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {
@@ -224,7 +233,7 @@ class ExpenseFirestore {
     try {
       final snapshot = await _collection
           .where('categoryId', isEqualTo: categoryId)
-          .get(GetOptions(source: Source.cache));
+          .get(const GetOptions(source: Source.cache));
       if (snapshot.docs.isEmpty) return;
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {

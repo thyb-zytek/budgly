@@ -157,9 +157,11 @@ class SyncQueue {
           (item) => item.type == type && item.entityId == entityId,
         );
       } else {
-        operations.removeWhere(
-          (item) => item.type == type && item.entityId == entityId,
-        );
+        if (entityId.isNotEmpty) {
+          operations.removeWhere(
+            (item) => item.type == type && item.entityId == entityId,
+          );
+        }
         operations.add(
           PendingSync(
             id: id,

@@ -10,8 +10,8 @@ class CategoriesStore extends ChangeNotifier {
     return _instance!;
   }
 
-  Map<String, List<Category>> _categoriesByAccount = {};
-  Map<String, bool> _hasLoadedByAccount = {};
+  final Map<String, List<Category>> _categoriesByAccount = {};
+  final Map<String, bool> _hasLoadedByAccount = {};
   List<CategoryIcon> _availableIcons = [];
   bool _iconsLoaded = false;
 

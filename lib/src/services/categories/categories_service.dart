@@ -267,7 +267,18 @@ class CategoriesService {
         await _categorySupabase.create(Category.fromJson(operation.payload)).timeout(const Duration(seconds: 8));
         return;
       case 'update':
-        await _categorySupabase.update(Category.fromJson(operation.payload)).timeout(const Duration(seconds: 8));
+        final category = Category.fromJson(operation.payload);
+        final updated = await _categorySupabase
+            .update(category)
+            .timeout(const Duration(seconds: 8));
+        if (updated == null) {
+          final recreated = await _categorySupabase
+              .create(category)
+              .timeout(const Duration(seconds: 8));
+          if (recreated == null) {
+            throw StateError('Failed to recreate category');
+          }
+        }
         return;
       case 'delete':
         await _categorySupabase.delete(operation.payload['id'] as String).timeout(const Duration(seconds: 8));

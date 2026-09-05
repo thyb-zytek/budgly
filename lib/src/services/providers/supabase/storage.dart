@@ -7,7 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'client.dart';
 
 class StorageSupabase {
-  sb.SupabaseClient get _client => supabase;
+  final sb.SupabaseClient? _injected;
+  late final sb.SupabaseClient _client = _injected ?? supabase;
+
+  StorageSupabase({sb.SupabaseClient? client}) : _injected = client;
 
   Future<String?> uploadFile({
     required String bucketId,

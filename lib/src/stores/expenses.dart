@@ -59,13 +59,27 @@ class ExpensesStore extends ChangeNotifier {
   }
 
   void updateExpense(Expense expense) {
-    for (final list in _expensesByAccount.values) {
-      list.removeWhere((e) => e.id == expense.id);
+    String? sourceAccountId;
+    int? sourceIndex;
+
+    for (final entry in _expensesByAccount.entries) {
+      final index = entry.value.indexWhere((e) => e.id == expense.id);
+      if (index != -1) {
+        sourceAccountId = entry.key;
+        sourceIndex = index;
+        break;
+      }
     }
 
-    final list = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
-    list.add(expense);
-    list.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    if (sourceAccountId == null || sourceIndex == null) return;
+
+    final source = _expensesByAccount[sourceAccountId]!;
+    source.removeAt(sourceIndex);
+    if (source.isEmpty) _expensesByAccount.remove(sourceAccountId);
+
+    final target = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
+    target.add(expense);
+    target.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     notifyListeners();
   }
 

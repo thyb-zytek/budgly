@@ -7,9 +7,14 @@ import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/calculators/recurring_expense_versioning.dart';
+import 'package:budgly/src/services/expenses/expense_period_cache.dart';
+import 'package:budgly/src/services/expenses/expense_sync_handler.dart';
+import 'package:budgly/src/services/expenses/recurring_expense_persistence.dart';
 import 'package:budgly/src/services/providers/firestore/expense_page.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:budgly/src/services/offline/offline_id.dart';
+import 'package:budgly/src/services/offline/sync_manager.dart';
+import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/stores/expenses.dart';
 
 class ExpensesService extends ChangeNotifier {
@@ -23,8 +28,9 @@ class ExpensesService extends ChangeNotifier {
   final ExpenseFirestore _expenseFirestore;
   final ExpensesStore _store;
   final RecurringExpenseVersioning _recurringVersioning;
-
-  final _periodData = _ExpensePeriodData();
+  final _periodData = ExpensePeriodCache();
+  late final ExpenseSyncHandler _syncHandler;
+  late final RecurringExpensePersistence _recurringPersistence;
 
   ExpensesService({
     ExpenseFirestore? expenseFirestore,
@@ -34,7 +40,16 @@ class ExpensesService extends ChangeNotifier {
        _store = store ?? ExpensesStore.instance,
        _recurringVersioning =
            recurringVersioning ?? const RecurringExpenseVersioning() {
+    _syncHandler = ExpenseSyncHandler(
+      firestore: _expenseFirestore,
+      periodData: _periodData,
+    );
+    _recurringPersistence = RecurringExpensePersistence(
+      firestore: _expenseFirestore,
+      periodData: _periodData,
+    );
     _store.addListener(notifyListeners);
+    SyncManager.instance.registerHandler('expenses', _handlePendingSync);
   }
 
   ExpensesService._() : this();
@@ -154,6 +169,10 @@ class ExpensesService extends ChangeNotifier {
       // locally-created expenses that the server has not acknowledged yet:
       // keep the unconfirmed ones until the server returns them.
       final merged = _periodData.mergeServer(key, expenses);
+      // The server has now returned these expenses, so they are acknowledged:
+      // release their optimistic shield so a later server-side deletion still
+      // propagates.
+      _periodData.releaseConfirmed(expenses);
       _periodData.put(key, merged);
       notifyListeners();
       return List.unmodifiable(merged);
@@ -195,6 +214,7 @@ class ExpensesService extends ChangeNotifier {
     cachedPeriod.add(optimistic);
     cachedPeriod.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     _periodData.addOptimistic(optimistic.id!);
+    _periodData.markPending(optimistic.id!, optimistic);
     _store.addExpense(optimistic);
     notifyListeners();
     unawaited(_persistCreatedExpense(optimistic));
@@ -204,17 +224,8 @@ class ExpensesService extends ChangeNotifier {
     return optimistic;
   }
 
-  Future<void> _persistCreatedExpense(Expense expense) async {
-    try {
-      final created = await _expenseFirestore.create(expense);
-      if (created == null) throw Exception('Failed to create expense');
-    } catch (e) {
-      AnalyticsService.instance.track('expense_create_failed', {
-        'error': e.toString(),
-      });
-      AppLogger.error('Failed to persist expense creation', e);
-    }
-  }
+  Future<void> _persistCreatedExpense(Expense expense) =>
+      _syncHandler.persistCreate(expense);
 
   Future<Expense> updateRecurringExpenseFromOccurrence({
     required Expense original,
@@ -236,23 +247,10 @@ class ExpensesService extends ChangeNotifier {
       return updateExpense(version.next, previous: original);
     }
 
-    // `splitRecurringExpense` may return null (batch not committed) or, offline,
-    // hang retrying the network. Never trap the user on the edit form: bound
-    // the call with a timeout and apply the split optimistically with a local
-    // id so the change is visible right away. A later server refresh can
-    // reconcile the series.
-    Expense resolved;
-    try {
-      final created = await _expenseFirestore
-          .splitRecurringExpense(
-            previous: version.previous,
-            next: version.next,
-          )
-          .timeout(const Duration(seconds: 5));
-      resolved = created ?? version.next.copyWith(id: OfflineId.uuid());
-    } catch (_) {
-      resolved = version.next.copyWith(id: OfflineId.uuid());
-    }
+    final resolved = await _recurringPersistence.split(
+      previous: version.previous,
+      next: version.next,
+    );
 
     _periodData.removeAccount(resolved.accountId);
     _store.replaceExpenseWithVersions(
@@ -269,6 +267,7 @@ class ExpensesService extends ChangeNotifier {
       _periodData.removeAccount(expense.accountId);
     }
     _store.updateExpense(expense);
+    _periodData.markPending(expense.id!, expense);
     unawaited(_persistExpenseUpdate(expense));
     AnalyticsService.instance.track('expense_updated', {
       'recurring': expense.isRecurring,
@@ -276,35 +275,36 @@ class ExpensesService extends ChangeNotifier {
     return expense;
   }
 
-  Future<void> _persistExpenseUpdate(Expense expense) async {
-    try {
-      final success = await _expenseFirestore.update(expense);
-      if (!success) throw Exception('Failed to update expense');
-    } catch (e, stackTrace) {
-      AnalyticsService.instance.track('expense_update_failed', {
-        'error': e.toString(),
-      });
-      AppLogger.error('Failed to update expense', e, stackTrace);
-    }
-  }
+  Future<void> _persistExpenseUpdate(Expense expense) =>
+      _syncHandler.persistUpdate(expense);
 
   Future<bool> deleteExpense(String expenseId, String accountId) async {
-    try {
-      final success = await _expenseFirestore.delete(expenseId);
-      if (success) {
-        _periodData.removeAccount(accountId);
-        _store.removeExpense(expenseId, accountId);
-        AnalyticsService.instance.track('expense_deleted');
-        return true;
-      }
-      throw Exception('Failed to delete expense');
-    } catch (e, stackTrace) {
-      AnalyticsService.instance.track('expense_delete_failed', {
-        'error': e.toString(),
-      });
-      AppLogger.error('Failed to delete expense', e, stackTrace);
-      rethrow;
+    final deletedExpense = _store.getExpenseById(expenseId);
+    _periodData.removeAccount(accountId);
+    _store.removeExpense(expenseId, accountId);
+    _periodData.markPendingDelete(expenseId);
+    if (deletedExpense != null) {
+      _periodData.ensure(
+        _periodData.key(
+          deletedExpense.accountId,
+          Period.fromDate(deletedExpense.debitDate),
+          null,
+        ),
+      );
     }
+    AnalyticsService.instance.track('expense_deleted');
+
+    final result = await _syncHandler.delete(expenseId);
+    if (deletedExpense != null) {
+      _periodData.ensure(
+        _periodData.key(
+          deletedExpense.accountId,
+          Period.fromDate(deletedExpense.debitDate),
+          null,
+        ),
+      );
+    }
+    return result;
   }
 
   Future<bool> deleteSingleOccurrence({
@@ -388,28 +388,17 @@ class ExpensesService extends ChangeNotifier {
       debitedOccurrences: nextDebited,
     );
 
-    try {
-      final created = await _expenseFirestore
-          .splitRecurringExpense(previous: previous, next: next)
-          .timeout(const Duration(seconds: 5));
-      final resolvedNext = created ?? next.copyWith(id: OfflineId.uuid());
-      _periodData.removeAccount(expense.accountId);
-      _store.replaceExpenseWithVersions(
-        previous: previous,
-        next: resolvedNext,
-      );
-      AnalyticsService.instance.track('expense_single_occurrence_deleted');
-      return true;
-    } catch (_) {
-      final fallbackNext = next.copyWith(id: OfflineId.uuid());
-      _periodData.removeAccount(expense.accountId);
-      _store.replaceExpenseWithVersions(
-        previous: previous,
-        next: fallbackNext,
-      );
-      AnalyticsService.instance.track('expense_single_occurrence_deleted');
-      return true;
-    }
+    final resolvedNext = await _recurringPersistence.split(
+      previous: previous,
+      next: next,
+    );
+    _periodData.removeAccount(expense.accountId);
+    _store.replaceExpenseWithVersions(
+      previous: previous,
+      next: resolvedNext,
+    );
+    AnalyticsService.instance.track('expense_single_occurrence_deleted');
+    return true;
   }
 
   Future<bool> deleteFutureOccurrences({
@@ -445,6 +434,9 @@ class ExpensesService extends ChangeNotifier {
     AnalyticsService.instance.track('expense_future_occurrences_deleted');
     return true;
   }
+
+  Future<void> _handlePendingSync(PendingSync operation) =>
+      _syncHandler.handlePendingSync(operation);
 
   Expense? getExpenseById(String expenseId) => _store.getExpenseById(expenseId);
 
@@ -505,138 +497,5 @@ class ExpensesService extends ChangeNotifier {
         : await markOccurrenceDebited(expense, date);
     AnalyticsService.instance.track('expense_toggled_debited');
     return result;
-  }
-}
-
-/// Internal period cache. It deliberately stays private to ExpensesService so
-/// cache policy does not become another public service dependency.
-class _ExpensePeriodData {
-  final Map<String, List<Expense>> _cache = {};
-  final Map<String, Future<List<Expense>>> _inFlight = {};
-
-  /// Ids of expenses created locally but not yet acknowledged by a server
-  /// refresh. They are protected from being dropped by stale snapshots.
-  final Set<String> _optimisticIds = {};
-
-  String key(String accountId, Period period, String? categoryId) =>
-      '$accountId|$period|${categoryId ?? '*'}';
-
-  List<Expense>? cached(String key) => _cache[key];
-
-  void put(String key, List<Expense> expenses) {
-    _cache[key] = List<Expense>.from(expenses);
-  }
-
-  List<Expense> ensure(String key) => _cache.putIfAbsent(key, () => []);
-
-  void addOptimistic(String expenseId) {
-    _optimisticIds.add(expenseId);
-  }
-
-  /// Merges a server snapshot with unconfirmed optimistic creations so a
-  /// freshly created expense survives a refresh that returns stale data.
-  ///
-  /// Once the server acknowledges an id it is no longer protected, so a
-  /// deletion performed on another device still propagates server-side.
-  List<Expense> mergeServer(String key, List<Expense> serverExpenses) {
-    for (final expense in serverExpenses) {
-      if (expense.id != null) _optimisticIds.remove(expense.id);
-    }
-    if (_optimisticIds.isEmpty) {
-      return List<Expense>.from(serverExpenses);
-    }
-
-    final existing = _cache[key];
-    if (existing == null || existing.isEmpty) {
-      return List<Expense>.from(serverExpenses);
-    }
-
-    final serverIds = serverExpenses
-        .map((expense) => expense.id)
-        .whereType<String>()
-        .toSet();
-    return List<Expense>.from([
-      ...serverExpenses,
-      ...existing.where(
-        (expense) =>
-            expense.id != null &&
-            _optimisticIds.contains(expense.id) &&
-            !serverIds.contains(expense.id),
-      ),
-    ]);
-  }
-
-  Future<List<Expense>>? inFlight(String key) => _inFlight[key];
-
-  void setInFlight(String key, Future<List<Expense>> future) {
-    _inFlight[key] = future;
-  }
-
-  void clearInFlight(String key, Future<List<Expense>> future) {
-    if (identical(_inFlight[key], future)) _inFlight.remove(key);
-  }
-
-  void removeAccount(String accountId) {
-    _cache.removeWhere((key, _) => key.startsWith('$accountId|'));
-    _inFlight.removeWhere((key, _) => key.startsWith('$accountId|'));
-  }
-
-  void optimisticUpdateExpense(Expense oldExpense, Expense newExpense) {
-    final oldIsRecurring = oldExpense.isRecurring;
-    final newIsRecurring = newExpense.isRecurring;
-    if (oldIsRecurring || newIsRecurring) {
-      removeAccount(oldExpense.accountId);
-      if (newExpense.accountId != oldExpense.accountId) {
-        removeAccount(newExpense.accountId);
-      }
-      return;
-    }
-
-    final oldPeriod = Period.fromDate(oldExpense.debitDate);
-    final newPeriod = Period.fromDate(newExpense.debitDate);
-    final oldAccountId = oldExpense.accountId;
-    final newAccountId = newExpense.accountId;
-
-    if (oldAccountId == newAccountId && oldPeriod == newPeriod) {
-      final cacheKey = key(oldAccountId, oldPeriod, null);
-      final list = _cache[cacheKey];
-      if (list != null) {
-        final index = list.indexWhere((e) => e.id == oldExpense.id);
-        if (index != -1) {
-          list[index] = newExpense;
-        }
-      }
-      return;
-    }
-
-    // Moved between periods or accounts: remove from old, add to new.
-    final oldKey = key(oldAccountId, oldPeriod, null);
-    final oldList = _cache[oldKey];
-    if (oldList != null) {
-      oldList.removeWhere((e) => e.id == oldExpense.id);
-    }
-
-    final newKey = key(newAccountId, newPeriod, null);
-    final newList = _cache[newKey];
-    if (newList != null) {
-      if (!newList.any((e) => e.id == newExpense.id)) {
-        newList.add(newExpense);
-        newList.sort((a, b) => b.debitDate.compareTo(a.debitDate));
-      } else {
-        final idx = newList.indexWhere((e) => e.id == newExpense.id);
-        if (idx != -1) newList[idx] = newExpense;
-      }
-    }
-    // If the other account/period caches were not loaded, they stay null
-    // and will be populated on next load from Firestore cache.
-    if (oldAccountId != newAccountId) {
-      // Also ensure the old account's new period is cleared if it was same as new period but different account
-    }
-  }
-
-  void clear() {
-    _cache.clear();
-    _inFlight.clear();
-    _optimisticIds.clear();
   }
 }

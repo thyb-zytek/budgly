@@ -11,7 +11,9 @@ class LocalCache {
   static const _categoriesPrefix = 'offline.categories.';
   static const _profilePrefix = 'offline.profile.';
 
-  static final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
+  // Resolve lazily so Flutter test bootstrap can install the in-memory
+  // SharedPreferences implementation before the first platform call.
+  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
   Future<void> saveAccounts(String userId, List<Account> accounts) async {
     final prefs = await _prefs;
