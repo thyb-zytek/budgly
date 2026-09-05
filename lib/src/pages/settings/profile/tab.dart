@@ -10,14 +10,30 @@ import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class ProfileTab extends StatefulWidget {
-  const ProfileTab({super.key});
+  final ProfileViewModel? injectedViewModel;
+
+  const ProfileTab({super.key, this.injectedViewModel});
 
   @override
   State<ProfileTab> createState() => _ProfileTabState();
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  late final ProfileViewModel _viewModel = ProfileViewModel();
+  late final ProfileViewModel _viewModel;
+  late final bool _ownsViewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsViewModel = widget.injectedViewModel == null;
+    _viewModel = widget.injectedViewModel ?? ProfileViewModel();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsViewModel) _viewModel.dispose();
+    super.dispose();
+  }
 
   void _displayChangePasswordDialog() {
     ChangePasswordSheet.show(
@@ -64,7 +80,7 @@ class _ProfileTabState extends State<ProfileTab> {
                         FilledButton.icon(
                           onPressed: _viewModel.refreshUser,
                           iconAlignment: IconAlignment.start,
-                          icon: Icon(Icons.refresh),
+                          icon: const Icon(Icons.refresh),
                           label: Text(tr.refreshProfile),
                         ),
                         if (!user.isGoogleUser)

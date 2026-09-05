@@ -2,6 +2,7 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/view_models/view_model_selector.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
+import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/models/budget/period.dart';
@@ -23,12 +24,14 @@ class CategoryExpensesPage extends StatefulWidget {
   final String accountId;
   final String categoryId;
   final Period period;
+  final CategoryExpensesViewModel? injectedViewModel;
 
   const CategoryExpensesPage({
     super.key,
     required this.accountId,
     required this.categoryId,
     required this.period,
+    this.injectedViewModel,
   });
 
   @override
@@ -41,15 +44,18 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
   final ScrollController _scrollController = ScrollController();
 
   late final CategoryExpensesViewModel _viewModel;
+  late final bool _ownsViewModel;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = CategoryExpensesViewModel(
-      accountId: widget.accountId,
-      categoryId: widget.categoryId,
-      period: widget.period,
-    );
+    _ownsViewModel = widget.injectedViewModel == null;
+    _viewModel = widget.injectedViewModel ??
+        CategoryExpensesViewModel(
+          accountId: widget.accountId,
+          categoryId: widget.categoryId,
+          period: widget.period,
+        );
     _viewModel.ensureDataLoaded();
     _scrollController.addListener(_onScroll);
   }
@@ -66,7 +72,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
-    _viewModel.dispose();
+    if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
@@ -369,9 +375,25 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
             return const AppLoadingIndicator();
           }
 
-          return ViewModelSelector<CategoryExpensesViewModel, int>(
+          return ViewModelSelector<CategoryExpensesViewModel, (
+            List<ExpenseOccurrence>,
+            bool,
+            Category?,
+            String,
+            String,
+            int,
+            Color?,
+          )>(
             model: _viewModel,
-            selector: (model) => model.dataRevision,
+            selector: (model) => (
+              model.occurrences,
+              model.isLoadingMore,
+              model.category,
+              model.currencyCode,
+              model.localeName,
+              model.amountDecimalPlaces,
+              model.accountColor,
+            ),
             builder: (context, _) => CategoryExpensesContent(
               viewModel: _viewModel,
               translations: tr,

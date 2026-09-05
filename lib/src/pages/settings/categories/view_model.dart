@@ -13,7 +13,8 @@ import 'package:budgly/src/shared/domain/view_models/category_form_view_model.da
 import 'package:flutter/material.dart';
 
 class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel {
-  final CategoriesService _categoriesService = CategoriesService.instance;
+  final CategoriesService _categoriesService;
+  final ExpensesService _expensesService;
 
   Account? _account;
   final List<Category> _localCategories = [];
@@ -27,7 +28,11 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
     availableIcons: [],
   );
 
-  CategoriesViewModel() {
+  CategoriesViewModel({
+    CategoriesService? categoriesService,
+    ExpensesService? expensesService,
+  })  : _categoriesService = categoriesService ?? CategoriesService.instance,
+        _expensesService = expensesService ?? ExpensesService.instance {
     _categoriesService.addListener(_onServiceChanged);
   }
 
@@ -155,7 +160,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
 
     setLoading(true);
     try {
-      await ExpensesService.instance.deleteByCategoryId(category.id!);
+      await _expensesService.deleteByCategoryId(category.id!);
       await _categoriesService.deleteCategory(category.id!);
       setSuccessMessage(const AppUserMessage.success(AppMessageKey.categoryDeleted));
     } catch (e, stackTrace) {

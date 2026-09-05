@@ -45,12 +45,14 @@ class AppLogger {
   }) {
     try {
       unawaited(
-        FirebaseCrashlytics.instance.recordError(
-          error,
-          stackTrace,
-          reason: reason,
-          fatal: false,
-        ),
+        FirebaseCrashlytics.instance
+            .recordError(
+              error,
+              stackTrace,
+              reason: reason,
+              fatal: false,
+            )
+            .catchError((_) {}),
       );
     } catch (_) {
     }

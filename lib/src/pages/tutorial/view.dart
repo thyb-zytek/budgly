@@ -12,7 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class TutorialPage extends StatefulWidget {
-  TutorialPage({super.key});
+  final TutorialViewModel? injectedViewModel;
+
+  const TutorialPage({super.key, this.injectedViewModel});
 
   @override
   State<TutorialPage> createState() => _TutorialPageState();
@@ -20,17 +22,19 @@ class TutorialPage extends StatefulWidget {
 
 class _TutorialPageState extends State<TutorialPage> {
   late final TutorialViewModel _viewModel;
+  late final bool _ownsViewModel;
   PageController? _pageController;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = TutorialViewModel();
+    _ownsViewModel = widget.injectedViewModel == null;
+    _viewModel = widget.injectedViewModel ?? TutorialViewModel();
   }
 
   @override
   void dispose() {
-    _viewModel.dispose();
+    if (_ownsViewModel) _viewModel.dispose();
     _pageController?.dispose();
     super.dispose();
   }

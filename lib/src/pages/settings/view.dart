@@ -46,7 +46,7 @@ class _SettingsPageState extends State<SettingsPage> {
           AccountsTab(accountsViewModel: _accountsViewModel),
           CategoriesTab(accountsViewModel: _accountsViewModel),
           const PreferencesTab(),
-          ProfileTab(),
+          const ProfileTab(),
         ],
       );
   }

@@ -4,9 +4,10 @@ import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 
 class PreferencesViewModel extends BaseViewModel {
-  final ProfileService _profileService = ProfileService.instance;
+  final ProfileService _profileService;
 
-  PreferencesViewModel() {
+  PreferencesViewModel({ProfileService? profileService})
+      : _profileService = profileService ?? ProfileService.instance {
     _profileService.addListener(_onServiceChanged);
   }
 
