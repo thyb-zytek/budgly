@@ -17,7 +17,7 @@ void main() {
 
   group('PendingSync', () {
     test('entityId extracts from payload id', () {
-      final sync = PendingSync(
+      const sync = PendingSync(
         id: 'op-1',
         type: 'accounts',
         operation: 'create',
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('entityId is empty string when payload has no id', () {
-      final sync = PendingSync(
+      const sync = PendingSync(
         id: 'op-1',
         type: 'accounts',
         operation: 'create',
@@ -37,7 +37,7 @@ void main() {
     });
 
     test('isReady returns true when nextAttemptAt is null', () {
-      final sync = PendingSync(
+      const sync = PendingSync(
         id: 'op-1',
         type: 'accounts',
         operation: 'create',
@@ -199,7 +199,7 @@ void main() {
       expect(operations, hasLength(2));
     });
 
-    test('entity with empty id coalesces with other empty id entities', () async {
+    test('entities without ids remain independent because they cannot be safely coalesced', () async {
       await queue.enqueue(
         id: 'op-1',
         type: 'accounts',
@@ -213,10 +213,10 @@ void main() {
         payload: {'name': 'Updated'},
       );
 
-      // Both have empty entityId, so they coalesce
+      // An empty id is not a stable identity; never merge unrelated operations.
       final operations = await queue.all();
-      expect(operations, hasLength(1));
-      expect(operations.single.payload['name'], 'Updated');
+      expect(operations, hasLength(2));
+      expect(operations.map((operation) => operation.payload['name']), ['Account', 'Updated']);
     });
 
     test('forType filters by type', () async {

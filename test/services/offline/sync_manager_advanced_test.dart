@@ -1,6 +1,7 @@
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     manager = SyncManager.instance;
     queue = SyncQueue.instance;
+    await manager.resetForTest();
     await queue.clear();
 
     manager.registerHandler('__test_reset__', (op) async {});
@@ -22,7 +24,7 @@ void main() {
   });
 
   tearDown(() async {
-    await manager.stop();
+    await manager.resetForTest();
   });
 
   test('flush processes user_profiles between accounts and categories', () async {
@@ -195,7 +197,53 @@ void main() {
 
   test('stop is idempotent', () async {
     manager.start();
-    await manager.stop();
-    await manager.stop(); // Should not throw
+    await manager.resetForTest();
+    await manager.resetForTest(); // Should not throw
+  });
+
+  test('registering a handler after start triggers a pending operation flush', () async {
+    await queue.enqueue(
+      id: 'accounts:create:after-start',
+      type: 'accounts',
+      operation: 'create',
+      payload: {'id': 'a1'},
+    );
+
+    var calls = 0;
+    manager.start();
+    manager.registerHandler('accounts', (op) async {
+      calls++;
+    });
+
+    await Future<void>.delayed(Duration.zero);
+    expect(calls, 1);
+    expect(await queue.all(), isEmpty);
+  });
+
+  test('resuming the app triggers a sync flush', () async {
+    await queue.enqueue(
+      id: 'accounts:create:resume',
+      type: 'accounts',
+      operation: 'create',
+      payload: {'id': 'a1'},
+    );
+
+    var calls = 0;
+    manager.registerHandler('accounts', (op) async {
+      calls++;
+    });
+    manager.start();
+    await manager.resetForTest();
+
+    // Restart without depending on the periodic timer: the lifecycle callback
+    // is the important recovery path after returning from the background.
+    manager.start();
+    manager.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(calls, greaterThanOrEqualTo(1));
+    expect(await queue.all(), isEmpty);
   });
 }
+
+// a user pressing the banner action expects the backoff window to be bypassed.

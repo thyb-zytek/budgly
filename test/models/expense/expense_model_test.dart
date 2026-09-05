@@ -235,4 +235,43 @@ void main() {
       expect(expense.recurrence, RecurrenceType.none);
     });
   });
+  group('Expense Firestore maps', () {
+    test('toCreateMap and toUpdateMap expose shared fields and timestamps', () {
+      final expense = buildExpense(
+        endDate: DateTime(2026, 12, 31),
+        recurrence: RecurrenceType.monthly,
+        recurrenceAnchorDay: 15,
+        isDebited: true,
+        debitedOccurrences: const ['2026-01-15'],
+      );
+
+      final create = expense.toCreateMap();
+      final update = expense.toUpdateMap();
+
+      expect(create['accountId'], 'account-1');
+      expect(create['categoryId'], 'cat-1');
+      expect(create['recurrence'], 'monthly');
+      expect(create['debitedOccurrences'], ['2026-01-15']);
+      expect(create['createdAt'], isA<FieldValue>());
+      expect(create['updatedAt'], isA<FieldValue>());
+      expect(update['createdAt'], isNull);
+      expect(update['updatedAt'], isA<FieldValue>());
+    });
+
+    test('toJson serializes optional dates and identifiers', () {
+      final expense = buildExpense(
+        id: 'json-id',
+        endDate: DateTime(2026, 12, 31),
+      );
+
+      final json = expense.toJson();
+      expect(json['id'], 'json-id');
+      expect(json['debitDate'], '2026-01-15T00:00:00.000');
+      expect(json['endDate'], '2026-12-31T00:00:00.000');
+      expect(json['createdAt'], isNull);
+      expect(json['updatedAt'], isNull);
+    });
+  });
+
 }
+

@@ -37,7 +37,7 @@ void main() {
 
     test('setError with explicit userMessage uses that message', () {
       final vm = _TestViewModel();
-      final msg = const AppUserMessage.success(AppMessageKey.budgetSaved);
+      const msg = AppUserMessage.success(AppMessageKey.budgetSaved);
       vm.fail(Exception('test'), message: msg);
       expect(vm.pendingUserMessage, msg);
     });

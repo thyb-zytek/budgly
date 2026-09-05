@@ -15,18 +15,16 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     manager = SyncManager.instance;
     queue = SyncQueue.instance;
+    await manager.resetForTest();
     await queue.clear();
 
-    // SyncManager.instance is a singleton, so its stuck-state fields would
-    // otherwise leak between tests. Registering a harmless handler and
-    // flushing against the now-empty queue forces a fresh, deterministic
-    // state (not stuck) before every test.
+    // Keep singleton handlers and stuck state isolated between tests.
     manager.registerHandler('__test_reset__', (op) async {});
     await manager.flush();
   });
 
   tearDown(() async {
-    await manager.stop();
+    await manager.resetForTest();
   });
 
   test('flush is a no-op when no handler is registered for a pending type', () async {
