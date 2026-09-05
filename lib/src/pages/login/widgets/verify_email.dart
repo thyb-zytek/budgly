@@ -62,7 +62,7 @@ class _VerifyEmailState extends State<VerifyEmail> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(top: BudglySpacing.xl),
+            padding: const EdgeInsets.only(top: BudglySpacing.xl),
             child: FilledButton(
                             onPressed: widget.onResendPressed,
               child: Text(
@@ -71,7 +71,7 @@ class _VerifyEmailState extends State<VerifyEmail> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.only(top: BudglySpacing.sm),
+            padding: const EdgeInsets.only(top: BudglySpacing.sm),
             child: FilledButton(
               style: ButtonType.neutralVariant.filledStyle(theme),
               onPressed: widget.onSignInPressed,

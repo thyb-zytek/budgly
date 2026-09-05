@@ -24,7 +24,7 @@ class AuthState {
     Object? errorCode = _sentinel,
     Object? errorMessage = _sentinel,
     bool? isLoading,
-    User? currentUser,
+    Object? currentUser = _sentinel,
     bool? isGoogleSignIn,
   }) {
     return AuthState(
@@ -34,7 +34,7 @@ class AuthState {
       errorMessage:
           errorMessage == _sentinel ? this.errorMessage : errorMessage as String?,
       isLoading: isLoading ?? this.isLoading,
-      currentUser: currentUser ?? this.currentUser,
+      currentUser: currentUser == _sentinel ? this.currentUser : currentUser as User?,
       isGoogleSignIn: isGoogleSignIn ?? this.isGoogleSignIn,
     );
   }

@@ -13,7 +13,7 @@ class ResetPasswordForm extends StatelessWidget {
   final VoidCallback onSubmitForm;
   final VoidCallback onSignInPressed;
 
-  ResetPasswordForm({
+  const ResetPasswordForm({
     super.key,
     required this.formKey,
     required this.emailController,
@@ -53,9 +53,10 @@ class ResetPasswordForm extends StatelessWidget {
             ),
           ),
         ),
-        Row(
+        Wrap(
           spacing: 4,
-          mainAxisSize: MainAxisSize.max,
+          runSpacing: 0,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(tr.userHasNoAccount),
             TextButton(
@@ -70,7 +71,7 @@ class ResetPasswordForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: BudglySpacing.xl),
+          padding: const EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
                         onPressed: onSubmitForm,
             child: Text(

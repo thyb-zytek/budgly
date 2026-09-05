@@ -12,7 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final LoginViewModel? injectedViewModel;
+
+  const LoginPage({super.key, this.injectedViewModel});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -20,28 +22,32 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  late final LoginViewModel _viewModel = LoginViewModel(
-    onAuthenticated: (user) async {
-      if (!mounted) return;
-      final destination = await _viewModel.resolvePostAuthDestination(user);
-      if (!mounted) return;
-      if (destination == AuthDestination.overview) {
-        context.go(NavigationHelper.overviewPath, extra: user);
-      } else {
-        context.go(NavigationHelper.tutorialPath);
-      }
-    },
-  );
+  late final LoginViewModel _viewModel;
+  late final bool _ownsViewModel;
 
   @override
   void initState() {
     super.initState();
+    _ownsViewModel = widget.injectedViewModel == null;
+    _viewModel = widget.injectedViewModel ??
+        LoginViewModel(
+          onAuthenticated: (user) async {
+            if (!mounted) return;
+            final destination = await _viewModel.resolvePostAuthDestination(user);
+            if (!mounted) return;
+            if (destination == AuthDestination.overview) {
+              context.go(NavigationHelper.overviewPath, extra: user);
+            } else {
+              context.go(NavigationHelper.tutorialPath);
+            }
+          },
+        );
     _viewModel.initializeFormType();
   }
 
   @override
   void dispose() {
-    _viewModel.dispose();
+    if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
@@ -94,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: LoginAppbar(isCompact: isKeyboardOpen),
                     ),
                     Padding(
-                      padding: EdgeInsets.only(top: BudglySpacing.xl),
+                      padding: const EdgeInsets.only(top: BudglySpacing.xl),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         switchInCurve: Curves.easeOut,

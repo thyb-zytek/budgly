@@ -37,7 +37,7 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.tutorial,
-        pageBuilder: (context, state) => _page(TutorialPage(), state),
+        pageBuilder: (context, state) => _page(const TutorialPage(), state),
       ),
       StatefulShellRoute.indexedStack(
         parentNavigatorKey: rootNavigatorKey,
@@ -57,7 +57,7 @@ class AppRouter {
                         CategoryExpensesPage(
                           accountId: state.pathParameters['accountId']!,
                           categoryId: state.pathParameters['categoryId']!,
-                          period: _parsePeriod(state),
+                          period: parsePeriod(state.uri),
                         ),
                         state,
                       );
@@ -86,9 +86,9 @@ class AppRouter {
     ],
   );
 
-  static Period _parsePeriod(GoRouterState state) {
-    final year = int.tryParse(state.uri.queryParameters['year'] ?? '');
-    final month = int.tryParse(state.uri.queryParameters['month'] ?? '');
+  static Period parsePeriod(Uri uri) {
+    final year = int.tryParse(uri.queryParameters['year'] ?? '');
+    final month = int.tryParse(uri.queryParameters['month'] ?? '');
     if (year == null || month == null || month < 1 || month > 12) {
       return Period.current();
     }
