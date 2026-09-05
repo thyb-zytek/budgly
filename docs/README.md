@@ -18,7 +18,7 @@
 
 ## État du projet
 
-Après la phase 4, le projet privilégie une architecture MVVM pragmatique, un offline-first explicite et le minimum d’abstractions nécessaires. Les détails sont dans `ARCHITECTURE.md`.
+Après la phase 6, le projet privilégie une architecture MVVM pragmatique, un offline-first explicite et le minimum d’abstractions nécessaires. Les détails sont dans `ARCHITECTURE.md`.
 
 ## Guidelines
 
@@ -60,7 +60,6 @@ Les commits suivent les conventions **gitmoji** ([carloscuesta/gitmoji](https://
 **Fichiers exclus du commit :**
 - `firebase.json`, `supabase/` (config locale)
 - `lib/l10n/app_localizations*.dart` (générés)
-- `pubspec.lock`
 - `assets/.env` (secrets)
 - `android/app/google-services.json`, `lib/firebase_options.dart`
 
@@ -86,9 +85,13 @@ Les tests couvrent la logique pure : math de récurrence, Period, calculators, q
 - **Filtrage PII** : les clés sensibles (`amount`, `name`, `email`, `merchant`, etc.) sont automatiquement supprimées
 - Voir `docs/ANALYTICS.md` pour la liste complète des événements
 
+### Guideline de développement
+
+`DEVELOPMENT_FEATURE_GUIDELINE.md` définit les requirements à respecter pour développer et valider une nouvelle fonctionnalité : architecture, offline-first, UI/UX, tests, analytics, performance et Definition of Done.
+
 ### Architecture offline-first
 
-Voir `docs/ARCHITECTURE.md` et `docs/OFFLINE_FIRST.md`. `docs/REFACTOR_AUDIT.md` décrit les refactors réalisés et les prochaines zones de travail.
+Voir `docs/ARCHITECTURE.md` pour l'architecture MVVM pragmatique et le contrat offline-first.
 
 ### Mise à jour des docs
 
@@ -160,7 +163,7 @@ budgly/
 │       ├── shared/              # domain/widgets (account, category, expense) + ui/widgets (forms, inputs, layout, feedback)
 │       └── stores/              # AccountsStore, CategoriesStore, ExpensesStore, AccountBudgetsStore, ProfileStore
 ├── assets/                      # images, fonts/saira, .env, icons/category_icons.json
-├── docs/                        # ARCHITECTURE, OFFLINE_FIRST, ANALYTICS, TEST_COVERAGE, MANUAL_TEST_PLAN, etc.
+├── docs/                        # README, ARCHITECTURE, ANALYTICS, TEST_COVERAGE, MANUAL_TEST_PLAN, etc.
 ├── supabase_migrations/         # Migrations SQL
 ├── test/                        # unit + widget (models, services, pages, shared, stores, period)
 ├── android/                     # Gradle 9.1 / KGP, build.gradle.kts
@@ -176,8 +179,10 @@ Selon ton installation :
 
 
 ### Documentation technique
-- `ARCHITECTURE.md` — architecture et responsabilités actuelles
-- `OFFLINE_FIRST.md` — contrat offline-first
+- `ARCHITECTURE.md` — architecture et responsabilités actuelles + contrat offline-first
+- `DEVELOPMENT_FEATURE_GUIDELINE.md` — exigences de développement et Definition of Done des nouvelles fonctionnalités
 - `ANALYTICS.md` — événements PostHog autorisés
-- `TEST_COVERAGE.md` — inventaire des tests et priorités
-- `REFACTOR_AUDIT.md` — état des refactors et prochaines zones de travail
+- `CRASHLYTICS.md` — activation et vérification de Firebase Crashlytics
+- `MANUAL_TEST_PLAN.md` — campagne manuelle minimale
+- `MODELE_ECONOMIQUE.md` — modèle économique de lancement
+- `TEST_COVERAGE.md` — inventaire des tests, contrats offline et priorités
