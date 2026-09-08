@@ -77,6 +77,15 @@ class LcovResult {
       };
 }
 
+/// Generated localization getters (one per translated string, per locale)
+/// are never meaningfully "tested" one by one — the widget tests that
+/// exercise them only ever run against a single default locale. Counting
+/// every unused-locale getter as an uncovered line makes the global
+/// percentage look worse without reflecting any real risk, so they are
+/// excluded from the report.
+bool _isGeneratedLocalizationFile(String sourcePath) =>
+    sourcePath.contains('lib/l10n/') || sourcePath.contains('lib\\l10n\\');
+
 /// Merges multiple LCOV files by summing the hit counts (DA) per source file
 /// and line. Flutter writes coverage per `--coverage` run to a single
 /// `coverage/lcov.info`, so partial files are consolidated here.
@@ -89,8 +98,11 @@ LcovResult mergeLcov(List<String> files) {
     String? currentSource;
     for (final line in lines) {
       if (line.startsWith('SF:')) {
-        currentSource = line.substring(3);
-        data.putIfAbsent(currentSource, () => <int, int>{});
+        final source = line.substring(3);
+        currentSource = _isGeneratedLocalizationFile(source) ? null : source;
+        if (currentSource != null) {
+          data.putIfAbsent(currentSource, () => <int, int>{});
+        }
       } else if (currentSource != null && line.startsWith('DA:')) {
         final parts = line.substring(3).split(',');
         final ln = int.parse(parts[0]);
