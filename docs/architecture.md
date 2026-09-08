@@ -97,6 +97,10 @@ ExpenseOccurrenceCalculator
 
 La règle d'expansion et de tri est ainsi unique.
 
+Les séries récurrentes peuvent également porter des `occurrenceExceptions` dans le document Firestore. Une exception est indexée par la clé stable `$id@YYYY-MM-DD` de l'occurrence source et peut surcharger le montant, le nom, la catégorie, la date de débit ou masquer l'occurrence. `ExpenseOccurrenceCalculator` applique ces exceptions au moment de la projection afin que les historiques restent immuables sans créer une collection Firestore supplémentaire.
+
+Les dépenses encore non débitées des périodes précédentes sont orchestrées par `UndebitedExpensesService`. Au chargement, le service liste les dépenses du compte via `ExpensesService.listExpensesForAccount`, projette toutes les échéances antérieures à la période courante avec `ExpenseOccurrenceCalculator` et ne conserve que celles non débitées. La liste est triée par date croissante. La bannière d'avertissement s'affiche dès qu'il reste des dépenses à traiter ; sa fermeture est mémorisée dans `LocalCache` (`undebited.banner.dismissedAt.*`) et elle réapparaît au bout de 3 h tant que des éléments restent en attente. Son bouton ouvre une bottom sheet qui somme le montant total en tête, regroupe les dépenses par période d'origine et permet trois actions par occurrence : reporter vers la période courante sans débiter (action principale), débiter sur la période d'origine ou débiter immédiatement sur la période courante. Les mutations sont déléguées respectivement à `moveOccurrenceToDate` (avec ou sans `markDebited`) et à `markOccurrenceDebited` sur `ExpensesService`.
+
 ## Contrat offline-first
 
 Budgly privilégie toujours la donnée locale utilisable. Une donnée distante ne doit pas bloquer l'affichage lorsqu'une version locale est disponible.
