@@ -1,5 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/navigation/navigation_helper.dart';
+import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/pages/tutorial/view_model.dart';
 import 'package:budgly/src/pages/tutorial/widgets/step_indicator.dart';
 import 'package:budgly/src/pages/tutorial/widgets/welcome_step.dart';
@@ -161,9 +162,19 @@ class _TutorialPageState extends State<TutorialPage> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              await _viewModel.signOut();
-              if (context.mounted) {
-                context.go(NavigationHelper.loginPath);
+              try {
+                await _viewModel.signOut();
+                if (context.mounted) {
+                  context.go(NavigationHelper.loginPath);
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  showAppSnackBar(
+                    context,
+                    message: tr.errorUnknown,
+                    type: SnackBarType.error,
+                  );
+                }
               }
             },
             child: Text(tr.logout),
