@@ -1,6 +1,5 @@
-import 'dart:async';
-
 import 'package:budgly/src/shared/ui/widgets/layout/budgly_fab.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/fab_label_auto_hide_mixin.dart';
 import 'package:flutter/material.dart';
 
 class AddEntity extends StatefulWidget {
@@ -21,31 +20,21 @@ class AddEntity extends StatefulWidget {
   State<AddEntity> createState() => _AddEntityState();
 }
 
-class _AddEntityState extends State<AddEntity> {
-  late final ValueNotifier<bool> _showFabLabel;
-  Timer? _fabLabelTimer;
-
+class _AddEntityState extends State<AddEntity> with FabLabelAutoHideMixin {
   @override
   void initState() {
     super.initState();
-    _showFabLabel = ValueNotifier(widget.label != null);
-    if (widget.label != null) {
-      _fabLabelTimer = Timer(const Duration(seconds: 8), () {
-        _showFabLabel.value = false;
-      });
-    }
+    startFabLabelAutoHide(visible: widget.label != null);
   }
 
   @override
   void dispose() {
-    _fabLabelTimer?.cancel();
-    _showFabLabel.dispose();
+    disposeFabLabelAutoHide();
     super.dispose();
   }
 
   void _handlePressed() {
-    _showFabLabel.value = false;
-    _fabLabelTimer?.cancel();
+    dismissFabLabel();
     widget.onPressed();
   }
 
@@ -55,7 +44,7 @@ class _AddEntityState extends State<AddEntity> {
       bottom: 24,
       right: 24,
       child: ValueListenableBuilder<bool>(
-        valueListenable: _showFabLabel,
+        valueListenable: showFabLabel,
         builder: (context, showLabel, child) => BudglyFab(
           heroTag: widget.heroTag,
           disabled: widget.disabled,

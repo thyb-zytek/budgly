@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
@@ -14,6 +12,7 @@ import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
 import 'package:budgly/src/pages/overview/widgets/overview_content.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/budgly_fab.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/fab_label_auto_hide_mixin.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
@@ -28,12 +27,10 @@ class OverviewPage extends StatefulWidget {
   State<OverviewPage> createState() => _OverviewPageState();
 }
 
-class _OverviewPageState extends State<OverviewPage> {
+class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin {
   late final OverviewViewModel _viewModel;
   late final bool _ownsViewModel;
   final ValueNotifier<int> _slideDirection = ValueNotifier(1);
-  final ValueNotifier<bool> _showFabLabel = ValueNotifier(true);
-  Timer? _fabLabelTimer;
 
   @override
   void initState() {
@@ -41,17 +38,14 @@ class _OverviewPageState extends State<OverviewPage> {
     _ownsViewModel = widget.injectedViewModel == null;
     _viewModel = widget.injectedViewModel ?? OverviewViewModel();
     _loadData();
-    _fabLabelTimer = Timer(const Duration(seconds: 8), () {
-      _showFabLabel.value = false;
-    });
+    startFabLabelAutoHide();
   }
 
   Future<void> _loadData() => _viewModel.loadInitialData();
 
   @override
   void dispose() {
-    _fabLabelTimer?.cancel();
-    _showFabLabel.dispose();
+    disposeFabLabelAutoHide();
     _slideDirection.dispose();
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
@@ -59,8 +53,7 @@ class _OverviewPageState extends State<OverviewPage> {
 
   void _openAddExpenseModal() {
     final tr = AppLocalizations.of(context)!;
-    _showFabLabel.value = false;
-    _fabLabelTimer?.cancel();
+    dismissFabLabel();
     _viewModel.startNewExpense();
     showAppBottomSheet(
       context,
@@ -231,7 +224,7 @@ class _OverviewPageState extends State<OverviewPage> {
         ],
       ),
       floatingActionButton: ValueListenableBuilder<bool>(
-        valueListenable: _showFabLabel,
+        valueListenable: showFabLabel,
         builder: (context, showLabel, child) => BudglyFab(
           heroTag: 'create_expense',
           label: showLabel ? tr.fabNewExpense : null,
