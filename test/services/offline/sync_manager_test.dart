@@ -113,6 +113,37 @@ void main() {
     expect(remaining, hasLength(2), reason: 'nothing is dropped on failure');
   });
 
+  test('a failed operation does not block unrelated types', () async {
+    await queue.enqueue(
+      id: 'user_profiles:update:1',
+      type: 'user_profiles',
+      operation: 'update',
+      payload: {'id': 'u1'},
+    );
+    await queue.enqueue(
+      id: 'accounts:create:1',
+      type: 'accounts',
+      operation: 'create',
+      payload: {'id': 'acc-1'},
+    );
+
+    var profileCalled = false;
+    manager.registerHandler('user_profiles', (op) async {
+      profileCalled = true;
+    });
+    manager.registerHandler('accounts', (op) async {
+      throw Exception('server rejected payload');
+    });
+
+    await manager.flush();
+
+    // 'accounts' failing must not stall an unrelated 'user_profiles' update
+    // stuck behind it in the replay order (head-of-line blocking).
+    expect(profileCalled, isTrue);
+    final remaining = await queue.all();
+    expect(remaining.map((e) => e.type), ['accounts']);
+  });
+
   test('an operation is not marked stuck before reaching the attempt threshold', () async {
     await queue.enqueue(
       id: 'accounts:create:1',

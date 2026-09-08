@@ -187,7 +187,21 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
         ),
       ];
 
+      // A failed operation only blocks operations of its own type and of
+      // types that depend on it (e.g. a failed account blocks categories
+      // and expenses, since they carry a foreign key to it). It must NOT
+      // block unrelated operations (a different account, a profile update,
+      // ...) that happen to be later in the replay order — otherwise a
+      // single stuck item would stall the entire queue indefinitely.
+      const dependentTypes = {
+        'accounts': ['categories', 'expenses'],
+        'categories': ['expenses'],
+      };
+      final blockedTypes = <String>{};
+
       for (final operation in ordered) {
+        if (blockedTypes.contains(operation.type)) continue;
+
         final handler = _handlers[operation.type];
         if (handler == null) continue;
 
@@ -209,9 +223,10 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
             'type': operation.type,
             'operation': operation.operation,
           });
-          // Stop at the first failed operation. Keeping order prevents a
-          // child entity from being pushed before its parent exists remotely.
-          break;
+          // Stop replaying this type (and anything that depends on it) for
+          // the rest of this pass, but let unrelated operations keep going.
+          blockedTypes.add(operation.type);
+          blockedTypes.addAll(dependentTypes[operation.type] ?? const []);
         }
       }
       if (operations.isNotEmpty) {
