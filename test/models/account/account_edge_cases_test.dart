@@ -8,6 +8,10 @@ void main() {
       expect(const Account(name: 'savings').initial, 'S');
     });
 
+    test('initial falls back to a placeholder instead of crashing on an empty name', () {
+      expect(const Account(name: '').initial, '?');
+    });
+
     test('copyWith can explicitly clear nullable picture fields', () {
       const account = Account(
         id: 'a1',

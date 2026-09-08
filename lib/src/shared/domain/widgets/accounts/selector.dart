@@ -69,7 +69,7 @@ class AccountSelector extends StatelessWidget {
           ),
       ],
       child: Avatar(
-        initial: current.name.isNotEmpty ? current.name[0].toUpperCase() : '?',
+        initial: current.initial,
         backgroundColor: current.color,
         picture: current.pictureUrl,
         isLocalPicture: false,

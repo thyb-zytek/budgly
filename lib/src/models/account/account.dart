@@ -21,7 +21,7 @@ class Account {
     this.color,
   });
 
-  String get initial => name[0].toUpperCase();
+  String get initial => name.isNotEmpty ? name[0].toUpperCase() : '?';
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
     id: json['id'] as String?,

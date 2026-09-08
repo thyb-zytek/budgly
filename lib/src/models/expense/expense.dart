@@ -80,7 +80,7 @@ class Expense {
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       debitDate: (map['debitDate'] as Timestamp).toDate(),
       endDate: (map['endDate'] as Timestamp?)?.toDate(),
-      isDebited: map['isDebited'] as bool,
+      isDebited: map['isDebited'] as bool? ?? false,
       debitedOccurrences: rawDebited is List
           ? rawDebited.cast<String>()
           : const [],
