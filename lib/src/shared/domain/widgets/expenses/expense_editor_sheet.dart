@@ -17,6 +17,7 @@ class ExpenseEditorSheet extends StatefulWidget {
   final String localeName;
   final String? Function(AppLocalizations translations) validate;
   final Future<bool> Function() onSubmit;
+  final Future<bool> Function()? onBeforeSubmit;
   final VoidCallback? onSubmitSuccess;
   final String? submitFailureMessage;
   final bool Function() isSaving;
@@ -42,6 +43,7 @@ class ExpenseEditorSheet extends StatefulWidget {
     required this.localeName,
     required this.validate,
     required this.onSubmit,
+    this.onBeforeSubmit,
     required this.onDateChanged,
     required this.onRecurrenceChanged,
     required this.onEndDateChanged,
@@ -78,6 +80,10 @@ class _ExpenseEditorSheetState extends State<ExpenseEditorSheet> {
     }
 
     setState(() => _errorMessage = null);
+    if (widget.onBeforeSubmit != null) {
+      final canSubmit = await widget.onBeforeSubmit!();
+      if (!mounted || !canSubmit) return;
+    }
     final success = await widget.onSubmit();
     if (!mounted) return;
 

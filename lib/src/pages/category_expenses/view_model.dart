@@ -20,6 +20,9 @@ import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_controlle
 import 'package:flutter/material.dart';
 import 'package:budgly/src/pages/category_expenses/paged_expenses_state.dart';
 
+
+enum RecurringEditScope { single, future }
+
 class CategoryExpensesViewModel extends BaseViewModel {
   final ExpensesService _expensesService;
   final CategoriesService _categoriesService;
@@ -35,6 +38,8 @@ class CategoryExpensesViewModel extends BaseViewModel {
   CategoryExpensesUiState _uiState = const CategoryExpensesUiState();
 
   final ExpenseFormController expenseForm = ExpenseFormController();
+
+  RecurringEditScope _editScope = RecurringEditScope.future;
 
   final _pagedState = PagedExpensesState();
   List<ExpenseOccurrence>? _cachedOccurrences;
@@ -166,7 +171,16 @@ class CategoryExpensesViewModel extends BaseViewModel {
         // so the list is not empty until a manual refresh succeeds.
         final local = _expensesService
             .getExpensesForAccount(accountId)
-            .where((expense) => expense.categoryId == categoryId)
+            .where((expense) {
+              if (!expense.isRecurring) return expense.categoryId == categoryId;
+              return _occurrenceCalculator
+                  .between(
+                    [expense],
+                    period.startOfMonth,
+                    period.endOfMonth,
+                  )
+                  .any((occurrence) => occurrence.categoryId == categoryId);
+            })
             .toList();
         if (local.isNotEmpty) {
           _pagedState.expenses.addAll(local);
@@ -203,11 +217,14 @@ class CategoryExpensesViewModel extends BaseViewModel {
       return _cachedOccurrences!;
     }
 
-    final result = _occurrenceCalculator.between(
-      _pagedState.expenses,
-      period.startOfMonth,
-      period.endOfMonth,
-    );
+    final result = _occurrenceCalculator
+        .between(
+          _pagedState.expenses,
+          period.startOfMonth,
+          period.endOfMonth,
+        )
+        .where((occurrence) => occurrence.categoryId == categoryId)
+        .toList();
     // The shared occurrence calculator keeps its chronological ordering for
     // calculations. The category expense screen presents the most recent
     // occurrence first, matching the paginated expense list.
@@ -238,12 +255,18 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
   void startEditing(ExpenseOccurrence occurrence) {
     AnalyticsService.instance.track('category_expense_tap');
+    _editScope = RecurringEditScope.future;
     _uiState = _uiState.copyWith(editingOccurrence: occurrence);
     expenseForm.loadFromOccurrence(
       occurrence,
       category: _categoriesService.getCategoryById(occurrence.categoryId),
       account: _accountsService.getAccountById(occurrence.expense.accountId),
     );
+  }
+
+
+  void setRecurringEditScope(RecurringEditScope scope) {
+    _editScope = scope;
   }
 
   List<Category> categoriesForAccount() {
@@ -289,26 +312,43 @@ class CategoryExpensesViewModel extends BaseViewModel {
 
     try {
       final updated = occurrence.expense.copyWith(
-        accountId: expenseForm.data.account?.id ?? occurrence.expense.accountId,
+        accountId: occurrence.expense.accountId,
         categoryId: expenseForm.data.category?.id ?? occurrence.expense.categoryId,
         name: expenseForm.data.nameController.text.trim(),
         amount: amount,
-        debitDate: expenseForm.data.debitDate,
-        endDate: expenseForm.data.effectiveEndDate,
-        clearEndDate: expenseForm.data.effectiveEndDate == null,
-        recurrence: expenseForm.data.recurrence,
+        debitDate: occurrence.expense.debitDate,
+        endDate: occurrence.expense.endDate,
+        recurrence: occurrence.expense.recurrence,
       );
 
-      final moved =
-          updated.accountId != occurrence.expense.accountId ||
+      final isRecurringSingle = occurrence.expense.isRecurring &&
+          _editScope == RecurringEditScope.single;
+      final moved = !occurrence.expense.isRecurring &&
           updated.categoryId != occurrence.expense.categoryId;
-      final savedExpense = occurrence.expense.isRecurring
-          ? await _expensesService.updateRecurringExpenseFromOccurrence(
+      final savedExpense = isRecurringSingle
+          ? await _expensesService.modifySingleOccurrence(
               original: occurrence.expense,
-              updated: updated,
-              effectiveDate: occurrence.date,
+              occurrenceDate: occurrence.sourceDate ?? occurrence.date,
+              override: updated,
             )
-          : await _expensesService.updateExpense(updated, previous: occurrence.expense);
+          : occurrence.expense.isRecurring
+              ? await _expensesService.modifyFutureOccurrences(
+                  original: occurrence.expense,
+                  updated: updated,
+                  effectiveDate: occurrence.sourceDate ?? occurrence.date,
+                )
+              : await _expensesService.updateExpense(
+                  occurrence.expense.copyWith(
+                    categoryId: expenseForm.data.category?.id ?? occurrence.expense.categoryId,
+                    name: expenseForm.data.nameController.text.trim(),
+                    amount: amount,
+                    debitDate: expenseForm.data.debitDate,
+                    endDate: expenseForm.data.effectiveEndDate,
+                    clearEndDate: expenseForm.data.effectiveEndDate == null,
+                    recurrence: expenseForm.data.recurrence,
+                  ),
+                  previous: occurrence.expense,
+                );
       if (moved) {
         _removePagedExpenseWhenMoved(
           occurrence.expense,
@@ -493,6 +533,7 @@ class CategoryExpensesViewModel extends BaseViewModel {
       _uiState = _uiState.copyWith(
         clearEditingOccurrence: _uiState.editingOccurrence?.id == occurrence.id,
       );
+      _bumpDataRevision();
       return;
     }
 

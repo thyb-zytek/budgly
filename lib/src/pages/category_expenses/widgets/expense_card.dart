@@ -117,7 +117,7 @@ class ExpenseCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             onUserInteracted?.call();
-            if (!isDebited) onTap();
+            onTap();
           },
           borderRadius: BorderRadius.circular(18),
           child: AnimatedContainer(
@@ -170,7 +170,11 @@ class ExpenseCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (isRecurring)
+                          if (occurrence.isException)
+                            RecurrenceBadge(
+                              label: tr.occurrenceCarriedOverBadge,
+                            )
+                          else if (isRecurring)
                             RecurrenceBadge(
                               label: recurrenceLabel(tr, occurrence.recurrence),
                             ),
