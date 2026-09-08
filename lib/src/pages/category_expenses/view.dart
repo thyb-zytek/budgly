@@ -76,7 +76,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
     super.dispose();
   }
 
-  void _openEditSheet(ExpenseOccurrence occurrence) {
+  Future<void> _openEditSheet(ExpenseOccurrence occurrence) async {
     final tr = AppLocalizations.of(context)!;
     _viewModel.startEditing(occurrence);
     showAppBottomSheet(
@@ -89,6 +89,24 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
         localeName: _viewModel.localeName,
         validate: (tr) => _viewModel.expenseForm.validate(tr, requireAccountAndCategory: true),
         onSubmit: _viewModel.saveEditing,
+        onBeforeSubmit: occurrence.recurrence.isRecurring
+            ? () async {
+                final choice = await showRecurringEditOptions(
+                  context,
+                  expenseName: occurrence.name,
+                  dateLabel: DateFormat.yMMMMd(
+                    _viewModel.localeName,
+                  ).format(occurrence.date),
+                );
+                if (!mounted || choice == null) return false;
+                _viewModel.setRecurringEditScope(
+                  choice == RecurringEditChoice.single
+                      ? RecurringEditScope.single
+                      : RecurringEditScope.future,
+                );
+                return true;
+              }
+            : null,
         submitFailureMessage: tr.expenseUpdateFailed,
         onToggleAdvanced: _viewModel.expenseForm.toggleAdvancedOptions,
         onDateChanged: _viewModel.expenseForm.setDebitDate,
@@ -102,14 +120,9 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
         titleLeadingBuilder: (context) {
           final occ = _viewModel.editingOccurrence;
           if (occ == null) return const SizedBox(width: 40);
-          final scheme = Theme.of(context).colorScheme;
+          final theme = Theme.of(context);
           return IconButton.filled(
-            style: IconButton.styleFrom(
-              backgroundColor: scheme.error,
-              foregroundColor: scheme.onError,
-              minimumSize: const Size(40, 40),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+            style: ButtonType.error.iconFilledStyle(theme),
             onPressed: _viewModel.isSaving ? null : _deleteEditingExpense,
             icon: const Icon(Icons.delete_outline, size: 20),
             tooltip: tr.delete,
@@ -119,16 +132,10 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
           final occ = _viewModel.editingOccurrence;
           if (occ == null) return const SizedBox(width: 40);
           final theme = Theme.of(context);
-          final scheme = theme.colorScheme;
           final isDebited = occ.isDebited;
-          final successColors = ButtonType.success.colors(theme);
           return IconButton.filled(
-            style: IconButton.styleFrom(
-              backgroundColor: isDebited ? scheme.secondary : successColors.background,
-              foregroundColor: isDebited ? scheme.onSecondary : successColors.foreground,
-              minimumSize: const Size(40, 40),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+            style: (isDebited ? ButtonType.secondary : ButtonType.success)
+                .iconFilledStyle(theme),
             onPressed: _viewModel.isSaving ? null : _toggleEditingDebited,
             icon: Icon(
               isDebited ? Icons.remove_circle_outline : Icons.check_circle_outline,

@@ -5,6 +5,7 @@ import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_badge.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/advanced_date_field.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_selector.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/end_date_field.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/date_field.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
 import 'package:flutter/material.dart';
@@ -56,13 +57,13 @@ class ExpenseAdvancedOptions extends StatelessWidget {
               ),
             ),
             child: Row(
+              spacing: BudglySpacing.sm,
               children: [
                 Icon(
                   Icons.event_repeat_rounded,
                   size: 18,
                   color: theme.colorScheme.primary,
                 ),
-                const SizedBox(width: BudglySpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

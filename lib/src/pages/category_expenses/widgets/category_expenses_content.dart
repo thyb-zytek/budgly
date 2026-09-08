@@ -33,67 +33,74 @@ class CategoryExpensesContent extends StatelessWidget {
     final occurrences = viewModel.occurrences;
     final summary = viewModel.summarize(occurrences);
 
-    return CustomScrollView(
-      controller: scrollController,
-      slivers: [
-        SliverPadding(
+    // The category card stays pinned above the scrollable expense list so it
+    // remains visible while scrolling.
+    return Column(
+      children: [
+        Padding(
           padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.sm),
-          sliver: SliverToBoxAdapter(
-            child: CategoryExpenses(
-              summary: summary,
-              currencyCode: viewModel.currencyCode,
-              localeName: viewModel.localeName,
-              decimalPlaces: viewModel.amountDecimalPlaces,
-            ),
+          child: CategoryExpenses(
+            summary: summary,
+            currencyCode: viewModel.currencyCode,
+            localeName: viewModel.localeName,
+            decimalPlaces: viewModel.amountDecimalPlaces,
           ),
         ),
-        if (occurrences.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: EmptyState(
-              icon: Icons.receipt_long_rounded,
-              title: translations.noExpensesForCategory,
-              subtitle: translations.noExpensesForCategoryHint,
-            ),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.lg, 88),
-            sliver: SliverList.separated(
-              itemCount: occurrences.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: BudglySpacing.md),
-              itemBuilder: (context, index) {
-                final occurrence = occurrences[index];
-                final card = ExpenseCard(
-                  occurrence: occurrence,
-                  currencyCode: viewModel.currencyCode,
-                  localeName: viewModel.localeName,
-                  decimalPlaces: viewModel.amountDecimalPlaces,
-                  accountColor: viewModel.accountColor,
-                  onTap: () => onEdit(occurrence),
-                  onEdit: () => onEdit(occurrence),
-                  onToggleDebited: () => onToggleDebited(occurrence),
-                  onDelete: () => onDelete(occurrence),
-                  onUserInteracted: () => swipeHintKey.currentState?.stop(),
-                );
-                return index == 0
-                    ? SwipeHintWrapper(
-                        key: swipeHintKey,
-                        isDebited: occurrence.isDebited,
-                        child: card,
-                      )
-                    : card;
-              },
-            ),
+        Expanded(
+          child: CustomScrollView(
+            controller: scrollController,
+            slivers: [
+              if (occurrences.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: EmptyState(
+                    icon: Icons.receipt_long_rounded,
+                    title: translations.noExpensesForCategory,
+                    subtitle: translations.noExpensesForCategoryHint,
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, 88),
+                  sliver: SliverList.separated(
+                    itemCount: occurrences.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: BudglySpacing.md),
+                    itemBuilder: (context, index) {
+                      final occurrence = occurrences[index];
+                      final card = ExpenseCard(
+                        occurrence: occurrence,
+                        currencyCode: viewModel.currencyCode,
+                        localeName: viewModel.localeName,
+                        decimalPlaces: viewModel.amountDecimalPlaces,
+                        accountColor: viewModel.accountColor,
+                        onTap: () => onEdit(occurrence),
+                        onEdit: () => onEdit(occurrence),
+                        onToggleDebited: () => onToggleDebited(occurrence),
+                        onDelete: () => onDelete(occurrence),
+                        onUserInteracted: () =>
+                            swipeHintKey.currentState?.stop(),
+                      );
+                      return index == 0
+                          ? SwipeHintWrapper(
+                              key: swipeHintKey,
+                              isDebited: occurrence.isDebited,
+                              child: card,
+                            )
+                          : card;
+                    },
+                  ),
+                ),
+              if (viewModel.isLoadingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.lg, 88),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+            ],
           ),
-        if (viewModel.isLoadingMore)
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.lg, 88),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ),
+        ),
       ],
     );
   }

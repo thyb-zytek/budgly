@@ -1,6 +1,4 @@
-import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
-import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -95,39 +93,4 @@ class DateField extends StatelessWidget {
       ),
     );
   }
-}
-
-
-/// Builds the end-date variant of [DateField].
-///
-/// This is a widget factory rather than a second Widget class, keeping the
-/// input component file focused on one reusable Widget type.
-Widget buildEndDateField(
-  BuildContext context, {
-  Key? key,
-  required DateTime? endDate,
-  required RecurrenceType recurrence,
-  required DateTime minimumDate,
-  required String localeName,
-  required ValueChanged<DateTime> onDateChanged,
-  required VoidCallback onCleared,
-}) {
-  final tr = AppLocalizations.of(context)!;
-  final firstDate = DateTime(
-    minimumDate.year,
-    minimumDate.month,
-    minimumDate.day,
-  );
-
-  return DateField(
-    key: key,
-    date: endDate,
-    localeName: localeName,
-    onDateChanged: onDateChanged,
-    onCleared: endDate != null ? onCleared : null,
-    firstDate: firstDate,
-    suggestedDate: recurrence.nextOccurrenceAfter(minimumDate),
-    placeholder: tr.addEndDate,
-    icon: Icons.event_busy_rounded,
-  );
 }

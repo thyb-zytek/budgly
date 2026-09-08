@@ -9,24 +9,32 @@ class RecurrenceBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Chip(
-      avatar: Icon(
-        Icons.repeat_rounded,
-        size: 12,
-        color: theme.colorScheme.primary,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
       ),
-      label: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        spacing: 2,
+        children: [
+          Icon(
+            Icons.repeat_rounded,
+            size: 10,
+            color: theme.colorScheme.primary,
+          ),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
-      backgroundColor: theme.colorScheme.surfaceContainerHigh,
-      side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

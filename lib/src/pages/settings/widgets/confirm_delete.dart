@@ -2,6 +2,7 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:flutter/material.dart';
 
 class ConfirmDelete extends StatelessWidget {
@@ -20,7 +21,6 @@ class ConfirmDelete extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return SafeArea(
@@ -46,33 +46,16 @@ class ConfirmDelete extends StatelessWidget {
                   content,
                   style: theme.textTheme.bodyMedium,
                 ),
-                Row(
-                  spacing: 16,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: BudglyButtonDimensions.densePadding,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(tr.cancel),
-                      ),
-                    ),
-                    Expanded(
-                      child: FilledButton(
-                        style: ButtonType.error.filledStyle(theme, dense: true),
-                        onPressed: () async {
-                          await onConfirm();
-                          if (context.mounted) {
-                            Navigator.pop(context, true);
-                          }
-                        },
-                        child: Text(
-                          tr.validate,
-                        ),
-                      ),
-                    ),
-                  ],
+                FormActions(
+                  destructiveSubmit: true,
+                  dense: true,
+                  onCancel: () => Navigator.pop(context),
+                  onSubmit: () async {
+                    await onConfirm();
+                    if (context.mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  },
                 ),
               ],
             ),
@@ -82,6 +65,7 @@ class ConfirmDelete extends StatelessWidget {
 }
 
 enum RecurringDeleteChoice { single, future }
+enum RecurringEditChoice { single, future }
 
 Future<bool?> showConfirmDelete(
   BuildContext context, {
@@ -130,15 +114,18 @@ Future<RecurringDeleteChoice?> showRecurringDeleteOptions(
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
-            Text(
-              tr.confirmDeleteRecurringExpenseMessage(dateLabel),
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                tr.confirmDeleteRecurringExpenseMessage(dateLabel),
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
             ),
-            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
+              child: FilledButton(
+                style: ButtonType.neutralVariant.filledStyle(theme),
                 onPressed: () => Navigator.pop(context, RecurringDeleteChoice.single),
                 child: Text(tr.deleteSingleOccurrence),
               ),
@@ -146,9 +133,75 @@ Future<RecurringDeleteChoice?> showRecurringDeleteOptions(
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                style: ButtonType.error.filledStyle(theme, dense: true),
+                style: ButtonType.error.filledStyle(theme),
                 onPressed: () => Navigator.pop(context, RecurringDeleteChoice.future),
                 child: Text(tr.deleteFutureOccurrences),
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(tr.cancel),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+
+Future<RecurringEditChoice?> showRecurringEditOptions(
+  BuildContext context, {
+  required String expenseName,
+  required String dateLabel,
+}) {
+  final tr = AppLocalizations.of(context)!;
+  final theme = Theme.of(context);
+
+  return showAppBottomSheet<RecurringEditChoice>(
+    context,
+    backgroundColor: theme.colorScheme.surfaceContainer,
+    builder: (context) => SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: BudglySpacing.xl,
+          right: BudglySpacing.xl,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16,
+          children: [
+            Text(
+              tr.modifyRecurringExpense(expenseName),
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                tr.modifyRecurringExpenseMessage(dateLabel),
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context, RecurringEditChoice.single),
+                child: Text(tr.modifyThisOccurrence),
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: ButtonType.primary.filledStyle(theme),
+                onPressed: () => Navigator.pop(context, RecurringEditChoice.future),
+                child: Text(tr.modifyOccurrenceAndFollowing),
               ),
             ),
             SizedBox(
