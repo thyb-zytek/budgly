@@ -118,12 +118,10 @@ class ExpenseFirestore {
         .where('recurrence', isNotEqualTo: 'none')
         .orderBy('recurrence')
         .orderBy('debitDate', descending: true);
-    if (categoryId != null) {
-      recurringQuery = recurringQuery.where(
-        'categoryId',
-        isEqualTo: categoryId,
-      );
-    }
+    // Recurring occurrences can carry a persisted category exception. The
+    // base document may therefore belong to another category even though an
+    // occurrence is displayed in this one. Keep the recurring query broad and
+    // let ExpenseOccurrenceCalculator resolve/filter the effective category.
 
     final snapshots = await Future.wait([
       oneOffQuery

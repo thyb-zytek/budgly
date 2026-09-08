@@ -27,6 +27,36 @@ class ExpensesStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Merges freshly-loaded expenses into the account cache so projections and
+  /// pending-mutation lookups see every locally-known expense, even when a
+  /// single period (or category page) has been loaded.
+  void upsertExpensesForAccount(String accountId, List<Expense> expenses) {
+    if (expenses.isEmpty) return;
+    final byId = <String, Expense>{};
+    final unnamed = <Expense>[];
+    for (final expense in _expensesByAccount[accountId] ?? const <Expense>[]) {
+      final id = expense.id;
+      if (id == null) {
+        unnamed.add(expense);
+      } else {
+        byId[id] ??= expense;
+      }
+    }
+    for (final expense in expenses) {
+      final id = expense.id;
+      if (id == null) {
+        unnamed.add(expense);
+      } else {
+        byId[id] = expense;
+      }
+    }
+    final merged = [...byId.values, ...unnamed]
+      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _expensesByAccount[accountId] = merged;
+    _loadedAccounts.add(accountId);
+    notifyListeners();
+  }
+
   Expense? getExpenseById(String expenseId) {
     for (final list in _expensesByAccount.values) {
       for (final expense in list) {

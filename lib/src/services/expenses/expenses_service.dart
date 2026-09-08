@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/calculators/recurring_expense_versioning.dart';
 import 'package:budgly/src/services/expenses/expense_period_cache.dart';
@@ -29,6 +30,9 @@ class ExpensesService extends ChangeNotifier {
   final ExpensesStore _store;
   final RecurringExpenseVersioning _recurringVersioning;
   final _periodData = ExpensePeriodCache();
+  int _creationRevision = 0;
+
+  int get creationRevision => _creationRevision;
   late final ExpenseSyncHandler _syncHandler;
   late final RecurringExpensePersistence _recurringPersistence;
 
@@ -88,6 +92,7 @@ class ExpensesService extends ChangeNotifier {
         );
         if (cached.isNotEmpty) {
           _periodData.put(key, cached);
+          _store.upsertExpensesForAccount(accountId, cached);
 
           // Firestore owns its persistent offline cache. Once local data is
           // available, never make the caller wait for the server.
@@ -174,6 +179,10 @@ class ExpensesService extends ChangeNotifier {
       // propagates.
       _periodData.releaseConfirmed(expenses);
       _periodData.put(key, merged);
+      // Keep the store in sync with everything locally known about the
+      // account so optimistic fallbacks and repeat lookups (e.g. after a
+      // recurring occurrence delete) see these expenses too.
+      _store.upsertExpensesForAccount(accountId, merged);
       notifyListeners();
       return List.unmodifiable(merged);
     } catch (e) {
@@ -191,8 +200,8 @@ class ExpensesService extends ChangeNotifier {
     int limit = 20,
     DocumentSnapshot<Map<String, dynamic>>? startAfter,
     bool includeRecurring = true,
-  }) {
-    return _expenseFirestore
+  }) async {
+    final page = await _expenseFirestore
         .listByCategoryAndPeriodPage(
           accountId,
           categoryId,
@@ -202,6 +211,8 @@ class ExpensesService extends ChangeNotifier {
           includeRecurring: includeRecurring,
         )
         .timeout(const Duration(seconds: 8));
+    _store.upsertExpensesForAccount(accountId, page.expenses);
+    return page;
   }
 
   Future<Expense> createExpense(Expense expense) async {
@@ -210,12 +221,19 @@ class ExpensesService extends ChangeNotifier {
         : expense;
     final periodKey =
         '${optimistic.accountId}|${Period.fromDate(optimistic.debitDate)}|*';
+    if (optimistic.isRecurring) {
+      // A recurring series projects into every covered period. The debit-date
+      // period below keeps its cache with the optimistic expense; every other
+      // already-cached period must be reloaded on its next visit.
+      _periodData.removeAccountExcept(optimistic.accountId, periodKey);
+    }
     final cachedPeriod = _periodData.ensure(periodKey);
     cachedPeriod.add(optimistic);
     cachedPeriod.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     _periodData.addOptimistic(optimistic.id!);
     _periodData.markPending(optimistic.id!, optimistic);
     _store.addExpense(optimistic);
+    _creationRevision++;
     notifyListeners();
     unawaited(_persistCreatedExpense(optimistic));
     AnalyticsService.instance.track('expense_created', {
@@ -268,6 +286,10 @@ class ExpensesService extends ChangeNotifier {
     }
     _store.updateExpense(expense);
     _periodData.markPending(expense.id!, expense);
+    // The store may not hold the expense yet (e.g. it was only loaded into the
+    // period cache), in which case _store.updateExpense is a silent no-op.
+    // Notify unconditionally so every listener re-derives the mutation.
+    notifyListeners();
     unawaited(_persistExpenseUpdate(expense));
     AnalyticsService.instance.track('expense_updated', {
       'recurring': expense.isRecurring,
@@ -292,6 +314,9 @@ class ExpensesService extends ChangeNotifier {
         ),
       );
     }
+    // Notify even when the account was not in the store yet so listeners still
+    // re-derive the deletion from the cleared period cache.
+    notifyListeners();
     AnalyticsService.instance.track('expense_deleted');
 
     final result = await _syncHandler.delete(expenseId);
@@ -307,6 +332,55 @@ class ExpensesService extends ChangeNotifier {
     return result;
   }
 
+  Future<Expense> modifySingleOccurrence({
+    required Expense original,
+    required DateTime occurrenceDate,
+    required Expense override,
+  }) async {
+    if (!original.isRecurring || original.id == null) {
+      return updateExpense(override, previous: original);
+    }
+
+    final key = '${original.id}@${Expense.isoDate(occurrenceDate)}';
+    ExpenseOccurrenceException? existing;
+    for (final item in original.occurrenceExceptions) {
+      if (item.key == key) {
+        existing = item;
+        break;
+      }
+    }
+    final exception = ExpenseOccurrenceException(
+      key: key,
+      amount: override.amount,
+      name: override.name,
+      categoryId: override.categoryId,
+      debitDate: existing?.debitDate,
+      deleted: existing?.deleted ?? false,
+      isDebited: original.isDebitedAt(occurrenceDate),
+    );
+    final exceptions = [
+      for (final item in original.occurrenceExceptions)
+        if (item.key != key) item,
+      exception,
+    ];
+    final updated = original.copyWith(occurrenceExceptions: exceptions);
+    await updateExpense(updated, previous: original);
+    AnalyticsService.instance.track('recurring_expense_occurrence_modified');
+    return updated;
+  }
+
+  Future<Expense> modifyFutureOccurrences({
+    required Expense original,
+    required DateTime effectiveDate,
+    required Expense updated,
+  }) {
+    return updateRecurringExpenseFromOccurrence(
+      original: original,
+      updated: updated,
+      effectiveDate: effectiveDate,
+    );
+  }
+
   Future<bool> deleteSingleOccurrence({
     required Expense expense,
     required DateTime occurrenceDate,
@@ -314,89 +388,26 @@ class ExpensesService extends ChangeNotifier {
     if (!expense.isRecurring || expense.id == null) {
       return deleteExpense(expense.id!, expense.accountId);
     }
+
     final targetDay = DateTime(
       occurrenceDate.year,
       occurrenceDate.month,
       occurrenceDate.day,
     );
-    final originalDay = DateTime(
-      expense.debitDate.year,
-      expense.debitDate.month,
-      expense.debitDate.day,
+    final targetKey = '${expense.id}@${Expense.isoDate(targetDay)}';
+    final exception = ExpenseOccurrenceException(
+      key: targetKey,
+      deleted: true,
+      isDebited: expense.isDebitedAt(targetDay),
     );
-    final isFirst = targetDay.isAtSameMomentAs(originalDay);
-    final targetKey = Expense.isoDate(targetDay);
-
-    if (isFirst) {
-      final nextDate = expense.recurrence.nextOccurrenceAfter(
-        targetDay,
-        anchorDay: expense.recurrenceAnchorDay,
-      );
-      final end = expense.endOfEndDate;
-      if (end != null && nextDate.isAfter(end)) {
-        return deleteExpense(expense.id!, expense.accountId);
-      }
-      final filteredDebited =
-          expense.debitedOccurrences.where((k) => k != targetKey).toList();
-      final updated = expense.copyWith(
-        debitDate: nextDate,
-        debitedOccurrences: filteredDebited,
-      );
-      await updateExpense(updated, previous: expense);
-      AnalyticsService.instance.track('expense_single_occurrence_deleted');
-      return true;
-    }
-
-    final previousEnd = targetDay.subtract(const Duration(days: 1));
-    final previousDebited = expense.debitedOccurrences
-        .where((k) => k.compareTo(targetKey) < 0)
-        .toList();
-    final nextDate = expense.recurrence.nextOccurrenceAfter(
-      targetDay,
-      anchorDay: expense.recurrenceAnchorDay,
+    final updated = expense.copyWith(
+      occurrenceExceptions: [
+        for (final item in expense.occurrenceExceptions)
+          if (item.key != targetKey) item,
+        exception,
+      ],
     );
-    final end = expense.endOfEndDate;
-    final hasFuture = end == null || !nextDate.isAfter(end);
-
-    if (!hasFuture) {
-      final previous = expense.copyWith(
-        endDate: previousEnd,
-        debitedOccurrences: previousDebited,
-      );
-      await updateExpense(previous, previous: expense);
-      AnalyticsService.instance.track('expense_single_occurrence_deleted');
-      return true;
-    }
-
-    final nextDebited = expense.debitedOccurrences
-        .where((k) => k.compareTo(targetKey) > 0)
-        .toList();
-    final previous = expense.copyWith(
-      endDate: previousEnd,
-      debitedOccurrences: previousDebited,
-    );
-    final next = Expense(
-      accountId: expense.accountId,
-      categoryId: expense.categoryId,
-      name: expense.name,
-      amount: expense.amount,
-      debitDate: nextDate,
-      endDate: expense.endDate,
-      recurrence: expense.recurrence,
-      recurrenceAnchorDay: expense.recurrenceAnchorDay,
-      isDebited: false,
-      debitedOccurrences: nextDebited,
-    );
-
-    final resolvedNext = await _recurringPersistence.split(
-      previous: previous,
-      next: next,
-    );
-    _periodData.removeAccount(expense.accountId);
-    _store.replaceExpenseWithVersions(
-      previous: previous,
-      next: resolvedNext,
-    );
+    await updateExpense(updated, previous: expense);
     AnalyticsService.instance.track('expense_single_occurrence_deleted');
     return true;
   }
@@ -429,11 +440,20 @@ class ExpensesService extends ChangeNotifier {
     final updated = expense.copyWith(
       endDate: previousEnd,
       debitedOccurrences: previousDebited,
+      occurrenceExceptions: [
+        for (final exception in expense.occurrenceExceptions)
+          if (_exceptionSourceDate(exception).isBefore(targetDay) &&
+              (exception.debitDate == null || exception.debitDate!.isBefore(targetDay)))
+            exception,
+      ],
     );
     await updateExpense(updated, previous: expense);
     AnalyticsService.instance.track('expense_future_occurrences_deleted');
     return true;
   }
+
+  DateTime _exceptionSourceDate(ExpenseOccurrenceException exception) =>
+      DateTime.parse(exception.key.substring(exception.key.lastIndexOf('@') + 1));
 
   Future<void> _handlePendingSync(PendingSync operation) =>
       _syncHandler.handlePendingSync(operation);
@@ -443,6 +463,16 @@ class ExpensesService extends ChangeNotifier {
   List<Expense> getExpensesForAccount(String accountId) =>
       _store.getExpensesForAccount(accountId);
 
+  /// Returns every locally cached expense for the account. Offline-first: the
+  /// store is populated from Firestore's native cache, so callers never wait
+  /// on the network to build period projections such as undebited detection.
+  Future<List<Expense>> listExpensesForAccount(
+    String accountId, {
+    bool forceRefresh = false,
+  }) async {
+    return getExpensesForAccount(accountId);
+  }
+
   Future<void> deleteByAccountId(String accountId) async {
     await _expenseFirestore.deleteByAccountId(accountId);
     _store.clearAccountCache(accountId);
@@ -451,6 +481,51 @@ class ExpensesService extends ChangeNotifier {
   Future<void> deleteByCategoryId(String categoryId) async {
     await _expenseFirestore.deleteByCategoryId(categoryId);
     _store.clearCategoryCache(categoryId);
+  }
+
+  Future<Expense> moveOccurrenceToDate(
+    Expense expense,
+    DateTime occurrenceDate,
+    DateTime targetDate, {
+    required bool markDebited,
+  }) async {
+    if (!expense.isRecurring) {
+      final updated = expense.copyWith(
+        debitDate: targetDate,
+        isDebited: markDebited,
+      );
+      return updateExpense(updated, previous: expense);
+    }
+
+    final sourceDay = DateTime(
+      occurrenceDate.year,
+      occurrenceDate.month,
+      occurrenceDate.day,
+    );
+    final key = '${expense.id}@${Expense.isoDate(sourceDay)}';
+    ExpenseOccurrenceException? existing;
+    for (final item in expense.occurrenceExceptions) {
+      if (item.key == key) {
+        existing = item;
+        break;
+      }
+    }
+    final exceptions = [
+      for (final item in expense.occurrenceExceptions)
+        if (item.key != key) item,
+      ExpenseOccurrenceException(
+        key: key,
+        amount: existing?.amount,
+        name: existing?.name,
+        categoryId: existing?.categoryId,
+        debitDate: DateTime(targetDate.year, targetDate.month, targetDate.day),
+        deleted: existing?.deleted ?? false,
+        isDebited: markDebited,
+      ),
+    ];
+    final updated = expense.copyWith(occurrenceExceptions: exceptions);
+    await updateExpense(updated, previous: expense);
+    return updated;
   }
 
   Future<Expense> markOccurrenceDebited(Expense expense, DateTime date) async {
