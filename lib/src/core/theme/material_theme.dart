@@ -101,10 +101,12 @@ class MaterialTheme {
     ),
   );
 
-  static const Color _lightCanvas = Color(0xFFF5F5F7);
-  static const Color _lightSurface = Color(0xFFFFFFFF);
-  static const Color _darkCanvas = Color(0xFF0C0A14);
-  static const Color _darkSurface = Color(0xFF1E1E2A);
+  // Surface colors are intentionally derived from the icon's near-black navy
+  // canvas instead of a neutral blue-grey family.
+  static const Color _lightCanvas = BudglyPalette.lightCanvas;
+  static const Color _lightSurface = BudglyPalette.lightSurface;
+  static const Color _darkCanvas = BudglyPalette.darkCanvas;
+  static const Color _darkSurface = BudglyPalette.darkSurface;
 
   static Color _tonalSurface(Color surface, Color tint, Color recede, double strength) {
     final blendColor = strength >= 0 ? tint : recede;
@@ -113,50 +115,56 @@ class MaterialTheme {
   }
 
   static ColorScheme lightScheme() {
-    const primary = Color(0xFF2C2665);
+    const primary = BudglyPalette.primary;
     const tint = primary;
     const recede = Colors.white;
 
-    Color tonal(double strength) => _tonalSurface(_lightSurface, tint, recede, strength);
+    Color tonal(double strength) =>
+        _tonalSurface(_lightSurface, tint, recede, strength);
 
     return ColorScheme(
       brightness: Brightness.light,
 
+      // Navy: the logo's background colour is the app's primary anchor.
       primary: primary,
       onPrimary: const Color(0xFFFFFFFF),
-      primaryContainer: const Color(0xFFE1DEFF),
-      onPrimaryContainer: const Color(0xFF17104E),
-      inversePrimary: const Color(0xFFC2BFFF),
+      primaryContainer: BudglyPalette.primaryLight,
+      onPrimaryContainer: BudglyPalette.primaryDeep,
+      inversePrimary: BudglyPalette.primaryDark,
 
-      secondary: const Color(0xFF5E5A75),
+      // Bright blue extracted from the icon's blue detail, slightly toned
+      // down for sustained use in controls and data visualisation.
+      secondary: BudglyPalette.secondary,
       onSecondary: const Color(0xFFFFFFFF),
-      secondaryContainer: const Color(0xFFE4E1F1),
-      onSecondaryContainer: const Color(0xFF1C192B),
+      secondaryContainer: BudglyPalette.secondaryLight,
+      onSecondaryContainer: BudglyPalette.secondaryDeep,
 
-      tertiary: const Color(0xFF71717A),
+      // Deepened cyan: reserved for highlights, budgets, objectives and
+      // premium cues, echoing the icon's highlight.
+      tertiary: BudglyPalette.tertiary,
       onTertiary: const Color(0xFFFFFFFF),
-      tertiaryContainer: const Color(0xFFF4F4F5),
-      onTertiaryContainer: const Color(0xFF27272A),
+      tertiaryContainer: BudglyPalette.tertiaryLight,
+      onTertiaryContainer: BudglyPalette.tertiaryDeep,
 
-      error: const Color(0xFFE11D48),
+      error: BudglyPalette.error,
       onError: const Color(0xFFFFFFFF),
-      errorContainer: const Color(0xFFFFE4E6),
-      onErrorContainer: const Color(0xFF9F1239),
+      errorContainer: BudglyPalette.errorLight,
+      onErrorContainer: BudglyPalette.errorDeep,
 
       surface: _lightSurface,
-      onSurface: const Color(0xFF12101C),
-      onSurfaceVariant: const Color(0xFF5E5A75),
-      inverseSurface: const Color(0xFF1C192B),
-      onInverseSurface: _lightCanvas,
+      onSurface: const Color(0xFF172033),
+      onSurfaceVariant: const Color(0xFF526078),
+      inverseSurface: const Color(0xFF172033),
+      onInverseSurface: const Color(0xFFF5F8FF),
 
       surfaceContainerLowest: _lightSurface,
-      surfaceContainerLow: _lightSurface,
+      surfaceContainerLow: tonal(0.025),
       surfaceContainer: tonal(0.05),
       surfaceContainerHigh: tonal(0.08),
       surfaceContainerHighest: tonal(0.11),
 
-      outline: const Color(0xFFD3CEDB),
-      outlineVariant: const Color(0xFFE8E5EE),
+      outline: const Color(0xFF9AA8BC),
+      outlineVariant: const Color(0xFFD9E2ED),
       shadow: Colors.transparent,
       scrim: const Color(0x66000000),
       surfaceTint: Colors.transparent,
@@ -164,50 +172,56 @@ class MaterialTheme {
   }
 
   static ColorScheme darkScheme() {
-    const primary = Color(0xFFC2BFFF);
+    const primary = BudglyPalette.primaryDark;
     const tint = primary;
     const recede = Colors.black;
 
-    Color tonal(double strength) => _tonalSurface(_darkSurface, tint, recede, strength);
+    Color tonal(double strength) =>
+        _tonalSurface(_darkSurface, tint, recede, strength);
 
     return ColorScheme(
       brightness: Brightness.dark,
 
+      // The logo's cyan highlight pops against the near-black navy surfaces
+      // while keeping the icon's identity readable in dark mode.
       primary: primary,
-      onPrimary: const Color(0xFF17104E),
-      primaryContainer: const Color(0xFF2C2665),
-      onPrimaryContainer: const Color(0xFFE1DEFF),
-      inversePrimary: const Color(0xFF2C2665),
+      onPrimary: BudglyPalette.primaryDeep,
+      primaryContainer: const Color(0xFF17335F),
+      onPrimaryContainer: BudglyPalette.primaryLight,
+      inversePrimary: BudglyPalette.primary,
 
-      secondary: const Color(0xFFAAA5C0),
-      onSecondary: const Color(0xFF1C192B),
-      secondaryContainer: const Color(0xFF46425D),
-      onSecondaryContainer: const Color(0xFFE4E1F1),
+      // Softer blue echoing the icon's blue detail without becoming
+      // aggressive on a dark interface.
+      secondary: BudglyPalette.secondaryDark,
+      onSecondary: BudglyPalette.secondaryDeep,
+      secondaryContainer: const Color(0xFF1B4A86),
+      onSecondaryContainer: BudglyPalette.secondaryLight,
 
-      tertiary: const Color(0xFFA1A1AA),
-      onTertiary: const Color(0xFF09090B),
-      tertiaryContainer: const Color(0xFF27272A),
-      onTertiaryContainer: const Color(0xFFE4E4E7),
+      // Sky-cyan keeps the icon's highlight visible in dark mode.
+      tertiary: BudglyPalette.tertiaryDark,
+      onTertiary: BudglyPalette.tertiaryDeep,
+      tertiaryContainer: BudglyPalette.tertiaryDeep,
+      onTertiaryContainer: BudglyPalette.tertiaryLight,
 
-      error: const Color(0xFFFB7185),
-      onError: const Color(0xFF4C0519),
-      errorContainer: const Color(0xFF881337),
-      onErrorContainer: const Color(0xFFFFE4E6),
+      error: BudglyPalette.errorDark,
+      onError: const Color(0xFF650012),
+      errorContainer: BudglyPalette.errorDeep,
+      onErrorContainer: BudglyPalette.errorLight,
 
       surface: _darkSurface,
-      onSurface: const Color(0xFFF9F9FB),
-      onSurfaceVariant: const Color(0xFFAAA5C0),
-      inverseSurface: const Color(0xFFF9F9FB),
+      onSurface: const Color(0xFFE3EDF8),
+      onSurfaceVariant: const Color(0xFFB6C3D6),
+      inverseSurface: const Color(0xFFE7EDF8),
       onInverseSurface: _darkCanvas,
 
       surfaceContainerLowest: _darkCanvas,
-      surfaceContainerLow: _darkSurface,
+      surfaceContainerLow: tonal(0.025),
       surfaceContainer: tonal(0.05),
       surfaceContainerHigh: tonal(0.08),
       surfaceContainerHighest: tonal(0.11),
 
-      outline: const Color(0xFF4C4761),
-      outlineVariant: const Color(0xFF2E2756),
+      outline: const Color(0xFF8295AC),
+      outlineVariant: const Color(0xFF24364D),
       shadow: Colors.transparent,
       scrim: const Color(0x80000000),
       surfaceTint: Colors.transparent,
@@ -444,15 +458,15 @@ class MaterialTheme {
   ThemeData dark() => theme(darkScheme());
 
   static const success = ExtendedColor(
-    seed: Color(0xFF10B981),
-    value: Color(0xFF10B981),
+    seed: BudglyPalette.success,
+    value: BudglyPalette.success,
     light: ColorFamily(
-      color: Color(0xFF10B981),
+      color: BudglyPalette.success,
       onColor: Color(0xFFFFFFFF),
     ),
     dark: ColorFamily(
-      color: Color(0xFF34D399),
-      onColor: Color(0xFF022C22),
+      color: BudglyPalette.successDark,
+      onColor: Color(0xFF00391B),
     ),
   );
 
