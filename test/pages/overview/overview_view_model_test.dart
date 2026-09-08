@@ -11,12 +11,15 @@ import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/offline/local_cache.dart';
 import 'package:budgly/src/stores/accounts.dart';
 import 'package:budgly/src/stores/accounts_budget.dart';
 import 'package:budgly/src/stores/profile.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../fixtures/builders.dart';
+import '../../helpers/fake_expense_firestore.dart';
 import '../../helpers/fake_stores.dart';
 
 class FakeOverviewAccountsService extends AccountsService {
@@ -119,6 +122,18 @@ class FakeOverviewRepository extends OverviewRepository {
   Future<double?> getMostRecentRevenue(String accountId, {required Period before}) async => inheritedRevenue;
 }
 
+/// Returns the seeded categories without touching Supabase, so the real
+/// [OverviewRepository] only exercises in-memory data sources.
+class SeededOverviewCategoriesService extends CategoriesService {
+  @override
+  Future<List<Category>> listCategoriesByAccount(
+    String accountId, {
+    bool forceRefresh = false,
+  }) async {
+    return getCategoriesForAccount(accountId);
+  }
+}
+
 void main() {
   setUp(() {
     clearAllTestStores();
@@ -144,6 +159,31 @@ void main() {
     expect(vm.account?.id, 'a1');
     expect(repo.calls.single, startsWith('initial:a1:'));
     expect(vm.isLoading, isFalse);
+  });
+
+  test('decimal place preference changes notify overview listeners', () async {
+    ProfileStore.instance.setPreferences(amountDecimalPlaces: 2);
+    addTearDown(
+      () => ProfileStore.instance.setPreferences(amountDecimalPlaces: 2),
+    );
+    final account = Fixtures.account(id: 'a1');
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: FakeOverviewCategoriesService(),
+      expensesService: FakeOverviewExpensesService(),
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: FakeOverviewRepository(),
+    );
+    addTearDown(vm.dispose);
+
+    var notified = 0;
+    vm.addListener(() => notified++);
+
+    ProfileStore.instance.setPreferences(amountDecimalPlaces: 1);
+
+    expect(vm.amountDecimalPlaces, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(notified, 1);
   });
 
   test('switching account invalidates period data and requests the new account', () async {
@@ -559,6 +599,410 @@ void main() {
 
     expenses.notifyListeners();
     await Future<void>.delayed(Duration.zero);
+  });
+
+  test('recurring occurrence delete refreshes the overview projections',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final recurring = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Loyer',
+      amount: 100,
+      debitDate: DateTime(period.year, period.month, 10),
+      recurrence: RecurrenceType.monthly,
+      recurrenceAnchorDay: 10,
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(recurring);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    expect(vm.periodOccurrences.map((o) => o.expense.id), ['e1']);
+
+    await expensesService.deleteSingleOccurrence(
+      expense: recurring,
+      occurrenceDate: DateTime(period.year, period.month, 10),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.periodOccurrences, isEmpty);
+  });
+
+  test('recurring single occurrence modify refreshes the overview projections',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final recurring = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Loyer',
+      amount: 100,
+      debitDate: DateTime(period.year, period.month, 10),
+      recurrence: RecurrenceType.monthly,
+      recurrenceAnchorDay: 10,
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(recurring);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    expect(vm.periodOccurrences, hasLength(1));
+    expect(vm.periodOccurrences.single.amount, 100);
+
+    await expensesService.modifySingleOccurrence(
+      original: recurring,
+      occurrenceDate: DateTime(period.year, period.month, 10),
+      override: recurring.copyWith(amount: 250),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.periodOccurrences, hasLength(1));
+    expect(vm.periodOccurrences.single.amount, 250);
+  });
+
+  test('cold start shows the undebited banner for the previous period',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final previous = period.previous;
+    final undebited = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(previous.year, previous.month, 20),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(undebited);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.undebitedExpensesService.shouldShow, isTrue);
+    expect(vm.undebitedExpensesService.count, 1);
+    expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
+  });
+
+  test(
+      'cold start re-arms the banner when it was dismissed in a previous month',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final previous = period.previous;
+    await LocalCache().saveUndebitedBannerDismissedAt(
+      'a1',
+      period: previous,
+      value: DateTime(previous.year, previous.month, 20),
+    );
+    final undebited = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(previous.year, previous.month, 20),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(undebited);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.undebitedExpensesService.shouldShow, isTrue);
+    expect(vm.undebitedExpensesService.count, 1);
+    expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
+  });
+
+  test('creating a recurring expense refreshes the Overview after a period change',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final c1 = Fixtures.category(id: 'c1', accountId: 'a1', name: 'Loyer');
+    final c2 = Fixtures.category(id: 'c2', accountId: 'a1', name: 'Assurance');
+    seedCategories('a1', [c1, c2]);
+    final period = Period.current();
+    final recurring = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Loyer',
+      amount: 100,
+      debitDate: DateTime(period.year, period.month, 5),
+      recurrence: RecurrenceType.monthly,
+      recurrenceAnchorDay: 5,
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(recurring);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    expect(vm.categorySummaries.map((s) => s.category.id).toSet(), {'c1'});
+
+    // Visit the next period so its service cache is populated before the create.
+    vm.selectedPeriod = period.next;
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(vm.categorySummaries.map((s) => s.category.id).toSet(), {'c1'});
+
+    // Return to the current period, then create a recurring expense in a NEW
+    // category — the reported repro.
+    vm.selectedPeriod = period;
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    await expensesService.createExpense(
+      Expense(
+        id: 'e2',
+        accountId: 'a1',
+        categoryId: 'c2',
+        name: 'Assurance',
+        amount: 60,
+        debitDate: DateTime(period.year, period.month, 10),
+        recurrence: RecurrenceType.monthly,
+        recurrenceAnchorDay: 10,
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    // Current period: summary card and donut (categorySummaries) include c2.
+    expect(vm.totalExpenses, 160);
+    expect(vm.categorySummaries.map((s) => s.category.id).toSet(), {'c1', 'c2'});
+
+    // The previously-cached next period must now list the new category too.
+    vm.selectedPeriod = period.next;
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.totalExpenses, 160);
+    final c2Summary =
+        vm.categorySummaries.firstWhere((s) => s.category.id == 'c2');
+    expect(c2Summary.total, 60);
+  });
+
+  test('creating an expense updates the Overview summary card and donut data',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final category = Fixtures.category(id: 'c1', accountId: 'a1', name: 'Courses');
+    seedCategories('a1', [category]);
+    final firestore = RefreshAwareExpenseFirestore();
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    final period = vm.selectedPeriod;
+
+    await expensesService.createExpense(
+      Expense(
+        id: 'e1',
+        accountId: 'a1',
+        categoryId: 'c1',
+        name: 'Courses',
+        amount: 40,
+        debitDate: DateTime(period.year, period.month, 8),
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.totalExpenses, 40);
+    expect(vm.pendingExpenses, 40);
+    final summaries = vm.categorySummaries;
+    expect(summaries, hasLength(1));
+    expect(summaries.single.category.id, 'c1');
+    expect(summaries.single.total, 40);
+  });
+
+  test('updating an expense updates the Overview summary card and donut data',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final category = Fixtures.category(id: 'c1', accountId: 'a1', name: 'Courses');
+    seedCategories('a1', [category]);
+    final period = Period.current();
+    final expense = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(period.year, period.month, 8),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(expense);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    expect(vm.totalExpenses, 40);
+
+    await expensesService.updateExpense(
+      expense.copyWith(amount: 90),
+      previous: expense,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.totalExpenses, 90);
+    expect(vm.categorySummaries.single.total, 90);
+  });
+
+  test('deleting an expense updates the Overview summary card, donut and category list',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final c1 = Fixtures.category(id: 'c1', accountId: 'a1', name: 'Courses');
+    final c2 = Fixtures.category(id: 'c2', accountId: 'a1', name: 'Loyer');
+    seedCategories('a1', [c1, c2]);
+    final period = Period.current();
+    final e1 = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(period.year, period.month, 8),
+    );
+    final e2 = Expense(
+      id: 'e2',
+      accountId: 'a1',
+      categoryId: 'c2',
+      name: 'Loyer',
+      amount: 60,
+      debitDate: DateTime(period.year, period.month, 10),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.addAll([e1, e2]);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    expect(vm.totalExpenses, 100);
+    expect(vm.categorySummaries.map((s) => s.category.id).toSet(), {'c1', 'c2'});
+
+    await expensesService.deleteExpense('e1', 'a1');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.totalExpenses, 60);
+    final summaries = vm.categorySummaries;
+    expect(summaries.map((s) => s.category.id).toSet(), {'c2'});
+    expect(summaries.single.total, 60);
   });
 
   test('accounts notification syncs the selected account and form account',
