@@ -9,6 +9,7 @@ import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/expense_editor_sheet.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/undebited_expenses_banner.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
 import 'package:budgly/src/pages/overview/widgets/overview_content.dart';
@@ -191,23 +192,43 @@ class _OverviewPageState extends State<OverviewPage> {
     final tr = AppLocalizations.of(context)!;
 
     return Scaffold(
-      body: ViewModelFeedback(
-        viewModel: _viewModel,
-        child: ViewModelSelector<OverviewViewModel, bool>(
-          model: _viewModel,
-          selector: (model) => model.isLoading,
-          builder: (context, isLoading) => isLoading
-              ? const AppLoadingIndicator()
-              : OverviewContent(
-                  viewModel: _viewModel,
-                  slideDirection: _slideDirection,
-                  onPeriodChanged: _onPeriodChanged,
-                  onSwipe: _changePeriodBySwipe,
-                  onCategoryTap: _openCategoryDetails,
-                  onRefresh: _viewModel.refreshAll,
-                  translations: tr,
-                ),
-        ),
+      body: Column(
+        children: [
+          ViewModelSelector<OverviewViewModel, Object?>(
+            model: _viewModel,
+            selector: (model) => (
+              model.amountDecimalPlaces,
+              model.currencyCode,
+              model.localeName,
+            ),
+            builder: (context, _) => UndebitedExpensesBanner(
+              service: _viewModel.undebitedExpensesService,
+              currencyCode: _viewModel.currencyCode,
+              localeName: _viewModel.localeName,
+              amountDecimalPlaces: _viewModel.amountDecimalPlaces,
+            ),
+          ),
+          Expanded(
+            child: ViewModelFeedback(
+              viewModel: _viewModel,
+              child: ViewModelSelector<OverviewViewModel, bool>(
+                model: _viewModel,
+                selector: (model) => model.isLoading,
+                builder: (context, isLoading) => isLoading
+                    ? const AppLoadingIndicator()
+                    : OverviewContent(
+                        viewModel: _viewModel,
+                        slideDirection: _slideDirection,
+                        onPeriodChanged: _onPeriodChanged,
+                        onSwipe: _changePeriodBySwipe,
+                        onCategoryTap: _openCategoryDetails,
+                        onRefresh: _viewModel.refreshAll,
+                        translations: tr,
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: ValueListenableBuilder<bool>(
         valueListenable: _showFabLabel,

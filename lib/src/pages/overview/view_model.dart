@@ -16,6 +16,7 @@ import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/expenses/undebited_expenses_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
@@ -37,6 +38,7 @@ class OverviewViewModel extends BaseViewModel {
   final ExpenseSummaryCalculator _summaryCalculator;
   final ExpenseOccurrenceCalculator _occurrenceCalculator;
   final OverviewMetricsCalculator _metricsCalculator;
+  final UndebitedExpensesService _undebitedExpensesService;
 
   OverviewUiState _uiState = OverviewUiState(selectedPeriod: Period.current());
 
@@ -61,6 +63,7 @@ class OverviewViewModel extends BaseViewModel {
     ExpenseOccurrenceCalculator? occurrenceCalculator,
     OverviewRepository? repository,
     OverviewMetricsCalculator? metricsCalculator,
+    UndebitedExpensesService? undebitedExpensesService,
   }) : _accountsService = accountsService ?? AccountsService.instance,
        _categoriesService = categoriesService ?? CategoriesService.instance,
        _expensesService = expensesService ?? ExpensesService.instance,
@@ -77,7 +80,9 @@ class OverviewViewModel extends BaseViewModel {
            summaryCalculator ?? const ExpenseSummaryCalculator(),
        _occurrenceCalculator =
            occurrenceCalculator ?? const ExpenseOccurrenceCalculator(),
-       _metricsCalculator = metricsCalculator ?? const OverviewMetricsCalculator() {
+       _metricsCalculator = metricsCalculator ?? const OverviewMetricsCalculator(),
+       _undebitedExpensesService = undebitedExpensesService ??
+           UndebitedExpensesService(expensesService: expensesService) {
     AnalyticsService.instance.track('screen_viewed', {'screen': 'overview'});
     expenseForm.addListener(_onFormChanged);
     _accountsService.changeNotifier.addListener(_onAccountsChanged);
@@ -85,6 +90,7 @@ class OverviewViewModel extends BaseViewModel {
     _expensesService.addListener(_onExpensesChanged);
     _accountBudgetsService.addListener(_onRevenueChanged);
     _profileService.addListener(_onProfileChanged);
+    _undebitedExpensesService.addListener(_onUndebitedChanged);
   }
 
   void _onFormChanged() {
@@ -152,6 +158,10 @@ class OverviewViewModel extends BaseViewModel {
     _notifyAfterFrame();
   }
 
+  void _onUndebitedChanged() {
+    _notifyAfterFrame();
+  }
+
   void _onProfileChanged() {
     _notifyAfterFrame();
   }
@@ -214,6 +224,7 @@ class OverviewViewModel extends BaseViewModel {
       final selectedAccount = accounts.first;
       _setSelectedAccount(selectedAccount, trackEvent: false);
       _ensureRevenueLoaded();
+      unawaited(_refreshUndebitedExpenses());
       unawaited(_ensureInheritedRevenueLoaded());
 
       // Once the account is known, period data can load independently. The
@@ -283,10 +294,13 @@ class OverviewViewModel extends BaseViewModel {
 
     _setSelectedAccount(value, trackEvent: true);
     unawaited(_loadSelectedPeriodExpenses());
+    unawaited(_refreshUndebitedExpenses());
     _ensureRevenueLoaded();
     unawaited(_ensureInheritedRevenueLoaded());
     _maybeShowRevenueEditor();
   }
+
+  UndebitedExpensesService get undebitedExpensesService => _undebitedExpensesService;
 
   Period get selectedPeriod => _uiState.selectedPeriod;
   Period get minPeriod => Period.current().addMonths(-12);
@@ -295,15 +309,34 @@ class OverviewViewModel extends BaseViewModel {
   );
 
   set selectedPeriod(Period value) {
-    if (_uiState.selectedPeriod == value) return;
+    final previous = _uiState.selectedPeriod;
+    if (previous == value) return;
+    final actualCurrent = Period.current();
+    final isRealPeriodTransition =
+        previous == actualCurrent.previous && value == actualCurrent;
     _uiState = _uiState.copyWith(selectedPeriod: value);
     _invalidateDerivedData();
     if (!isDisposed) notifyListeners();
     AnalyticsService.instance.track('overview_period_changed');
     _ensureRevenueLoaded();
     _ensureInheritedRevenueLoaded();
+    unawaited(_refreshUndebitedExpenses(
+      showImmediately: isRealPeriodTransition,
+    ));
     _loadSelectedPeriodExpenses();
     _maybeShowRevenueEditor();
+  }
+
+  Future<void> _refreshUndebitedExpenses({
+    bool showImmediately = false,
+  }) async {
+    final accountId = _uiState.account?.id;
+    if (accountId == null) return;
+    await _undebitedExpensesService.refresh(
+      accountId: accountId,
+      current: _uiState.selectedPeriod,
+      showImmediately: showImmediately,
+    );
   }
 
   void _ensureRevenueLoaded() {
@@ -636,6 +669,8 @@ class OverviewViewModel extends BaseViewModel {
 
   @override
   void dispose() {
+    _undebitedExpensesService.removeListener(_onUndebitedChanged);
+    _undebitedExpensesService.dispose();
     _accountsService.changeNotifier.removeListener(_onAccountsChanged);
     _categoriesService.removeListener(_onCategoriesChanged);
     _expensesService.removeListener(_onExpensesChanged);
@@ -645,4 +680,5 @@ class OverviewViewModel extends BaseViewModel {
     expenseForm.dispose();
     super.dispose();
   }
+
 }
