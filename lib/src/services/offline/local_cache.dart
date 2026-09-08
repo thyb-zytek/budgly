@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ class LocalCache {
   static const _accountsPrefix = 'offline.accounts.';
   static const _categoriesPrefix = 'offline.categories.';
   static const _profilePrefix = 'offline.profile.';
+  static const _undebitedBannerPrefix = 'undebited.banner.dismissedAt.';
 
   // Resolve lazily so Flutter test bootstrap can install the in-memory
   // SharedPreferences implementation before the first platform call.
@@ -89,6 +91,41 @@ class LocalCache {
       AppLogger.error('Failed to load cached profile', e, st);
       return null;
     }
+  }
+
+
+  Future<void> saveUndebitedBannerDismissedAt(
+    String accountId, {
+    required Period period,
+    required DateTime value,
+  }) async {
+    final prefs = await _prefs;
+    await prefs.setString(
+      '$_undebitedBannerPrefix$accountId',
+      '${period.year}-${period.month}|${value.toIso8601String()}',
+    );
+  }
+
+  /// The dismissal is scoped to the reporting [Period] it was recorded in, so
+  /// the banner can reappear when the app is opened for a new month.
+  Future<({Period period, DateTime at})?> loadUndebitedBannerDismissedAt(
+    String accountId,
+  ) async {
+    final prefs = await _prefs;
+    final raw = prefs.getString('$_undebitedBannerPrefix$accountId');
+    if (raw == null) return null;
+
+    final parts = raw.split('|');
+    if (parts.length != 2) return null;
+    final periodParts = parts[0].split('-');
+    if (periodParts.length != 2) return null;
+
+    final year = int.tryParse(periodParts[0]);
+    final month = int.tryParse(periodParts[1]);
+    final at = DateTime.tryParse(parts[1]);
+    if (year == null || month == null || at == null) return null;
+
+    return (period: Period(year: year, month: month), at: at);
   }
 
   Future<void> clearUser(String userId) async {
