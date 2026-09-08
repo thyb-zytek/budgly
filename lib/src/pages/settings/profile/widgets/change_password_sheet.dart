@@ -1,8 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/pages/settings/profile/view_model.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
@@ -118,30 +118,11 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
-              child: Row(
-                spacing: 16,
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      style: ButtonType.error.filledStyle(theme, dense: true),
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        tr.cancel,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-              padding: BudglyButtonDimensions.densePadding,
-            ),
-                      onPressed: _submit,
-                      child: Text(
-                        tr.validate,
-                      ),
-                    ),
-                  ),
-                ],
+              child: FormActions(
+                destructiveCancel: true,
+                dense: true,
+                onCancel: () => Navigator.pop(context),
+                onSubmit: _submit,
               ),
             ),
           ],

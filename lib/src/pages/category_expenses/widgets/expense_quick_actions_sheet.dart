@@ -44,9 +44,7 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
             if (edit != null)
               Expanded(
                 child: FilledButton(
-                  style: FilledButton.styleFrom(
-              padding: BudglyButtonDimensions.densePadding,
-            ),
+                  style: ButtonType.primary.filledStyle(theme, dense: true),
                   onPressed: () {
                     Navigator.pop(context);
                     edit();

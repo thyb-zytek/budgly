@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class GoogleSignInButton extends StatelessWidget {
@@ -14,11 +15,14 @@ class GoogleSignInButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BudglyRadius.small,
         ),
         side: BorderSide(color: theme.colorScheme.outline),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: BudglySpacing.xl,
+          vertical: BudglySpacing.md,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.max,

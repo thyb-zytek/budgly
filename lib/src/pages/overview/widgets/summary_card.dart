@@ -115,16 +115,15 @@ class OverviewSummaryCard extends StatelessWidget {
           child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: BudglySpacing.lg,
           children: [
-            if (viewModel.accounts.isNotEmpty) ...[
+            if (viewModel.accounts.isNotEmpty)
               AccountSelector(
                 accounts: viewModel.accounts,
                 selectedAccount: viewModel.account,
                 backgroundColor: Colors.transparent,
                 onSelect: onSelectAccount,
               ),
-              const SizedBox(height: BudglySpacing.md),
-            ],
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.md),
               child: Row(
@@ -136,7 +135,6 @@ class OverviewSummaryCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: BudglySpacing.lg),
             Row(
               spacing: BudglySpacing.lg,
               children: [
@@ -145,7 +143,7 @@ class OverviewSummaryCard extends StatelessWidget {
                   child: RepaintBoundary(
                     child: CategoryDonutChart(
                       summaries: viewModel.categorySummaries,
-                      size: 104,
+                      size: 96,
                       strokeWidthFactor: 0.18,
                       referenceTotal: viewModel.effectiveRevenue > 0
                           ? viewModel.effectiveRevenue

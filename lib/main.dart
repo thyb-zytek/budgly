@@ -93,4 +93,3 @@ Future<void> _initializeCrashlytics() async {
     return true;
   };
 }
-
