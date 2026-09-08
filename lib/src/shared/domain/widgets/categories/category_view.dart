@@ -1,5 +1,6 @@
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
+import 'package:budgly/src/shared/ui/widgets/actions/edit_delete_actions.dart';
 import 'package:flutter/material.dart';
 
 class CategoryView extends StatelessWidget {
@@ -51,24 +52,7 @@ class CategoryView extends StatelessWidget {
           ),
         ),
         if (onEdit != null || onDelete != null)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              if (onEdit != null)
-                IconButton(
-                  icon: const Icon(Icons.edit_rounded, size: 32),
-                  onPressed: onEdit,
-                  color: theme.colorScheme.primary,
-                ),
-              if (onDelete != null)
-                IconButton(
-                  icon: const Icon(Icons.delete_rounded, size: 32),
-                  onPressed: onDelete,
-                  color: theme.colorScheme.error,
-                ),
-            ],
-          ),
+          EditDeleteActions(onEdit: onEdit, onDelete: onDelete),
       ],
     );
   }
