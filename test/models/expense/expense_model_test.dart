@@ -198,6 +198,17 @@ void main() {
       expect(expense.amount, 0.0);
     });
 
+    test('handles missing isDebited as false instead of throwing', () {
+      final map = {
+        'accountId': 'acc-1',
+        'categoryId': 'cat-1',
+        'debitDate': Timestamp.fromDate(DateTime(2026, 1, 15)),
+      };
+
+      final expense = Expense.fromMap('exp-1', map);
+      expect(expense.isDebited, isFalse);
+    });
+
     test('handles non-list debitedOccurrences as empty', () {
       final map = {
         'accountId': 'acc-1',
