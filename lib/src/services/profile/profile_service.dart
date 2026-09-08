@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/services/auth/auth_service.dart';
 import 'package:budgly/src/stores/profile.dart';
@@ -15,7 +16,6 @@ import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
@@ -74,25 +74,34 @@ class ProfileService implements Listenable {
   }
 
   Future<void> _hydrateCachedProfile() async {
-    final firebaseUser = fb.FirebaseAuth.instance.currentUser;
+    final firebaseUser = _authService.firebaseUser;
     if (firebaseUser == null) return;
 
     final cachedProfile = await _localCache.loadProfile(firebaseUser.uid);
-    _store.setUser(
-      User.fromFirebaseUser(firebaseUser, profile: cachedProfile),
-    );
+    if (cachedProfile != null) {
+      _store.setUser(
+        User.fromFirebaseUser(firebaseUser, profile: cachedProfile),
+      );
+      _applyProfilePreferences(cachedProfile);
+    }
   }
 
   /// Refreshes the profile from the backend without making startup/navigation
   /// wait for the network. Cached state remains visible if the refresh fails.
   Future<void> refreshUserProfileInBackground() async {
-    final userId = fb.FirebaseAuth.instance.currentUser?.uid;
+    final userId = _authService.firebaseUser?.uid;
     if (userId == null) return;
     await _refreshProfileFromRemote(userId);
   }
 
   Future<void> _loadLocalPreferences() async {
     if (_prefs == null) return;
+
+    // The user's profile is authoritative for preferences once it is loaded
+    // (cached or from the server). Without this guard, preferences persisted
+    // for a previous user — or a fresh device default — could clobber the
+    // connected profile's values on startup.
+    if (_store.currentUser != null) return;
 
     final themeIndex = _prefs!.getInt(_themeKey);
     final theme = themeIndex != null
@@ -112,26 +121,31 @@ class ProfileService implements Listenable {
   }
 
   Future<void> syncPreferencesWithServer(User user) async {
-    if (user.hasProfile) {
-      try {
-        final profile = user.profile!;
-        final serverTheme = _getThemeModeFromString(profile.themeMode);
+    final profile = user.profile;
+    if (profile == null) return;
+    try {
+      _applyProfilePreferences(profile);
 
-        _store.setPreferences(
-          themeMode: serverTheme,
-          locale: Locale(profile.language),
-          currency: profile.currency,
-          amountDecimalPlaces: profile.amountDecimalPlaces,
-        );
-
-        await _prefs?.setInt(_themeKey, serverTheme.index);
-        await _prefs?.setString(_localeKey, profile.language);
-        await _prefs?.setString(_currencyKey, profile.currency);
-        await _prefs?.setInt(_amountDecimalPlacesKey, profile.amountDecimalPlaces);
-      } catch (e) {
-        AppLogger.error('Error syncing preferences with server: $e', e);
-      }
+      await _prefs?.setInt(_themeKey, _store.themeMode.index);
+      await _prefs?.setString(_localeKey, profile.language);
+      await _prefs?.setString(_currencyKey, profile.currency);
+      await _prefs?.setInt(_amountDecimalPlacesKey, profile.amountDecimalPlaces);
+    } catch (e) {
+      AppLogger.error('Error syncing preferences with server: $e', e);
     }
+  }
+
+  /// Mirrors a profile's preferences into the store so the UI reflects the
+  /// connected user's configuration immediately, without waiting for a remote
+  /// round-trip (or a background refresh that may be skipped while pending
+  /// profile mutations exist).
+  void _applyProfilePreferences(UserProfile profile) {
+    _store.setPreferences(
+      themeMode: _getThemeModeFromString(profile.themeMode),
+      locale: Locale(profile.language),
+      currency: profile.currency,
+      amountDecimalPlaces: profile.amountDecimalPlaces,
+    );
   }
 
   ThemeMode _getThemeModeFromString(String modeString) {
@@ -156,7 +170,7 @@ class ProfileService implements Listenable {
   }
 
   Future<void> _loadUserProfile() async {
-    final firebaseUser = fb.FirebaseAuth.instance.currentUser;
+    final firebaseUser = _authService.firebaseUser;
     if (firebaseUser == null) return;
 
     final cachedProfile = await _localCache.loadProfile(firebaseUser.uid);
@@ -166,6 +180,7 @@ class ProfileService implements Listenable {
         profile: cachedProfile,
       );
       _store.setUser(localUser);
+      _applyProfilePreferences(cachedProfile);
 
       // A cached profile is sufficient for routing and UI. A forced refresh
       // still happens, but never blocks the caller when local data exists.
@@ -183,7 +198,7 @@ class ProfileService implements Listenable {
   /// propagates failures to the caller so the UI can surface an offline or
   /// network error instead of silently keeping stale data.
   Future<void> refreshFromServer() async {
-    final firebaseUser = fb.FirebaseAuth.instance.currentUser;
+    final firebaseUser = _authService.firebaseUser;
     if (firebaseUser == null) return;
 
     final user = await _authService
@@ -210,7 +225,7 @@ class ProfileService implements Listenable {
   }
 
   Future<void> _refreshProfileFromRemote(String userId) async {
-    if (fb.FirebaseAuth.instance.currentUser?.uid != userId ||
+    if (_authService.firebaseUser?.uid != userId ||
         await _syncQueue.hasPending(type: 'user_profiles', entityId: userId)) {
       return;
     }
@@ -218,7 +233,7 @@ class ProfileService implements Listenable {
       final user = await _authService
           .reloadCurrentUser()
           .timeout(const Duration(seconds: 8));
-      if (user != null && fb.FirebaseAuth.instance.currentUser?.uid == userId) {
+      if (user != null && _authService.firebaseUser?.uid == userId) {
         _store.setUser(user);
         if (user.profile != null) {
           await _localCache.saveProfile(user.id, user.profile!);
