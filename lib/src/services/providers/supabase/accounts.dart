@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/account/account.dart';
 
 import 'package:budgly/src/services/providers/supabase/client.dart';
@@ -10,7 +11,7 @@ class AccountSupabase {
   AccountSupabase({sb.SupabaseClient? client}) : _injected = client;
   Future<List<Account>> listByUserId(String userId) async {
     final response =
-        await _client.from('accounts').select().eq('user_id', userId).timeout(const Duration(seconds: 8));
+        await _client.from('accounts').select().eq('user_id', userId).timeout(AppConstants.networkTimeout);
 
     return (response as List<dynamic>)
         .map((json) => Account.fromJson(json as Map<String, dynamic>))

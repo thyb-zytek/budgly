@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -126,10 +127,10 @@ class ExpenseFirestore {
     final snapshots = await Future.wait([
       oneOffQuery
           .get(GetOptions(source: source))
-          .timeout(const Duration(seconds: 8)),
+          .timeout(AppConstants.networkTimeout),
       recurringQuery
           .get(GetOptions(source: source))
-          .timeout(const Duration(seconds: 8)),
+          .timeout(AppConstants.networkTimeout),
     ]);
 
     final expenses = [
@@ -153,7 +154,7 @@ class ExpenseFirestore {
         .where('accountId', isEqualTo: accountId)
         .orderBy('debitDate', descending: true)
         .get(GetOptions(source: source))
-        .timeout(const Duration(seconds: 8));
+        .timeout(AppConstants.networkTimeout);
     return snapshot.docs
         .map((doc) => Expense.fromMap(doc.id, doc.data()))
         .toList();

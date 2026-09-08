@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
@@ -210,7 +211,7 @@ class ExpensesService extends ChangeNotifier {
           startAfter: startAfter,
           includeRecurring: includeRecurring,
         )
-        .timeout(const Duration(seconds: 8));
+        .timeout(AppConstants.networkTimeout);
     _store.upsertExpensesForAccount(accountId, page.expenses);
     return page;
   }

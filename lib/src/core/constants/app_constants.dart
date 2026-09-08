@@ -26,6 +26,11 @@ class AppConstants {
 
   static const int maxFutureExpenseDays = 365 * 5;
 
+  /// Timeout applied to outbound network calls (Supabase/Firestore reads and
+  /// writes). Centralized here instead of being repeated as a magic
+  /// `Duration(seconds: 8)` literal across every provider/service.
+  static const Duration networkTimeout = Duration(seconds: 8);
+
   static const int maxUploadSizeBytes = 5 * 1024 * 1024; // 5 MB
   static const List<String> allowedUploadExtensions = [
     'jpg',
