@@ -82,7 +82,7 @@ void main() {
     expect(firestore.deleteCalled, isFalse);
   });
 
-  test('deleteSingleOccurrence first shifts debitDate', () async {
+  test('deleteSingleOccurrence first creates a persisted exception', () async {
     final expense = monthly('e1', DateTime(2026, 1, 15));
     final result = await service.deleteSingleOccurrence(
       expense: expense,
@@ -90,19 +90,18 @@ void main() {
     );
     expect(result, isTrue);
     expect(firestore.deleteCalled, isFalse);
+    expect(firestore.lastCreatedNext, isNull);
   });
 
-  test('deleteSingleOccurrence middle creates split', () async {
+  test('deleteSingleOccurrence middle creates an exception without a split', () async {
     final expense = monthly('e1', DateTime(2026, 1, 15));
     final result = await service.deleteSingleOccurrence(
       expense: expense,
       occurrenceDate: DateTime(2026, 2, 15),
     );
     expect(result, isTrue);
-    expect(firestore.lastCreatedNext, isNotNull);
-    expect(firestore.lastUpdatedPrevious, isNotNull);
-    expect(firestore.lastUpdatedPrevious!.endDate, DateTime(2026, 2, 14));
-    expect(firestore.lastCreatedNext!.debitDate, DateTime(2026, 3, 15));
+    expect(firestore.lastCreatedNext, isNull);
+    expect(firestore.lastUpdatedPrevious, isNull);
   });
 
   test('deleteSingleOccurrence non-recurring deletes', () async {
