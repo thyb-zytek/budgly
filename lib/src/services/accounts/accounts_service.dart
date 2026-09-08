@@ -251,18 +251,18 @@ class AccountsService {
         final account = Account.fromJson(operation.payload);
         await _accountSupabase
             .create(account)
-            .timeout(const Duration(seconds: 8));
+            .timeout(AppConstants.networkTimeout);
         await _uploadQueuedPicture(operation, account);
         return;
       case 'update':
         final account = Account.fromJson(operation.payload);
         final updated = await _accountSupabase
             .update(account)
-            .timeout(const Duration(seconds: 8));
+            .timeout(AppConstants.networkTimeout);
         if (updated == null) {
           final recreated = await _accountSupabase
               .create(account)
-              .timeout(const Duration(seconds: 8));
+              .timeout(AppConstants.networkTimeout);
           if (recreated == null) {
             throw StateError('Failed to recreate account');
           }
@@ -272,7 +272,7 @@ class AccountsService {
       case 'delete':
         await _accountSupabase
             .delete(operation.payload['id'] as String)
-            .timeout(const Duration(seconds: 8));
+            .timeout(AppConstants.networkTimeout);
         return;
       default:
         throw StateError(

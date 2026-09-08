@@ -203,7 +203,7 @@ class ProfileService implements Listenable {
 
     final user = await _authService
         .reloadCurrentUser()
-        .timeout(const Duration(seconds: 8));
+        .timeout(AppConstants.networkTimeout);
     if (user == null) return;
 
     _store.setUser(user);
@@ -232,7 +232,7 @@ class ProfileService implements Listenable {
     try {
       final user = await _authService
           .reloadCurrentUser()
-          .timeout(const Duration(seconds: 8));
+          .timeout(AppConstants.networkTimeout);
       if (user != null && _authService.firebaseUser?.uid == userId) {
         _store.setUser(user);
         if (user.profile != null) {
@@ -352,7 +352,7 @@ class ProfileService implements Listenable {
     await _profileSupabase.updateProfile(
       operation.payload['id'] as String,
       payload,
-    ).timeout(const Duration(seconds: 8));
+    ).timeout(AppConstants.networkTimeout);
   }
 
   Future<void> completeOnboarding() async {

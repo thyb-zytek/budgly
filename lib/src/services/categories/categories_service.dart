@@ -167,7 +167,7 @@ class CategoriesService {
       }
       final freshCategories = await _categorySupabase
           .listByAccountId(accountId)
-          .timeout(const Duration(seconds: 8));
+          .timeout(AppConstants.networkTimeout);
       final categoriesWithIcons =
           freshCategories.map(_hydrateCategoryIcon).toList(growable: false);
       _store.setCategoriesForAccount(accountId, categoriesWithIcons);
@@ -264,24 +264,24 @@ class CategoriesService {
   Future<void> _handlePendingSync(PendingSync operation) async {
     switch (operation.operation) {
       case 'create':
-        await _categorySupabase.create(Category.fromJson(operation.payload)).timeout(const Duration(seconds: 8));
+        await _categorySupabase.create(Category.fromJson(operation.payload)).timeout(AppConstants.networkTimeout);
         return;
       case 'update':
         final category = Category.fromJson(operation.payload);
         final updated = await _categorySupabase
             .update(category)
-            .timeout(const Duration(seconds: 8));
+            .timeout(AppConstants.networkTimeout);
         if (updated == null) {
           final recreated = await _categorySupabase
               .create(category)
-              .timeout(const Duration(seconds: 8));
+              .timeout(AppConstants.networkTimeout);
           if (recreated == null) {
             throw StateError('Failed to recreate category');
           }
         }
         return;
       case 'delete':
-        await _categorySupabase.delete(operation.payload['id'] as String).timeout(const Duration(seconds: 8));
+        await _categorySupabase.delete(operation.payload['id'] as String).timeout(AppConstants.networkTimeout);
         return;
       default:
         throw StateError(
