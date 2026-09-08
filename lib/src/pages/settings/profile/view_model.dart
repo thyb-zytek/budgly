@@ -147,6 +147,8 @@ class ProfileViewModel extends BaseViewModel {
       _oldPasswordController.clear();
       _passwordController.clear();
       _confirmPasswordController.clear();
+    } catch (e, stackTrace) {
+      setError(e, stackTrace: stackTrace);
     } finally {
       setLoading(false);
     }
