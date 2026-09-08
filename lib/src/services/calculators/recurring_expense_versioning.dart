@@ -1,5 +1,6 @@
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurring_expense_version.dart';
+import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 
 class RecurringExpenseVersioning {
   const RecurringExpenseVersioning();
@@ -26,6 +27,7 @@ class RecurringExpenseVersioning {
         next: updated.copyWith(
           id: original.id,
           recurrenceAnchorDay: original.recurrenceAnchorDay,
+          occurrenceExceptions: original.occurrenceExceptions,
         ),
       );
     }
@@ -36,6 +38,10 @@ class RecurringExpenseVersioning {
       debitedOccurrences: [
         for (final key in original.debitedOccurrences)
           if (key.compareTo(effectiveKey) < 0) key,
+      ],
+      occurrenceExceptions: [
+        for (final exception in original.occurrenceExceptions)
+          if (_exceptionDate(exception).isBefore(effectiveDay)) exception,
       ],
     );
 
@@ -55,6 +61,10 @@ class RecurringExpenseVersioning {
                 if (key.compareTo(effectiveKey) >= 0) key,
             ]
           : const [],
+      occurrenceExceptions: [
+        for (final exception in original.occurrenceExceptions)
+          if (!_exceptionDate(exception).isBefore(effectiveDay)) exception,
+      ],
     );
 
     return RecurringExpenseVersion(previous: previous, next: next);
@@ -63,3 +73,7 @@ class RecurringExpenseVersioning {
   DateTime _calendarDay(DateTime value) =>
       DateTime(value.year, value.month, value.day);
 }
+
+
+DateTime _exceptionDate(ExpenseOccurrenceException exception) =>
+    DateTime.parse(exception.key.substring(exception.key.lastIndexOf('@') + 1));
