@@ -63,6 +63,7 @@ class _ProfileTabState extends State<ProfileTab> {
             padding: const EdgeInsets.all(BudglySpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: BudglySpacing.lg,
               children: [
                 Expanded(
                   child: SingleChildScrollView(
@@ -85,20 +86,17 @@ class _ProfileTabState extends State<ProfileTab> {
                         ),
                         if (!user.isGoogleUser)
                           FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: theme.colorScheme.tertiary,
-                              foregroundColor: theme.colorScheme.onTertiary,
-                            ),
+                            style: ButtonType.tertiary.filledStyle(theme),
                             onPressed: _displayChangePasswordDialog,
                             iconAlignment: IconAlignment.start,
                             icon: Icon(
                               Icons.lock,
-                              color: theme.colorScheme.onTertiary,
+                              color: ButtonType.tertiary.colors(theme).foreground,
                             ),
                             label: Text(
                               tr.changePassword,
                               style: theme.textTheme.labelLarge?.copyWith(
-                                color: theme.colorScheme.onTertiary,
+                                color: ButtonType.tertiary.colors(theme).foreground,
                               ),
                             ),
                           ),
@@ -106,7 +104,6 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ),
                 ),
-                const SizedBox(height: BudglySpacing.lg),
                 FilledButton.icon(
                   style: ButtonType.error.filledStyle(theme),
                   onPressed: _viewModel.signOut,

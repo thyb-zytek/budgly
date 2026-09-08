@@ -56,7 +56,6 @@ Future<bool> showAvatarCustomizationSheet(
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(),
                       onPressed: () => pickImage().then((path) {
                         if (path == null) return;
                         setModalState(() {
@@ -65,14 +64,8 @@ Future<bool> showAvatarCustomizationSheet(
                         });
                       }),
                       iconAlignment: IconAlignment.start,
-                      icon: const Icon(
-                        Icons.upload_rounded,
-                        
-                      ),
-                      label: Text(
-                        tr.pickImage,
-                        
-                      ),
+                      icon: const Icon(Icons.upload_rounded),
+                      label: Text(tr.pickImage),
                     ),
                   ),
                   ColorWheel(

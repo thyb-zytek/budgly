@@ -117,46 +117,53 @@ class _AccountFormState extends State<AccountForm>
       listenable: widget.viewModel,
       builder: (context, child) {
         if (widget.compact) {
-          return Row(
-            spacing: 8,
-            children: [
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable:
-                    widget.viewModel.editingData.nameController,
-                builder: (context, value, _) {
-                  final initial =
-                      value.text.isNotEmpty ? value.text[0] : 'A';
-                  return PulseHint(
-                    pulseAnimation: pulseAnimation,
-                    hintAnimation: hintAnimation,
-                    child: Avatar(
-                      initial: initial.toUpperCase(),
-                      backgroundColor: _tempColor,
-                      picture: _tempPicture,
-                      isLocalPicture: _isTempLocalPicture,
-                      size: 52,
-                      onTap: widget.enabled
-                          ? () => _openAvatarPicker(
-                              context,
-                              initial.toUpperCase(),
-                            )
-                          : null,
-                      showEditBadge: widget.enabled,
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return Row(
+                spacing: 8,
+                children: [
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable:
+                        widget.viewModel.editingData.nameController,
+                    builder: (context, value, _) {
+                      final initial =
+                          value.text.isNotEmpty ? value.text[0] : 'A';
+                      return PulseHint(
+                        pulseAnimation: pulseAnimation,
+                        hintAnimation: hintAnimation,
+                        child: Avatar(
+                          initial: initial.toUpperCase(),
+                          backgroundColor: _tempColor,
+                          picture: _tempPicture,
+                          isLocalPicture: _isTempLocalPicture,
+                          size: 52,
+                          onTap: widget.enabled
+                              ? () => _openAvatarPicker(
+                                  context,
+                                  initial.toUpperCase(),
+                                )
+                              : null,
+                          showEditBadge: widget.enabled,
+                        ),
+                      );
+                    },
+                  ),
+                  Expanded(
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      child: TextInput(
+                        focusNode: _nameFocusNode,
+                        controller: widget.viewModel.editingData.nameController,
+                        labelText: tr.accountName,
+                        hotValidating: (v) =>
+                            v == null || v.trim().isEmpty ? tr.nameRequired : null,
+                        textInputAction: TextInputAction.done,
+                      ),
                     ),
-                  );
-                },
-              ),
-              Expanded(
-                child: TextInput(
-                  focusNode: _nameFocusNode,
-                  controller: widget.viewModel.editingData.nameController,
-                  labelText: tr.accountName,
-                  hotValidating: (v) =>
-                      v == null || v.trim().isEmpty ? tr.nameRequired : null,
-                  textInputAction: TextInputAction.done,
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           );
         }
 

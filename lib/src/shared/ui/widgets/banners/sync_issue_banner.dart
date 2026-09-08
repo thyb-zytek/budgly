@@ -106,6 +106,7 @@ class _SyncIssueBannerState extends State<SyncIssueBanner> {
               vertical: BudglySpacing.sm,
             ),
             child: Row(
+              spacing: BudglySpacing.sm,
               children: [
                 if (isLoading)
                   SizedBox(
@@ -124,7 +125,6 @@ class _SyncIssueBannerState extends State<SyncIssueBanner> {
                     color: foreground,
                     size: 20,
                   ),
-                const SizedBox(width: BudglySpacing.sm),
                 Expanded(
                   child: Text(
                     _showSuccess

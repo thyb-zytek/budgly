@@ -1,5 +1,4 @@
-import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
@@ -38,7 +37,6 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Column(
@@ -98,30 +96,11 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(BudglySpacing.xl, 0, BudglySpacing.xl, BudglySpacing.sm),
-          child: Row(
-            spacing: 16,
-            children: [
-              Expanded(
-                child: FilledButton(
-                  style: ButtonType.error.filledStyle(theme, dense: true),
-                  onPressed: widget.onCancel,
-                  child: Text(
-                    tr.cancel,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-              padding: BudglyButtonDimensions.densePadding,
-            ),
-                  onPressed: widget.onValidate,
-                  child: Text(
-                    tr.validate,
-                  ),
-                ),
-              ),
-            ],
+          child: FormActions(
+            destructiveCancel: true,
+            dense: true,
+            onCancel: widget.onCancel,
+            onSubmit: widget.onValidate,
           ),
         ),
       ],
