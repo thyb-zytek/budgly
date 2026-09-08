@@ -18,7 +18,7 @@ class WelcomeStep extends StatelessWidget {
         child: SizedBox(
           width: 280,
           height: 280,
-          child: Image.asset('assets/images/logo.webp'),
+          child: Image.asset('assets/images/logo.png'),
         ),
       ),
       title: tr.tutorialWelcome,
@@ -26,7 +26,7 @@ class WelcomeStep extends StatelessWidget {
       primaryAction: SizedBox(
         width: double.infinity,
         child: FilledButton(
-                    onPressed: onNext,
+          onPressed: onNext,
           child: Text(
             tr.tutorialGetStarted,
           ),
