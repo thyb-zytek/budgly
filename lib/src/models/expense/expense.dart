@@ -1,6 +1,7 @@
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
+import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Expense {
@@ -16,6 +17,7 @@ class Expense {
   final bool isDebited;
 
   final List<String> debitedOccurrences;
+  final List<ExpenseOccurrenceException> occurrenceExceptions;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final Account? account;
@@ -33,6 +35,7 @@ class Expense {
     int? recurrenceAnchorDay,
     this.isDebited = false,
     this.debitedOccurrences = const [],
+    this.occurrenceExceptions = const [],
     this.createdAt,
     this.updatedAt,
     this.account,
@@ -47,9 +50,18 @@ class Expense {
     return DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
   }
 
+  ExpenseOccurrenceException? exceptionAt(DateTime date) {
+    final key = '${id ?? ''}@${isoDate(date)}';
+    for (final exception in occurrenceExceptions) {
+      if (exception.key == key) return exception;
+    }
+    return null;
+  }
+
   bool isDebitedAt(DateTime date) {
     if (!isRecurring) return isDebited;
-    return debitedOccurrences.contains(isoDate(date));
+    final exception = exceptionAt(date);
+    return exception?.isDebited ?? debitedOccurrences.contains(isoDate(date));
   }
 
   static String isoDate(DateTime date) {
@@ -72,6 +84,12 @@ class Expense {
       debitedOccurrences: rawDebited is List
           ? rawDebited.cast<String>()
           : const [],
+      occurrenceExceptions: (map['occurrenceExceptions'] as List?)
+              ?.map((item) => ExpenseOccurrenceException.fromJson(
+                    Map<String, dynamic>.from(item as Map),
+                  ))
+              .toList() ??
+          const [],
       recurrence: RecurrenceType.fromString(map['recurrence'] as String?),
       recurrenceAnchorDay: (map['recurrenceAnchorDay'] as num?)?.toInt(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
@@ -89,6 +107,7 @@ class Expense {
       'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
       'isDebited': isDebited,
       'debitedOccurrences': debitedOccurrences,
+      'occurrenceExceptions': occurrenceExceptions.map((e) => e.toJson()).toList(),
       'recurrence': recurrence.name,
       'recurrenceAnchorDay': recurrenceAnchorDay,
     };
@@ -110,6 +129,7 @@ class Expense {
         'recurrenceAnchorDay': recurrenceAnchorDay,
         'isDebited': isDebited,
         'debitedOccurrences': debitedOccurrences,
+        'occurrenceExceptions': occurrenceExceptions.map((e) => e.toJson()).toList(),
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),
       };
@@ -129,6 +149,12 @@ class Expense {
         isDebited: json['isDebited'] as bool? ?? false,
         debitedOccurrences: (json['debitedOccurrences'] as List?)
                 ?.map((value) => value.toString())
+                .toList() ??
+            const [],
+        occurrenceExceptions: (json['occurrenceExceptions'] as List?)
+                ?.map((item) => ExpenseOccurrenceException.fromJson(
+                      Map<String, dynamic>.from(item as Map),
+                    ))
                 .toList() ??
             const [],
         createdAt: json['createdAt'] == null
@@ -167,6 +193,7 @@ class Expense {
     int? recurrenceAnchorDay,
     bool? isDebited,
     List<String>? debitedOccurrences,
+    List<ExpenseOccurrenceException>? occurrenceExceptions,
     DateTime? createdAt,
     DateTime? updatedAt,
     Account? account,
@@ -184,6 +211,7 @@ class Expense {
       recurrenceAnchorDay: recurrenceAnchorDay ?? this.recurrenceAnchorDay,
       isDebited: isDebited ?? this.isDebited,
       debitedOccurrences: debitedOccurrences ?? this.debitedOccurrences,
+      occurrenceExceptions: occurrenceExceptions ?? this.occurrenceExceptions,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       account: account ?? this.account,
