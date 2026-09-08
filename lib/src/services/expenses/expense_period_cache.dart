@@ -111,6 +111,21 @@ class ExpensePeriodCache {
     _inFlight.removeWhere((key, _) => key.startsWith('$accountId|'));
   }
 
+  /// Clears every cached period of the account except [keepKey].
+  ///
+  /// Used when a recurring series is created: the debit-date period already
+  /// holds the optimistic expense, but the series projects into every other
+  /// covered period, whose caches are now stale and must be reloaded on the
+  /// next visit instead of serving a stale snapshot.
+  void removeAccountExcept(String accountId, String keepKey) {
+    _cache.removeWhere(
+      (key, _) => key.startsWith('$accountId|') && key != keepKey,
+    );
+    _inFlight.removeWhere(
+      (key, _) => key.startsWith('$accountId|') && key != keepKey,
+    );
+  }
+
   void optimisticUpdateExpense(Expense oldExpense, Expense newExpense) {
     final oldIsRecurring = oldExpense.isRecurring;
     final newIsRecurring = newExpense.isRecurring;
