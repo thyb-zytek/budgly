@@ -20,7 +20,9 @@ extension SnackBarTypeStyles on SnackBarType {
     final theme = Theme.of(context);
     return switch (this) {
       SnackBarType.error => theme.colorScheme.onErrorContainer,
-      SnackBarType.success => theme.colorScheme.onPrimary,
+      SnackBarType.success => theme.brightness == Brightness.light
+          ? MaterialTheme.success.light.onColor
+          : MaterialTheme.success.dark.onColor,
       SnackBarType.info => theme.colorScheme.onTertiaryContainer,
       SnackBarType.pending => theme.colorScheme.onSecondary,
     };
