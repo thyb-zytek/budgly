@@ -42,6 +42,11 @@ class AuthService {
   User? get currentUser =>
       _auth.currentUser != null ? User.fromFirebaseUser(_auth.currentUser!) : null;
 
+  /// The raw Firebase auth session backing this service. Useful for services
+  /// that need the user id without going through the domain mapping, and for
+  /// tests injecting a [MockFirebaseAuth].
+  fb.User? get firebaseUser => _auth.currentUser;
+
   Future<User> changePassword(String oldPassword, String newPassword) async {
     try {
       final fb.User? firebaseUser = _auth.currentUser;
