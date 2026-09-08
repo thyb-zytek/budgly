@@ -124,6 +124,17 @@ create/update/delete/debit
 
 Le retry utilise une passe `forceRetry` explicite afin qu'une action utilisateur ne soit pas bloquée par le backoff exponentiel d'arrière-plan.
 
+### Bannière et report des dépenses non débitées
+
+`UndebitedExpensesService` est couvert par une suite dédiée (`test/services/expenses/undebited_expenses_service_test.dart`) qui vérifie :
+
+1. le déclencheur (affichage dès qu'une dépense antérieure non débitée existe, masquage après fermeture persistée dans `LocalCache`, cycle de rappel) ;
+2. la récupération (toutes les périodes précédentes, exclusion des échéances débitées et des dépenses futures, tri par date croissante) ;
+3. chaque action unitaire et groupée (reporter sans débit, débiter sur la période d'origine, débiter sur la période courante) ;
+4. le rechargement quand `ExpensesService` notifie un changement.
+
+La bannière et sa bottom sheet sont également testées en widgets (`test/widget/undebited_expenses_banner_test.dart`) : rendu du titre/sous-titre, total en tête, regroupement par période d'origine, dates complètes, tri croissant et déclenchement des trois actions.
+
 ### Contrats garantis
 
 1. Après une erreur réseau, l'état local reste affiché.

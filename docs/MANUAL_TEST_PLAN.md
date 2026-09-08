@@ -12,10 +12,11 @@ L'automatisation couvre les invariants métier, la sérialisation, les mutations
 | 4 | Login Google réel | authentification et création/récupération du profil | P1 |
 | 5 | Création/modification/suppression d'une dépense avec réseau réel | données persistées après relance | P0 |
 | 6 | Coupure réseau pendant create/update/delete puis reconnexion | UI reste cohérente, synchronisation finale sans doublon | P0 |
-| 7 | Modifier une occurrence récurrente passée/milieu/future | les occurrences avant la date effective restent inchangées | P0 |
-| 8 | Changer devise + nombre de décimales + langue | formats affichés partout, après redémarrage | P1 |
-| 9 | Photo/avatar : prise/sélection, refus permission, suppression | fallback visuel et permissions OS | P1 |
-| 10 | Parcours long sur petit écran + tablette | pas d'overflow, menus/dialogues accessibles, swipe utilisable | P1 |
+| 7 | Modifier une occurrence récurrente passée/milieu/future | choisir « uniquement » ou « et les suivantes », vérifier que l'historique reste inchangé | P0 |
+| 8 | Dépenses non débitées des mois précédents au démarrage | bannière d'avertissement visible dès qu'il reste des dépenses antérieures non débitées, total en tête de la bottom sheet, regroupement par période d'origine, actions reporter / débiter sur origine / débiter maintenant cohérentes après traitement | P0 |
+| 9 | Changer devise + nombre de décimales + langue | formats affichés partout, après redémarrage | P1 |
+| 10 | Photo/avatar : prise/sélection, refus permission, suppression | fallback visuel et permissions OS | P1 |
+| 11 | Parcours long sur petit écran + tablette | pas d'overflow, menus/dialogues accessibles, swipe utilisable | P1 |
 
 ## Scénarios à ne pas refaire manuellement
 

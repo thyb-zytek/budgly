@@ -74,6 +74,9 @@ PostHog est réservé aux événements produit explicites. Le tracking automatiq
 | `expense_page_loaded` | `source` (`"pagination"`) |
 | `expense_toggled_debited` | — |
 | `recurring_expense_version_changed` | — |
+| `recurring_expense_occurrence_modified` | — |
+| `expense_single_occurrence_deleted` | — |
+| `expense_future_occurrences_deleted` | — |
 | `expense_single_occurrence_deleted` | — |
 | `expense_future_occurrences_deleted` | — |
 
