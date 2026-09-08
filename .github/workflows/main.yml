@@ -96,6 +96,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create .env file
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > assets/.env
+          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
+          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
+          echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
+
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
 
