@@ -330,25 +330,79 @@
   "semanticColorPicker": "Color picker",
   "semanticSwipeTabs": "Swipeable tab navigation",
   "modifyRecurringExpense": "Modify recurring expense: {expenseName}",
-  "@modifyRecurringExpense": {"placeholders": {"expenseName": {"type": "String"}}},
+  "@modifyRecurringExpense": {
+    "placeholders": {
+      "expenseName": {
+        "type": "String"
+      }
+    }
+  },
   "modifyRecurringExpenseMessage": "Do you want to modify only this occurrence or this and all following occurrences from {date}?",
-  "@modifyRecurringExpenseMessage": {"placeholders": {"date": {"type": "String"}}},
+  "@modifyRecurringExpenseMessage": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "modifyThisOccurrence": "This occurrence only",
   "modifyOccurrenceAndFollowing": "This occurrence and following ones",
   "occurrenceCarriedOverBadge": "Carried over",
   "undebitedCount": "{count, plural, =1{1 undebited expense} other{{count} undebited expenses}}",
-  "@undebitedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@undebitedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "undebitedSheetTitle": "Expenses to process",
   "undebitedPendingCount": "{count} expense(s) pending",
-  "@undebitedPendingCount": {"placeholders": {"count": {"type": "int"}}},
+  "@undebitedPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "debitOnOriginalPeriod": "Debit on {period}",
-  "@debitOnOriginalPeriod": {"placeholders": {"period": {"type": "String"}}},
+  "@debitOnOriginalPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "carryToCurrentPeriod": "Move to {period}",
-  "@carryToCurrentPeriod": {"placeholders": {"period": {"type": "String"}}},
+  "@carryToCurrentPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "debitOnCurrentPeriod": "Debit in {period}",
-  "@debitOnCurrentPeriod": {"placeholders": {"period": {"type": "String"}}},
+  "@debitOnCurrentPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
   "ignore": "Ignore",
   "undebitedBannerDismiss": "Close",
   "undebitedBannerHint": "These expenses come from previous months and have not been debited yet.",
-  "manageUndebitedExpenses": "Manage expenses"
+  "manageUndebitedExpenses": "Manage expenses",
+  "threshold": "Threshold",
+  "monthlyThreshold": "Monthly threshold",
+  "setThreshold": "Set threshold",
+  "editThreshold": "Edit threshold",
+  "removeThreshold": "Remove threshold",
+  "thresholdProgressRemaining": "Remaining: {amount}",
+  "thresholdReached": "Threshold reached",
+  "thresholdExceeded": "Exceeded by {amount}",
+  "thresholdWarningHint": "You are approaching your threshold",
+  "thresholdEnabledHint": "A monthly spending threshold is enabled",
+  "thresholdOptionalHint": "Optional — leave empty to disable",
+  "thresholdNotSet": "No threshold"
 }
