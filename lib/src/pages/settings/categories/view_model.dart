@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/errors/app_user_message.dart';
 import 'package:budgly/src/core/logging/logger.dart';
+import 'package:budgly/src/core/extensions/amount.dart';
 import 'package:budgly/src/core/view_models/base_view_model.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
@@ -20,12 +21,14 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
   final List<Category> _localCategories = [];
   Category? _editingCategory;
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _monthlyThresholdController = TextEditingController();
 
   late final CategoryEditingData _editingData = CategoryEditingData(
     nameController: _nameController,
     color: Colors.primaries[Random().nextInt(Colors.primaries.length)],
     icon: AppConstants.defaultCategoryIcon,
     availableIcons: [],
+    monthlyThresholdController: _monthlyThresholdController,
   );
 
   CategoriesViewModel({
@@ -70,6 +73,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
   set editingCategory(Category? category) {
     _editingCategory = category;
     _nameController.text = category?.name ?? '';
+    _monthlyThresholdController.text = category?.monthlyThreshold?.toString() ?? '';
     _editingData.color =
         category?.color ??
         Colors.primaries[Random().nextInt(Colors.primaries.length)];
@@ -85,6 +89,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
   void cancelEdit() {
     _editingCategory = null;
     _nameController.clear();
+    _monthlyThresholdController.clear();
     if (!isDisposed) notifyListeners();
   }
 
@@ -92,6 +97,7 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
   void dispose() {
     _categoriesService.removeListener(_onServiceChanged);
     _nameController.dispose();
+    _monthlyThresholdController.dispose();
     super.dispose();
   }
 
@@ -139,7 +145,8 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
       );
 
       _editingData.color = category.color!;
-      _nameController.text = '';
+      _nameController.clear();
+      _monthlyThresholdController.clear();
       _editingData.icon = category.icon!;
 
       _localCategories.add(category);
@@ -180,12 +187,16 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
         name: _nameController.text,
         color: _editingData.color,
         icon: _editingData.icon,
+        monthlyThreshold: parseAmount(_monthlyThresholdController.text),
+        clearMonthlyThreshold: _monthlyThresholdController.text.trim().isEmpty,
       );
 
       await _categoriesService.createCategory(newCategory);
 
       _localCategories.removeWhere((c) => identical(c, category));
       _editingCategory = null;
+      _nameController.clear();
+      _monthlyThresholdController.clear();
       setSuccessMessage(const AppUserMessage.success(AppMessageKey.categorySaved));
     } catch (e, stackTrace) {
       setError(e, stackTrace: stackTrace);
@@ -203,10 +214,14 @@ class CategoriesViewModel extends BaseViewModel implements CategoryFormViewModel
         name: _nameController.text,
         color: _editingData.color,
         icon: _editingData.icon,
+        monthlyThreshold: parseAmount(_monthlyThresholdController.text),
+        clearMonthlyThreshold: _monthlyThresholdController.text.trim().isEmpty,
       );
 
       await _categoriesService.updateCategory(updatedCategoryData);
       _editingCategory = null;
+      _nameController.clear();
+      _monthlyThresholdController.clear();
       setSuccessMessage(const AppUserMessage.success(AppMessageKey.categorySaved));
     } catch (e, stackTrace) {
       setError(e, stackTrace: stackTrace);

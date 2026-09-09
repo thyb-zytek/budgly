@@ -6,11 +6,13 @@ class CategoryEditingData {
   Color color;
   CategoryIcon icon;
   List<CategoryIcon> availableIcons;
+  TextEditingController? monthlyThresholdController;
 
   CategoryEditingData({
     required this.nameController,
     required this.color,
     required this.icon,
     required this.availableIcons,
+    this.monthlyThresholdController,
   });
 }

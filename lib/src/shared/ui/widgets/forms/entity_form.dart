@@ -14,6 +14,7 @@ class EntityForm extends StatelessWidget {
   final VoidCallback onCancel;
   final bool denseButtons;
   final FocusNode? focusNode;
+  final List<Widget>? extraFields;
 
   const EntityForm({
     super.key,
@@ -27,6 +28,7 @@ class EntityForm extends StatelessWidget {
     required this.onCancel,
     this.denseButtons = true,
     this.focusNode,
+    this.extraFields,
   });
 
   void _onSubmit() {
@@ -61,6 +63,7 @@ class EntityForm extends StatelessWidget {
               ),
             ],
           ),
+          ...?extraFields,
           FormActions(
             destructiveCancel: true,
             dense: denseButtons,
