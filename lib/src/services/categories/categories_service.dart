@@ -108,6 +108,7 @@ class CategoriesService {
       icon: fallback,
       iconCode: category.iconCode,
       accountId: category.accountId,
+      monthlyThreshold: category.monthlyThreshold,
     );
   }
 
