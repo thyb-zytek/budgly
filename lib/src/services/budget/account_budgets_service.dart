@@ -209,6 +209,12 @@ class AccountBudgetsService {
     }
   }
 
+  /// Clears only the derived inherited-revenue lookup cache without removing
+  /// already loaded monthly budgets.
+  void invalidateMostRecentRevenueCache() {
+    _mostRecentRevenueCache.clear();
+  }
+
   void invalidateCache() {
     _inFlight.clear();
     _store.clearAll();

@@ -248,18 +248,49 @@ class OverviewViewModel extends BaseViewModel {
   Future<void> refreshAll() async {
     AnalyticsService.instance.track('overview_refresh');
     try {
+      // Pull-to-refresh is an explicit user action: do not reuse stale memory,
+      // Firestore cache or Supabase data for the sources rendered by Overview.
       await _accountsService.loadAccounts(forceRefresh: true);
-      final accountId = _uiState.account?.id;
 
-      if (accountId != null) {
-        await _repository.refresh(_uiState.account!, _uiState.selectedPeriod);
-        _inheritedRevenueByAccount
-            .removeWhere((key, _) => key.startsWith('${accountId}_'));
-        await _ensureInheritedRevenueLoaded();
+      // Accounts may have changed remotely (name, balance metadata, deletion,
+      // etc.). Reconcile the selected account before refreshing dependent data.
+      _syncSelectedAccount();
+      final selectedAccount = _uiState.account;
+      if (selectedAccount == null) {
+        _expenses = const [];
+        _expensesKey = null;
+        _periodExpensesLoad.invalidate();
+        _invalidateDerivedData();
+        _lastRevenueEvaluationKey = null;
+        _notifyAfterFrame();
+        return;
       }
 
+      final refreshedExpenses = await _repository.refresh(
+        selectedAccount,
+        _uiState.selectedPeriod,
+      );
+
+      // Repository refresh used to update service caches only. Keep the ViewModel
+      // snapshot in sync as well so the visible screen changes immediately.
+      _expenses = refreshedExpenses;
+      _expensesKey = _currentPeriodCacheKey;
+      _periodExpensesLoad.invalidate();
       _invalidateDerivedData();
       _lastRevenueEvaluationKey = null;
+
+      _accountBudgetsService.invalidateMostRecentRevenueCache();
+      _inheritedRevenueByAccount.removeWhere(
+        (key, _) => key.startsWith('${selectedAccount.id}_'),
+      );
+      await Future.wait([
+        _ensureInheritedRevenueLoaded(),
+        // The banner has its own derived state and must be recomputed after
+        // Firestore data has been refreshed. Its target remains the real month.
+        _refreshUndebitedExpenses(forceRefresh: true),
+      ]);
+      _maybeShowRevenueEditor();
+      _notifyAfterFrame();
     } catch (e, stackTrace) {
       setError(e, stackTrace: stackTrace);
     }
@@ -309,33 +340,27 @@ class OverviewViewModel extends BaseViewModel {
   );
 
   set selectedPeriod(Period value) {
-    final previous = _uiState.selectedPeriod;
-    if (previous == value) return;
-    final actualCurrent = Period.current();
-    final isRealPeriodTransition =
-        previous == actualCurrent.previous && value == actualCurrent;
+    if (_uiState.selectedPeriod == value) return;
     _uiState = _uiState.copyWith(selectedPeriod: value);
     _invalidateDerivedData();
     if (!isDisposed) notifyListeners();
     AnalyticsService.instance.track('overview_period_changed');
     _ensureRevenueLoaded();
     _ensureInheritedRevenueLoaded();
-    unawaited(_refreshUndebitedExpenses(
-      showImmediately: isRealPeriodTransition,
-    ));
+    // Pending expenses are always evaluated against the real current month,
+    // never against the month currently being browsed in the Overview.
+    unawaited(_refreshUndebitedExpenses());
     _loadSelectedPeriodExpenses();
     _maybeShowRevenueEditor();
   }
 
-  Future<void> _refreshUndebitedExpenses({
-    bool showImmediately = false,
-  }) async {
+  Future<void> _refreshUndebitedExpenses({bool forceRefresh = false}) async {
     final accountId = _uiState.account?.id;
     if (accountId == null) return;
     await _undebitedExpensesService.refresh(
       accountId: accountId,
-      current: _uiState.selectedPeriod,
-      showImmediately: showImmediately,
+      current: Period.current(),
+      forceRefresh: forceRefresh,
     );
   }
 
