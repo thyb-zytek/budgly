@@ -30,6 +30,7 @@ class CategorySelector extends StatelessWidget {
       itemBuilder: (context, category) => CategoryView(
         category: category,
         color: Colors.transparent,
+        showThreshold: false,
       ),
     );
   }
