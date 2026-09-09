@@ -5,6 +5,7 @@ import 'package:budgly/src/shared/domain/view_models/category_form_view_model.da
 import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
+import 'package:budgly/src/core/theme/input_styles.dart';
 import 'package:budgly/src/shared/ui/widgets/forms/entity_form.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
@@ -164,6 +165,15 @@ class _CategoryFormState extends State<CategoryForm>
             ),
           ),
           nameController: widget.viewModel.categoryEditingData.nameController,
+          extraFields: [
+            if (widget.viewModel.categoryEditingData.monthlyThresholdController != null)
+              TextInput(
+                controller: widget.viewModel.categoryEditingData.monthlyThresholdController!,
+                labelText: tr.monthlyThreshold,
+                hintText: tr.thresholdOptionalHint,
+                type: InputType.currency,
+              ),
+          ],
           labelText: tr.categoryName,
           validator: (v) =>
               v == null || v.trim().isEmpty ? tr.nameRequired : null,
