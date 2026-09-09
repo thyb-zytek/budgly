@@ -3,6 +3,8 @@ import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/status_chip.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_view.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_threshold_bar.dart';
+import 'package:budgly/src/services/calculators/category_threshold_calculator.dart';
 import 'package:flutter/material.dart';
 
 class CategoryExpenses extends StatelessWidget {
@@ -36,6 +38,7 @@ class CategoryExpenses extends StatelessWidget {
     final tr = AppLocalizations.of(context)!;
     final category = summary.category;
     final hasPending = summary.undebitedCount > 0;
+    final threshold = const CategoryThresholdCalculator().calculate(total: summary.total, threshold: category.monthlyThreshold);
 
     return InkWell(
       onTap: onTap,
@@ -66,6 +69,7 @@ class CategoryExpenses extends StatelessWidget {
                 ),
               ],
             ),
+            if (threshold.isEnabled) CategoryThresholdBar(progress: threshold, currencyCode: currencyCode, localeName: localeName, decimalPlaces: decimalPlaces),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
