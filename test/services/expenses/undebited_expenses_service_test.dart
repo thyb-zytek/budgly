@@ -265,6 +265,31 @@ void main() {
       expenses.dispose();
     });
 
+    test('uses the reporting current month as the cutoff, independent of a later Overview month', () async {
+      final expenses = FakeUndebitedExpensesService()
+        ..accountExpenses = [
+          expense(name: 'August pending', debitDate: DateTime(2026, 8, 15)),
+          expense(name: 'September pending', debitDate: DateTime(2026, 9, 15)),
+          expense(name: 'October pending', debitDate: DateTime(2026, 10, 15)),
+        ];
+      final service = UndebitedExpensesService(expensesService: expenses);
+
+      // The Overview may be browsing November, but the banner's reporting
+      // target remains the real current month: September 2026.
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        showImmediately: true,
+      );
+
+      expect(service.currentPeriod, const Period(year: 2026, month: 9));
+      expect(service.occurrences.map((o) => o.name), ['August pending']);
+      expect(service.shouldShow, isTrue);
+
+      service.dispose();
+      expenses.dispose();
+    });
+
     test('ignores expenses that start after the current period', () async {
       final expenses = FakeUndebitedExpensesService()
         ..accountExpenses = [

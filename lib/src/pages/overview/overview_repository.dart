@@ -38,20 +38,23 @@ class OverviewRepository {
     return expensesFuture;
   }
 
-  Future<void> refresh(Account account, Period period) async {
+  /// Forces a remote refresh of every Overview data source for [account] and
+  /// returns the fresh expenses for the currently displayed period.
+  Future<List<Expense>> refresh(Account account, Period period) async {
     final accountId = account.id;
-    if (accountId == null) return;
+    if (accountId == null) return const [];
 
+    final expensesFuture = expensesService.listExpensesForPeriod(
+      accountId,
+      period,
+      forceRefresh: true,
+    );
     await Future.wait([
       categoriesService.listCategoriesByAccount(
         accountId,
         forceRefresh: true,
       ),
-      expensesService.listExpensesForPeriod(
-        accountId,
-        period,
-        forceRefresh: true,
-      ),
+      expensesFuture,
       accountBudgetsService.loadRevenue(
         accountId,
         period.year,
@@ -59,6 +62,7 @@ class OverviewRepository {
         forceRefresh: true,
       ),
     ]);
+    return expensesFuture;
   }
 
   Future<List<Expense>> loadPeriodExpenses(

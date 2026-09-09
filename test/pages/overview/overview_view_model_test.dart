@@ -88,7 +88,7 @@ class FakeOverviewBudgetService extends AccountBudgetsService {
 }
 
 class FakeOverviewRepository extends OverviewRepository {
-  final List<Expense> initialExpenses;
+  List<Expense> initialExpenses;
   final List<String> calls = [];
   bool failRefresh = false;
   double? inheritedRevenue;
@@ -108,9 +108,10 @@ class FakeOverviewRepository extends OverviewRepository {
   }
 
   @override
-  Future<void> refresh(Account account, Period period) async {
+  Future<List<Expense>> refresh(Account account, Period period) async {
     calls.add('refresh:${account.id}:$period');
     if (failRefresh) throw StateError('offline');
+    return initialExpenses;
   }
 
   @override
@@ -734,6 +735,61 @@ void main() {
     expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
   });
 
+  test('browsing a future Overview period keeps undebited actions targeted to the real current month',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final previous = period.previous;
+    final undebited = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(previous.year, previous.month, 20),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(undebited);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(vm.undebitedExpensesService.count, 1);
+
+    vm.selectedPeriod = period.addMonths(2);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    // Regression: browsing a future month must not redefine the reporting
+    // month or pull current/future occurrences into the banner.
+    expect(vm.selectedPeriod, period.addMonths(2));
+    expect(vm.undebitedExpensesService.currentPeriod, period);
+    expect(vm.undebitedExpensesService.count, 1);
+    expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
+
+    await vm.undebitedExpensesService
+        .carryOccurrenceToCurrentPeriod(vm.undebitedExpensesService.occurrences.single);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    final moved = await expensesService.listExpensesForAccount('a1');
+    final movedExpense = moved.singleWhere((expense) => expense.id == 'e1');
+    expect(movedExpense.debitDate, period.startOfMonth);
+  });
+
   test(
       'cold start re-arms the banner when it was dismissed in a previous month',
       () async {
@@ -1085,6 +1141,27 @@ void main() {
     await vm.loadInitialData();
 
     expect(vm.hasError, isTrue);
+  });
+
+  test('refreshAll replaces the visible expenses with fresh remote data', () async {
+    final account = Fixtures.account(id: 'a1');
+    final stale = Fixtures.expense(id: 'stale', accountId: 'a1', categoryId: 'c1');
+    final fresh = Fixtures.expense(id: 'fresh', accountId: 'a1', categoryId: 'c1');
+    final repo = FakeOverviewRepository(initialExpenses: [stale]);
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: FakeOverviewCategoriesService(),
+      expensesService: FakeOverviewExpensesService(),
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: repo,
+    );
+    addTearDown(vm.dispose);
+    await vm.loadInitialData();
+
+    repo.initialExpenses = [fresh];
+    await vm.refreshAll();
+
+    expect(vm.expenses.single.id, 'fresh');
   });
 
   test('refreshAll succeeds and reloads inherited revenue when online',

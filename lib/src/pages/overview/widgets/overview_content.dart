@@ -40,6 +40,7 @@ class OverviewContent extends StatelessWidget {
       child: RefreshIndicator(
         onRefresh: onRefresh,
         child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             ViewModelSelector<OverviewViewModel, Period>(
               model: viewModel,

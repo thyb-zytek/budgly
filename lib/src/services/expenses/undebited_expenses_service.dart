@@ -9,9 +9,12 @@ import 'package:budgly/src/services/calculators/expense_occurrence_calculator.da
 import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:budgly/src/services/offline/local_cache.dart';
 
-/// Coordinates detection and user decisions for expenses left undebited when
-/// moving from one month to the next. It is deliberately presentation-agnostic
-/// so the Overview only renders its state and delegates mutations here.
+/// Coordinates detection and user decisions for expenses left undebited before
+/// the real current month. It is deliberately presentation-agnostic so the
+/// Overview only renders its state and delegates mutations here.
+///
+/// Important: [current] is the real current month used as the reporting target,
+/// not the month currently selected by the Overview UI.
 class UndebitedExpensesService extends ChangeNotifier {
   final ExpensesService _expensesService;
   final LocalCache _localCache;
@@ -47,19 +50,20 @@ class UndebitedExpensesService extends ChangeNotifier {
     required String accountId,
     required Period current,
     bool showImmediately = false,
+    bool forceRefresh = false,
   }) async {
     _accountId = accountId;
     _currentPeriod = current;
     _dismissedAt =
         showImmediately ? null : await _loadDismissal(accountId, current);
     _initialized = true;
-    await _reloadOccurrences();
+    await _reloadOccurrences(forceRefresh: forceRefresh);
     _notify();
   }
 
-  /// A dismissal only covers the reporting month it was recorded in. Opening
-  /// the app for a new month (or navigating to another month) re-arms the
-  /// banner so the new undebited items are reported again.
+  /// A dismissal only covers the real reporting month it was recorded in.
+  /// Navigating through the Overview must not re-arm or hide the banner; it is
+  /// re-armed only when the real calendar month changes.
   Future<DateTime?> _loadDismissal(String accountId, Period current) async {
     final dismissed = await _localCache.loadUndebitedBannerDismissedAt(accountId);
     if (dismissed == null) return null;
@@ -67,7 +71,7 @@ class UndebitedExpensesService extends ChangeNotifier {
     return dismissed.at;
   }
 
-  Future<void> _reloadOccurrences() async {
+  Future<void> _reloadOccurrences({bool forceRefresh = false}) async {
     final accountId = _accountId;
     final current = _currentPeriod;
     if (accountId == null || current == null) {
@@ -78,14 +82,18 @@ class UndebitedExpensesService extends ChangeNotifier {
     final previous = current.previous;
     final to = previous.endOfMonth;
 
-    // A cold start only loads the current period, so the previous period is
-    // missing from the account store even though the store is non-empty. Check
-    // the period cache (empty on a fresh session) and load the previous period
-    // when needed; listExpensesForPeriod upserts it into the store and the
-    // period cache dedupes repeat loads.
-    if (_expensesService.cachedExpensesForPeriod(accountId, previous) == null) {
+    // A cold start may only have loaded the Overview's selected period, which
+    // can be in the past or future. Ensure the month immediately preceding the
+    // real current period is available; older periods already present in the
+    // store are also considered below.
+    if (forceRefresh ||
+        _expensesService.cachedExpensesForPeriod(accountId, previous) == null) {
       try {
-        await _expensesService.listExpensesForPeriod(accountId, previous);
+        await _expensesService.listExpensesForPeriod(
+          accountId,
+          previous,
+          forceRefresh: forceRefresh,
+        );
       } catch (_) {
         // Firestore's local cache is the source of truth for offline mode. If it
         // cannot be loaded yet, the next service/store notification retries it.
