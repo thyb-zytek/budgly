@@ -32,31 +32,44 @@ class TabSwitcher extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: spaceBetween ?? 8.0,
         children: List.generate(tabs.length, (index) {
-          return GestureDetector(
-            onTap: () => onTabSelected(index),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(50.0),
-                color:
-                    selectedIndex == index
-                        ? theme.colorScheme.surfaceContainerHigh
-                        : Colors.transparent,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xs),
-                child: DefaultTextStyle(
-                  style: TextStyle(
+          // Keep the compact pill layout, but let every tab shrink gracefully
+          // (instead of overflowing) when the combined content is wider than
+          // the available space.
+          return Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: GestureDetector(
+                onTap: () => onTabSelected(index),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(50.0),
                     color:
                         selectedIndex == index
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        selectedIndex == index
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                            ? theme.colorScheme.surfaceContainerHigh
+                            : Colors.transparent,
                   ),
-                  child: tabs[index],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: BudglySpacing.xs,
+                    ),
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        color:
+                            selectedIndex == index
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                        fontWeight:
+                            selectedIndex == index
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                      ),
+                      child: tabs[index],
+                    ),
+                  ),
                 ),
               ),
             ),
