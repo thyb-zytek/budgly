@@ -13,7 +13,8 @@ Utilisez les gitmojis du projet [carloscuesta/gitmoji](https://github.com/carlos
 | ♻️ | recycle | Refactor code |
 | 🎨 | art | Improve structure / format of the code |
 | � | lipstick | Add or update the UI and style files |
-| �🔧 | wrench | Add or update configuration files |
+| 🔧 | wrench | Add or update configuration files |
+| 👷 | construction_worker | Add or update CI build system files |
 | 📦 | package | Add or update compiled files or packages |
 | 🔥 | fire | Remove code or files |
 | ➕ | heavy_plus_sign | Add a dependency |
