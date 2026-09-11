@@ -40,7 +40,8 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
 
   void _submit() {
     final isValid = _formKey.currentState?.validate() ?? false;
-    if (isValid) widget.onSubmit();
+    if (!isValid) return;
+    widget.onSubmit();
     Navigator.pop(context);
   }
 
