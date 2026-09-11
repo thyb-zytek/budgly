@@ -23,7 +23,13 @@ class CategoryThresholdBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final tr = AppLocalizations.of(context)!;
     final color = switch (progress.state) {
-      CategoryThresholdState.warning => scheme.error.withValues(green: 0.5),
+      // Blend toward the error color rather than overriding a single RGB
+      // channel (the previous `scheme.error.withValues(green: 0.5)` just
+      // clobbered the green channel of an already red-dominant color,
+      // producing an unpredictable muddy tone instead of a distinct
+      // warning color).
+      CategoryThresholdState.warning =>
+        Color.lerp(scheme.tertiary, scheme.error, 0.6)!,
       CategoryThresholdState.exceeded => scheme.error,
       _ => scheme.tertiary,
     };

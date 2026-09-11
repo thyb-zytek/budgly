@@ -28,7 +28,7 @@ class SwipeHintContent extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const pillWidth = 120.0;
+        const pillWidth = 132.0;
         final maxLeft = (constraints.maxWidth - pillWidth).clamp(
           0.0,
           double.infinity,
@@ -68,11 +68,15 @@ class SwipeHintContent extends StatelessWidget {
                           size: 16,
                           color: theme.colorScheme.onInverseSurface,
                         ),
-                        Text(
-                          tr.swipeHint,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onInverseSurface,
-                            fontWeight: FontWeight.w700,
+                        Flexible(
+                          child: Text(
+                            tr.swipeHint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onInverseSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
