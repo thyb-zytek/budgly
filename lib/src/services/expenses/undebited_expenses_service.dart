@@ -19,20 +19,27 @@ class UndebitedExpensesService extends ChangeNotifier {
   final ExpensesService _expensesService;
   final LocalCache _localCache;
   final ExpenseOccurrenceCalculator _calculator;
+  final DateTime Function() _now;
+
+  static const Duration bannerRedisplayInterval = Duration(hours: 3);
+  Timer? _redisplayTimer;
 
   String? _accountId;
   Period? _currentPeriod;
   List<ExpenseOccurrence> _occurrences = const [];
   DateTime? _dismissedAt;
   bool _initialized = false;
+  bool _isDisposed = false;
 
   UndebitedExpensesService({
     ExpensesService? expensesService,
     LocalCache? localCache,
     ExpenseOccurrenceCalculator? calculator,
+    DateTime Function()? now,
   })  : _expensesService = expensesService ?? ExpensesService.instance,
         _localCache = localCache ?? LocalCache(),
-        _calculator = calculator ?? const ExpenseOccurrenceCalculator() {
+        _calculator = calculator ?? const ExpenseOccurrenceCalculator(),
+        _now = now ?? DateTime.now {
     _expensesService.addListener(_onExpensesChanged);
   }
 
@@ -42,9 +49,13 @@ class UndebitedExpensesService extends ChangeNotifier {
   Period? get currentPeriod => _currentPeriod;
 
   bool get isDismissed => _dismissedAt != null;
+  bool get isDisposed => _isDisposed;
 
-  bool get shouldShow =>
-      _initialized && count > 0 && !isDismissed;
+  bool get shouldShow {
+    if (!_initialized || count == 0) return false;
+    final dismissedAt = _dismissedAt;
+    return dismissedAt == null || _now().difference(dismissedAt) >= bannerRedisplayInterval;
+  }
 
   Future<void> refresh({
     required String accountId,
@@ -57,7 +68,17 @@ class UndebitedExpensesService extends ChangeNotifier {
     _dismissedAt =
         showImmediately ? null : await _loadDismissal(accountId, current);
     _initialized = true;
+    _scheduleRedisplay();
     await _reloadOccurrences(forceRefresh: forceRefresh);
+    // Pull-to-refresh is an explicit user re-sync: if expenses still await
+    // reporting, re-arm the banner instead of letting a previous dismissal
+    // keep it hidden for the whole redisplay interval.
+    if (isDisposed) return;
+    if (forceRefresh && _occurrences.isNotEmpty) {
+      _dismissedAt = null;
+      await _localCache.clearUndebitedBannerDismissedAt(accountId);
+    }
+    _scheduleRedisplay();
     _notify();
   }
 
@@ -103,9 +124,14 @@ class UndebitedExpensesService extends ChangeNotifier {
     // Local-first: project every occurrence from the account's stored
     // expenses that falls before the current period, not only those of the
     // immediately previous month, so multi-month delays stay visible.
+    // A forced refresh (app launch / pull-to-refresh) instead queries the
+    // server so the banner reflects the authoritative account state.
     List<Expense> expenses = const [];
     try {
-      expenses = await _expensesService.listExpensesForAccount(accountId);
+      expenses = await _expensesService.listExpensesForAccount(
+        accountId,
+        forceRefresh: forceRefresh,
+      );
     } catch (_) {
       expenses = const [];
     }
@@ -128,19 +154,40 @@ class UndebitedExpensesService extends ChangeNotifier {
 
   Future<void> _reloadAndNotify() async {
     await _reloadOccurrences();
+    _scheduleRedisplay();
     _notify();
+  }
+
+  void _scheduleRedisplay() {
+    _redisplayTimer?.cancel();
+    _redisplayTimer = null;
+
+    final dismissedAt = _dismissedAt;
+    if (!_initialized || count == 0 || dismissedAt == null) return;
+
+    final elapsed = _now().difference(dismissedAt);
+    final remaining = bannerRedisplayInterval - elapsed;
+    if (remaining <= Duration.zero) return;
+
+    _redisplayTimer = Timer(remaining, () {
+      _redisplayTimer = null;
+      if (!isDisposed && _initialized && _occurrences.isNotEmpty) {
+        _notify();
+      }
+    });
   }
 
   Future<void> dismiss() async {
     final accountId = _accountId;
     final current = _currentPeriod;
     if (accountId == null) return;
-    _dismissedAt = DateTime.now();
+    _dismissedAt = _now();
     await _localCache.saveUndebitedBannerDismissedAt(
       accountId,
       period: current ?? Period.current(),
       value: _dismissedAt!,
     );
+    _scheduleRedisplay();
     _notify();
   }
 
@@ -176,48 +223,71 @@ class UndebitedExpensesService extends ChangeNotifier {
     await _reloadAndNotify();
   }
 
-  Future<void> debitOnOriginalPeriod() async {
-    final snapshot = List<ExpenseOccurrence>.from(_occurrences);
+  Future<void> debitSelectedOnOriginalPeriod(
+    Iterable<ExpenseOccurrence> selected,
+  ) async {
+    final snapshot = List<ExpenseOccurrence>.from(selected);
+    final latest = <String, Expense>{};
     for (final occurrence in snapshot) {
-      await _expensesService.markOccurrenceDebited(
-        occurrence.expense,
-        occurrence.sourceDate ?? occurrence.date,
+      final expense = latest[occurrence.id] ??
+          _expensesService.getExpenseById(occurrence.id) ??
+          occurrence.expense;
+      latest[occurrence.id] = await _expensesService.markOccurrenceDebited(
+        expense, occurrence.sourceDate ?? occurrence.date,
       );
     }
     await _reloadAndNotify();
   }
 
-  Future<void> carryToCurrentPeriod() async {
+  Future<void> carrySelectedToCurrentPeriod(
+    Iterable<ExpenseOccurrence> selected,
+  ) async {
     final current = _currentPeriod;
     if (current == null) return;
     final target = current.startOfMonth;
-    final snapshot = List<ExpenseOccurrence>.from(_occurrences);
+    final snapshot = List<ExpenseOccurrence>.from(selected);
+    final latest = <String, Expense>{};
     for (final occurrence in snapshot) {
-      await _expensesService.moveOccurrenceToDate(
-        occurrence.expense,
-        occurrence.sourceDate ?? occurrence.date,
-        target,
+      final expense = latest[occurrence.id] ??
+          _expensesService.getExpenseById(occurrence.id) ??
+          occurrence.expense;
+      latest[occurrence.id] = await _expensesService.moveOccurrenceToDate(
+        expense, occurrence.sourceDate ?? occurrence.date, target,
         markDebited: false,
       );
     }
     await _reloadAndNotify();
   }
 
-  Future<void> debitOnCurrentPeriod() async {
+  Future<void> debitSelectedOnCurrentPeriod(
+    Iterable<ExpenseOccurrence> selected,
+  ) async {
     final current = _currentPeriod;
     if (current == null) return;
     final target = current.startOfMonth;
-    final snapshot = List<ExpenseOccurrence>.from(_occurrences);
+    final snapshot = List<ExpenseOccurrence>.from(selected);
+    final latest = <String, Expense>{};
     for (final occurrence in snapshot) {
-      await _expensesService.moveOccurrenceToDate(
-        occurrence.expense,
-        occurrence.sourceDate ?? occurrence.date,
-        target,
+      final expense = latest[occurrence.id] ??
+          _expensesService.getExpenseById(occurrence.id) ??
+          occurrence.expense;
+      latest[occurrence.id] = await _expensesService.moveOccurrenceToDate(
+        expense, occurrence.sourceDate ?? occurrence.date, target,
         markDebited: true,
       );
     }
     await _reloadAndNotify();
   }
+
+  // Kept for callers using the previous API: process every pending occurrence.
+  Future<void> debitOnOriginalPeriod() =>
+      debitSelectedOnOriginalPeriod(_occurrences);
+
+  Future<void> carryToCurrentPeriod() =>
+      carrySelectedToCurrentPeriod(_occurrences);
+
+  Future<void> debitOnCurrentPeriod() =>
+      debitSelectedOnCurrentPeriod(_occurrences);
 
   void _notify() {
     if (!hasListeners) return;
@@ -226,6 +296,9 @@ class UndebitedExpensesService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _redisplayTimer?.cancel();
+    _redisplayTimer = null;
     _expensesService.removeListener(_onExpensesChanged);
     super.dispose();
   }

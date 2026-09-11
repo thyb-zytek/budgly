@@ -128,6 +128,13 @@ class LocalCache {
     return (period: Period(year: year, month: month), at: at);
   }
 
+  /// Removes the persisted undebited-banner dismissal so a later refresh can
+  /// re-arm the banner without waiting for the redisplay interval to elapse.
+  Future<void> clearUndebitedBannerDismissedAt(String accountId) async {
+    final prefs = await _prefs;
+    await prefs.remove('$_undebitedBannerPrefix$accountId');
+  }
+
   Future<void> clearUser(String userId) async {
     final prefs = await _prefs;
     await Future.wait([
