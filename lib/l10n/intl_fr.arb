@@ -356,6 +356,8 @@
       }
     }
   },
+  "selectAll": "Tout sélectionner",
+  "deselectAll": "Tout désélectionner",
   "undebitedSheetTitle": "Dépenses à traiter",
   "undebitedPendingCount": "{count} dépense(s) en attente",
   "@undebitedPendingCount": {
@@ -365,6 +367,8 @@
       }
     }
   },
+  "selectedExpensesCount": "{count} sélectionnée(s)","@selectedExpensesCount": {"placeholders": {"count": {"type": "int"}}},
+  "selected": "sélectionnées",
   "debitOnOriginalPeriod": "Débiter sur {period}",
   "@debitOnOriginalPeriod": {
     "placeholders": {
@@ -373,6 +377,7 @@
       }
     }
   },
+  "debitOnOriginalPeriodBulk": "Débiter sur la période d'origine",
   "carryToCurrentPeriod": "Reporter vers {period}",
   "@carryToCurrentPeriod": {
     "placeholders": {
@@ -390,8 +395,11 @@
     }
   },
   "ignore": "Ignorer",
+  "allAccounts": "Tous les comptes",
+  "undebitedNoExpenses": "Aucune dépense non débitée",
   "undebitedBannerDismiss": "Fermer",
   "undebitedBannerHint": "Ces dépenses proviennent des mois précédents et n'ont pas encore été débitées.",
+  "undebitedLongPressHint": "Appuyez longuement sur une dépense pour la sélectionner.",
   "manageUndebitedExpenses": "Gérer les dépenses",
   "threshold": "Seuil",
   "monthlyThreshold": "Seuil mensuel",

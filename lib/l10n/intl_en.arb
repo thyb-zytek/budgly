@@ -356,6 +356,8 @@
       }
     }
   },
+  "selectAll": "Select all",
+  "deselectAll": "Deselect all",
   "undebitedSheetTitle": "Expenses to process",
   "undebitedPendingCount": "{count} expense(s) pending",
   "@undebitedPendingCount": {
@@ -365,6 +367,8 @@
       }
     }
   },
+  "selectedExpensesCount": "{count} selected","@selectedExpensesCount": {"placeholders": {"count": {"type": "int"}}},
+  "selected": "selected",
   "debitOnOriginalPeriod": "Debit on {period}",
   "@debitOnOriginalPeriod": {
     "placeholders": {
@@ -373,6 +377,7 @@
       }
     }
   },
+  "debitOnOriginalPeriodBulk": "Debit on the original period",
   "carryToCurrentPeriod": "Move to {period}",
   "@carryToCurrentPeriod": {
     "placeholders": {
@@ -390,8 +395,11 @@
     }
   },
   "ignore": "Ignore",
+  "allAccounts": "All accounts",
+  "undebitedNoExpenses": "No undebited expenses",
   "undebitedBannerDismiss": "Close",
   "undebitedBannerHint": "These expenses come from previous months and have not been debited yet.",
+  "undebitedLongPressHint": "Long-press an expense to select it.",
   "manageUndebitedExpenses": "Manage expenses",
   "threshold": "Threshold",
   "monthlyThreshold": "Monthly threshold",
