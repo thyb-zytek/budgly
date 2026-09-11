@@ -61,6 +61,16 @@ class RefreshAwareExpenseFirestore extends ExpenseFirestore {
   }
 
   @override
+  Future<List<Expense>> listByAccountId(
+    String accountId, {
+    Source source = Source.server,
+  }) async {
+    return serverExpenses
+        .where((expense) => expense.accountId == accountId)
+        .toList();
+  }
+
+  @override
   Future<bool> update(Expense expense) async {
     for (var i = 0; i < serverExpenses.length; i++) {
       if (serverExpenses[i].id == expense.id) {

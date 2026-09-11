@@ -467,11 +467,42 @@ class ExpensesService extends ChangeNotifier {
   /// Returns every locally cached expense for the account. Offline-first: the
   /// store is populated from Firestore's native cache, so callers never wait
   /// on the network to build period projections such as undebited detection.
+  ///
+  /// When [forceRefresh] is true, a real server query replaces the local
+  /// snapshot so the caller sees the authoritative account state (e.g. the
+  /// undebited banner at launch and on pull-to-refresh). Offline, the query
+  /// fails and the local store is served instead.
+  ///
+  /// The forced read is deliberately non-mutating: it must not clobber the
+  /// shared store or notify listeners, otherwise a concurrent optimistic
+  /// mutation could be reverted by the server snapshot.
   Future<List<Expense>> listExpensesForAccount(
     String accountId, {
     bool forceRefresh = false,
   }) async {
-    return getExpensesForAccount(accountId);
+    if (!forceRefresh) return getExpensesForAccount(accountId);
+    try {
+      final serverExpenses = await _expenseFirestore.listByAccountId(accountId);
+      final serverIds = <String>{
+        for (final expense in serverExpenses)
+          if (expense.id != null) expense.id!,
+      };
+      // Merge with unconfirmed local mutations so a slow sync never drops a
+      // just-created/updated expense the server has not returned yet.
+      final merged = <Expense>[
+        for (final expense in serverExpenses)
+          if (!_periodData.isPendingDelete(expense.id)) expense,
+        for (final pending in _periodData.pendingForAccount(accountId))
+          if (!serverIds.contains(pending.id)) pending,
+      ]..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+      return List.unmodifiable(merged);
+    } catch (e) {
+      AnalyticsService.instance.track('expense_load_failed', {
+        'error': e.toString(),
+      });
+      // Offline fallback: the local store remains the source of truth.
+      return getExpensesForAccount(accountId);
+    }
   }
 
   Future<void> deleteByAccountId(String accountId) async {

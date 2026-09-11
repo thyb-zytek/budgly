@@ -96,6 +96,17 @@ class ExpensePeriodCache {
     return merged;
   }
 
+  /// Locally-created or locally-updated expenses for [accountId] whose writes
+  /// the server has not acknowledged yet. Used by the account-wide refresh so
+  /// a stale server snapshot never drops an unconfirmed mutation.
+  List<Expense> pendingForAccount(String accountId) => [
+        for (final expense in _pending.values)
+          if (expense.accountId == accountId) expense,
+      ];
+
+  bool isPendingDelete(String? expenseId) =>
+      _pendingDeletes.contains(expenseId);
+
   Future<List<Expense>>? inFlight(String key) => _inFlight[key];
 
   void setInFlight(String key, Future<List<Expense>> future) {
