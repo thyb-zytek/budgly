@@ -11,6 +11,7 @@ abstract final class NavigationHelper {
   static const overviewPath = AppRoutes.overview;
   static const settingsPath = AppRoutes.settings;
   static const categoryExpensesPath = AppRoutes.categoryExpenses;
+  static const undebitedExpensesPath = AppRoutes.undebitedExpenses;
 
   static String buildCategoryExpensesPath(
     String accountId,

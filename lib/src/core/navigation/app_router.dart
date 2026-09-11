@@ -6,6 +6,7 @@ import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/category_expenses/view.dart';
 import 'package:budgly/src/pages/login/view.dart';
 import 'package:budgly/src/pages/overview/view.dart';
+import 'package:budgly/src/pages/undebited_expenses/view.dart';
 import 'package:budgly/src/pages/settings/view.dart';
 import 'package:budgly/src/pages/tutorial/view.dart';
 import 'package:budgly/src/shared/ui/widgets/bottom_navbar/bottom_navbar.dart';
@@ -50,6 +51,11 @@ class AppRouter {
                 pageBuilder: (context, state) =>
                     _page(const OverviewPage(), state),
                 routes: [
+                  GoRoute(
+                    path: 'undebited',
+                    pageBuilder: (context, state) =>
+                        _page(const UndebitedExpensesPage(), state),
+                  ),
                   GoRoute(
                     path: 'category/:accountId/:categoryId',
                     pageBuilder: (context, state) {
