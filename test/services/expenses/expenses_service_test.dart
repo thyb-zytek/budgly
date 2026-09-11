@@ -29,6 +29,16 @@ class PendingWriteExpenseFirestore extends ExpenseFirestore {
         )
         .toList();
   }
+
+  @override
+  Future<List<Expense>> listByAccountId(
+    String accountId, {
+    Source source = Source.server,
+  }) async {
+    return serverExpenses
+        .where((expense) => expense.accountId == accountId)
+        .toList();
+  }
 }
 
 void main() {
@@ -120,6 +130,42 @@ void main() {
     );
 
     expect(listed.map((e) => e.id).toSet(), {'e1', 'e2'});
+  });
+
+  test('forced account list queries the server and propagates remote deletions',
+      () async {
+    firestore.serverExpenses.addAll([
+      expense(),
+      expense(id: 'e2'),
+    ]);
+
+    expect(
+      (await service.listExpensesForAccount('a1', forceRefresh: true))
+          .map((e) => e.id)
+          .toSet(),
+      {'e1', 'e2'},
+    );
+
+    // A remote deletion must be reflected by the account-wide refresh.
+    firestore.serverExpenses.removeWhere((e) => e.id == 'e2');
+    expect(
+      (await service.listExpensesForAccount('a1', forceRefresh: true))
+          .map((e) => e.id),
+      ['e1'],
+    );
+  });
+
+  test('forced account list keeps an unacknowledged local expense', () async {
+    await service.createExpense(expense());
+
+    // The server has not acknowledged the write yet: the refresh must keep
+    // the optimistic expense instead of flushing it away.
+    final listed = await service.listExpensesForAccount(
+      'a1',
+      forceRefresh: true,
+    );
+
+    expect(listed.map((e) => e.id), ['e1']);
   });
 
   test(
