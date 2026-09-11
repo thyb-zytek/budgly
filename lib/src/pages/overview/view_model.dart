@@ -224,7 +224,6 @@ class OverviewViewModel extends BaseViewModel {
       final selectedAccount = accounts.first;
       _setSelectedAccount(selectedAccount, trackEvent: false);
       _ensureRevenueLoaded();
-      unawaited(_refreshUndebitedExpenses());
       unawaited(_ensureInheritedRevenueLoaded());
 
       // Once the account is known, period data can load independently. The
@@ -238,6 +237,12 @@ class OverviewViewModel extends BaseViewModel {
       _invalidateDerivedData();
       // Do not preload other accounts here. Their period data is loaded only
       // when the user selects the account, keeping startup work bounded.
+
+      // The banner's visibility must reflect a real server query at launch,
+      // not a possibly stale local snapshot (issue #14/#23 banner bug). It
+      // runs after the current period is cached so its read-only server
+      // refresh cannot trigger a competing period reload.
+      unawaited(_refreshUndebitedExpenses(forceRefresh: true));
     } catch (e, stackTrace) {
       setError(e, stackTrace: stackTrace);
     } finally {
