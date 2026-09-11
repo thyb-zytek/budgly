@@ -735,6 +735,48 @@ void main() {
     expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
   });
 
+  test('launch queries the server so multi-month undebited expenses surface',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final twoMonthsAgo = period.previous.previous;
+    // This expense lies outside the Overview's period cache; only an
+    // account-wide server query at launch can reveal it to the banner.
+    final oldUndebited = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Old bill',
+      amount: 12,
+      debitDate: DateTime(twoMonthsAgo.year, twoMonthsAgo.month, 5),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(oldUndebited);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.undebitedExpensesService.shouldShow, isTrue);
+    expect(vm.undebitedExpensesService.count, 1);
+    expect(vm.undebitedExpensesService.occurrences.single.name, 'Old bill');
+  });
+
   test('browsing a future Overview period keeps undebited actions targeted to the real current month',
       () async {
     final account = Fixtures.account(id: 'a1');
@@ -790,6 +832,58 @@ void main() {
     expect(movedExpense.debitDate, period.startOfMonth);
   });
 
+  test('browsing a past Overview period keeps undebited actions targeted to the real current month',
+      () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final previous = period.previous;
+    final undebited = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(previous.year, previous.month, 20),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(undebited);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(vm.undebitedExpensesService.count, 1);
+
+    // Browse deep into history: several months before the real current
+    // period, not just the immediately previous one.
+    vm.selectedPeriod = period.addMonths(-6);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    // Regression: browsing a past month must not redefine the reporting
+    // month either. Before the fix, `current` was sourced from the
+    // browsed/selected period instead of the real current one, so browsing
+    // history could silently move the banner's "current" reference back in
+    // time and surface expenses relative to the wrong month.
+    expect(vm.selectedPeriod, period.addMonths(-6));
+    expect(vm.undebitedExpensesService.currentPeriod, period);
+    expect(vm.undebitedExpensesService.count, 1);
+    expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
+  });
+
   test(
       'cold start re-arms the banner when it was dismissed in a previous month',
       () async {
@@ -835,6 +929,54 @@ void main() {
     expect(vm.undebitedExpensesService.shouldShow, isTrue);
     expect(vm.undebitedExpensesService.count, 1);
     expect(vm.undebitedExpensesService.occurrences.single.name, 'Courses');
+  });
+
+  test('pull-to-refresh re-arms the banner after a recent dismissal', () async {
+    SharedPreferences.setMockInitialValues({});
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final previous = period.previous;
+    final undebited = Expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 40,
+      debitDate: DateTime(previous.year, previous.month, 20),
+    );
+    final firestore = RefreshAwareExpenseFirestore()
+      ..serverExpenses.add(undebited);
+    final expensesService = ExpensesService(expenseFirestore: firestore);
+    addTearDown(expensesService.dispose);
+    final categoriesService = SeededOverviewCategoriesService();
+
+    final vm = OverviewViewModel(
+      accountsService: FakeOverviewAccountsService([account]),
+      categoriesService: categoriesService,
+      expensesService: expensesService,
+      accountBudgetsService: FakeOverviewBudgetService(),
+      repository: OverviewRepository(
+        expensesService: expensesService,
+        categoriesService: categoriesService,
+        accountBudgetsService: FakeOverviewBudgetService(),
+      ),
+    );
+    addTearDown(vm.dispose);
+
+    await vm.loadInitialData();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(vm.undebitedExpensesService.shouldShow, isTrue);
+
+    await vm.undebitedExpensesService.dismiss();
+    expect(vm.undebitedExpensesService.shouldShow, isFalse);
+
+    // Pull-to-refresh is an explicit re-sync: pending expenses re-arm the
+    // banner despite the recent dismissal.
+    await vm.refreshAll();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(vm.undebitedExpensesService.count, 1);
+    expect(vm.undebitedExpensesService.shouldShow, isTrue);
   });
 
   test('creating a recurring expense refreshes the Overview after a period change',
