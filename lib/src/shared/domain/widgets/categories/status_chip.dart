@@ -22,6 +22,8 @@ class StatusChip extends StatelessWidget {
       avatar: Icon(icon, size: 16, color: color),
       label: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: theme.textTheme.labelMedium?.copyWith(
           color: color,
           fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,

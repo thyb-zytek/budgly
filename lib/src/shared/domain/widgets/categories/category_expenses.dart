@@ -73,20 +73,26 @@ class CategoryExpenses extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                StatusChip(
-                  label: tr.debited(_format(summary.debited)),
-                  icon: Icons.check_circle_outline_rounded,
-                  color: theme.colorScheme.tertiary,
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: StatusChip(
+                    label: tr.debited(_format(summary.debited)),
+                    icon: Icons.check_circle_outline_rounded,
+                    color: theme.colorScheme.tertiary,
+                  ),
                 ),
                 if (hasPending)
-                  StatusChip(
-                    label: tr.pending(
-                      summary.undebitedCount,
-                      _format(summary.undebited),
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: StatusChip(
+                      label: tr.pending(
+                        summary.undebitedCount,
+                        _format(summary.undebited),
+                      ),
+                      icon: Icons.schedule_rounded,
+                      color: theme.colorScheme.error,
+                      isHighlighted: true,
                     ),
-                    icon: Icons.schedule_rounded,
-                    color: theme.colorScheme.error,
-                    isHighlighted: true,
                   ),
               ],
             ),
