@@ -24,6 +24,11 @@ Future<bool> showAvatarCustomizationSheet(
   bool isLocalPicture(String? picture) =>
       picture != null && !picture.startsWith('http');
 
+  // Only the local `selected*` state is mutated while the user browses/
+  // picks/drags, so the sheet's own preview stays live. `onPictureChanged` /
+  // `onColorChanged` are deferred to `onValidate` so Cancel (or a backdrop/
+  // swipe dismiss) never leaves the caller with a picture/color the user
+  // only tried and never confirmed.
   return showAppBottomSheet(
     context,
     backgroundColor: theme.colorScheme.surface,
@@ -44,7 +49,6 @@ Future<bool> showAvatarCustomizationSheet(
                   canRemove: selectedPicture != null,
                   onRemove: () => setModalState(() {
                     selectedPicture = null;
-                    onPictureChanged(null);
                   }),
                 ),
                 tabTitles: [
@@ -60,7 +64,6 @@ Future<bool> showAvatarCustomizationSheet(
                         if (path == null) return;
                         setModalState(() {
                           selectedPicture = path;
-                          onPictureChanged(path);
                         });
                       }),
                       iconAlignment: IconAlignment.start,
@@ -73,11 +76,14 @@ Future<bool> showAvatarCustomizationSheet(
                     color: selectedColor,
                     onChanged: (color) => setModalState(() {
                       selectedColor = color;
-                      onColorChanged(color);
                     }),
                   ),
                 ],
-                onValidate: () => Navigator.pop(sheetContext, true),
+                onValidate: () {
+                  onPictureChanged(selectedPicture);
+                  onColorChanged(selectedColor);
+                  Navigator.pop(sheetContext, true);
+                },
                 onCancel: () => Navigator.pop(sheetContext, false),
               ),
             ),
