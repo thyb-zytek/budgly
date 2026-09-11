@@ -185,7 +185,12 @@ class _CategoryFormState extends State<CategoryForm>
               widget.viewModel.createCategory(
                 widget.category ??
                     Category(
-                      name: '',
+                      name: widget
+                          .viewModel
+                          .categoryEditingData
+                          .nameController
+                          .text
+                          .trim(),
                       color: _tempColor,
                       icon: _tempIcon,
                       accountId: '',
@@ -195,9 +200,22 @@ class _CategoryFormState extends State<CategoryForm>
               widget.viewModel.updateCategory(widget.category!);
             }
           },
-          onCancel: () => widget.category?.id == null
-              ? widget.viewModel.removeCategory(widget.category!)
-              : widget.viewModel.cancelEdit(),
+          onCancel: () {
+            final category = widget.category;
+            if (category == null || category.id == null) {
+              widget.viewModel.removeCategory(
+                category ??
+                    Category(
+                      name: '',
+                      color: _tempColor,
+                      icon: _tempIcon,
+                      accountId: '',
+                    ),
+              );
+            } else {
+              widget.viewModel.cancelEdit();
+            }
+          },
         );
       },
     );
