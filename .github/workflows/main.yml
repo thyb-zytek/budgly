@@ -117,6 +117,9 @@ jobs:
           echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
           echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
 
+      - name: Create google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
+
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
 
