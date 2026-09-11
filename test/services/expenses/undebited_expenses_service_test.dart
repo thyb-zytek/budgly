@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeUndebitedExpensesService extends ExpensesService {
   List<Expense> accountExpenses = const [];
+  List<Expense> serverAccountExpenses = const [];
+  bool serverUnavailable = false;
   final List<(Expense, DateTime, DateTime, bool)> moves = [];
   final List<(Expense, DateTime)> marks = [];
 
@@ -16,7 +18,16 @@ class FakeUndebitedExpensesService extends ExpensesService {
   Future<List<Expense>> listExpensesForAccount(
     String accountId, {
     bool forceRefresh = false,
-  }) async => accountExpenses;
+  }) async {
+    if (forceRefresh) {
+      // Mirrors [ExpensesService]: a forced list is the server's answer, with
+      // a local-store fallback while offline.
+      if (serverUnavailable) return accountExpenses;
+      accountExpenses = serverAccountExpenses;
+      return serverAccountExpenses;
+    }
+    return accountExpenses;
+  }
 
   @override
   Future<Expense> markOccurrenceDebited(Expense expense, DateTime date) async {
@@ -147,7 +158,73 @@ void main() {
       expenses.dispose();
     });
 
-    test('dismiss hides the banner but re-arms for a new reporting month',
+    test('dismiss hides the banner for three hours and then re-shows it',
+        () async {
+      var now = DateTime(2026, 9, 9, 10);
+      final expenses = FakeUndebitedExpensesService()
+        ..accountExpenses = [
+          expense(name: 'Rent', debitDate: DateTime(2026, 8, 15)),
+        ];
+      final service = UndebitedExpensesService(
+        expensesService: expenses,
+        now: () => now,
+      );
+
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+      );
+      expect(service.shouldShow, isTrue);
+
+      await service.dismiss();
+      expect(service.shouldShow, isFalse);
+
+      now = now.add(const Duration(hours: 2, minutes: 59));
+      expect(service.shouldShow, isFalse);
+
+      now = now.add(const Duration(minutes: 1));
+      expect(service.shouldShow, isTrue);
+
+      service.dispose();
+      expenses.dispose();
+    });
+
+    test('a forced refresh re-arms the banner while expenses remain pending',
+        () async {
+      var now = DateTime(2026, 9, 9, 10);
+      final undebitedExpense = expense(
+        name: 'Rent',
+        debitDate: DateTime(2026, 8, 15),
+      );
+      final expenses = FakeUndebitedExpensesService()
+        ..accountExpenses = [undebitedExpense]
+        ..serverAccountExpenses = [undebitedExpense];
+      final service = UndebitedExpensesService(
+        expensesService: expenses,
+        now: () => now,
+      );
+
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+      );
+      await service.dismiss();
+      expect(service.shouldShow, isFalse);
+
+      // Pull-to-refresh is an explicit re-sync: a recent dismissal must not
+      // keep the banner hidden when expenses still await reporting.
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        forceRefresh: true,
+      );
+      expect(service.shouldShow, isTrue);
+
+      service.dispose();
+      expenses.dispose();
+    });
+
+    test('dismissal remains scoped to the real reporting period',
         () async {
       final expenses = FakeUndebitedExpensesService()
         ..accountExpenses = [
@@ -200,6 +277,74 @@ void main() {
         showImmediately: true,
       );
       expect(service.shouldShow, isFalse);
+
+      service.dispose();
+      expenses.dispose();
+    });
+
+    test('forced refresh lists undebited expenses from the server', () async {
+      final expenses = FakeUndebitedExpensesService()
+        ..serverAccountExpenses = [
+          expense(name: 'Rent', debitDate: DateTime(2026, 8, 15)),
+        ];
+      final service = UndebitedExpensesService(expensesService: expenses);
+
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        forceRefresh: true,
+      );
+
+      // The local store was empty; the server query is what drives the banner.
+      expect(service.count, 1);
+      expect(service.occurrences.single.name, 'Rent');
+      expect(service.shouldShow, isTrue);
+
+      service.dispose();
+      expenses.dispose();
+    });
+
+    test('forced refresh hides the banner when the server reports nothing',
+        () async {
+      // The local store still holds a stale undebited expense, but the server
+      // (another device already debited it) reports an empty account.
+      final expenses = FakeUndebitedExpensesService()
+        ..accountExpenses = [
+          expense(name: 'Rent', debitDate: DateTime(2026, 8, 15)),
+        ]
+        ..serverAccountExpenses = const [];
+      final service = UndebitedExpensesService(expensesService: expenses);
+
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        forceRefresh: true,
+      );
+
+      expect(service.count, 0);
+      expect(service.shouldShow, isFalse);
+
+      service.dispose();
+      expenses.dispose();
+    });
+
+    test('forced refresh falls back to the local store while offline',
+        () async {
+      final expenses = FakeUndebitedExpensesService()
+        ..accountExpenses = [
+          expense(name: 'Rent', debitDate: DateTime(2026, 8, 15)),
+        ]
+        ..serverUnavailable = true;
+      final service = UndebitedExpensesService(expensesService: expenses);
+
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        forceRefresh: true,
+      );
+
+      expect(service.count, 1);
+      expect(service.shouldShow, isTrue);
 
       service.dispose();
       expenses.dispose();
