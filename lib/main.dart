@@ -85,11 +85,7 @@ Future<void> _initializeCrashlytics() async {
   };
 
   PlatformDispatcher.instance.onError = (error, stackTrace) {
-    FirebaseCrashlytics.instance.recordError(
-      error,
-      stackTrace,
-      fatal: true,
-    );
+    FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
     return true;
   };
 }
