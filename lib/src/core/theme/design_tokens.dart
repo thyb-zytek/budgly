@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil_plus/flutter_screenutil_plus.dart';
 
 /// Core palette extracted and refined from the Budgly app icon.
 ///
@@ -50,13 +51,13 @@ abstract final class BudglyPalette {
 }
 
 abstract final class BudglySpacing {
-  static const xxs = 2.0;
-  static const xs = 4.0;
-  static const sm = 8.0;
-  static const md = 12.0;
-  static const lg = 16.0;
-  static const xl = 24.0;
-  static const xxl = 32.0;
+  static double get xxs => 2.0.w;
+  static double get xs => 4.0.w;
+  static double get sm => 8.0.w;
+  static double get md => 12.0.w;
+  static double get lg => 16.0.w;
+  static double get xl => 24.0.w;
+  static double get xxl => 32.0.w;
 }
 
 abstract final class BudglyRadius {
@@ -72,24 +73,24 @@ abstract final class BudglyRadius {
 }
 
 abstract final class BudglyButtonDimensions {
-  static const normalPadding = EdgeInsets.symmetric(
+  static EdgeInsets get normalPadding => EdgeInsets.symmetric(
     horizontal: BudglySpacing.xl,
     vertical: BudglySpacing.lg,
   );
-  static const densePadding = EdgeInsets.symmetric(
+  static EdgeInsets get densePadding => EdgeInsets.symmetric(
     horizontal: BudglySpacing.lg,
     vertical: BudglySpacing.sm,
   );
 }
 
 abstract final class BudglyComponentStyles {
-  static const cardPadding = EdgeInsets.fromLTRB(
+  static EdgeInsets get cardPadding => EdgeInsets.fromLTRB(
     BudglySpacing.lg,
     BudglySpacing.md,
     BudglySpacing.sm,
     BudglySpacing.md,
   );
 
-  static const fabSize = 64.0;
-  static const fabIconSize = 48.0;
+  static double get fabSize => 64.w;
+  static double get fabIconSize => 48.w;
 }

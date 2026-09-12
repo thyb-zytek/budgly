@@ -96,7 +96,7 @@ class _SwipeTabsState extends State<SwipeTabs> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(bottom: BudglySpacing.xl),
+            padding: EdgeInsets.only(bottom: BudglySpacing.xl),
             child: TabSwitcher(
               selectedIndex: _currentIndex,
               onTabSelected: _handleTabChange,

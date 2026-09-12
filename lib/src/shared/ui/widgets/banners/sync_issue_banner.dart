@@ -101,7 +101,7 @@ class _SyncIssueBannerState extends State<SyncIssueBanner> {
         return Material(
           color: background,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
+            padding: EdgeInsets.symmetric(
               horizontal: BudglySpacing.lg,
               vertical: BudglySpacing.sm,
             ),

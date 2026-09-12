@@ -60,7 +60,7 @@ class _ProfileTabState extends State<ProfileTab> {
           final user = _viewModel.currentUser!;
 
           return Padding(
-            padding: const EdgeInsets.all(BudglySpacing.lg),
+            padding: EdgeInsets.all(BudglySpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: BudglySpacing.lg,

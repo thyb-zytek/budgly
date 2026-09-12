@@ -94,7 +94,7 @@ class _TutorialPageState extends State<TutorialPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(BudglySpacing.md),
+                    padding: EdgeInsets.all(BudglySpacing.md),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [

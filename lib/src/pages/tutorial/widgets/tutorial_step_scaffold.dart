@@ -27,7 +27,7 @@ class TutorialStepScaffold extends StatelessWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(BudglySpacing.xxl, BudglySpacing.sm, BudglySpacing.xxl, BudglySpacing.lg),
+            padding: EdgeInsets.fromLTRB(BudglySpacing.xxl, BudglySpacing.sm, BudglySpacing.xxl, BudglySpacing.lg),
             child: _buildStepEntrance(
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,

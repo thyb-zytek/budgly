@@ -70,9 +70,9 @@ extension InputTypeStyles on InputType {
     final suffixWidgets = <Widget>[];
 
     if (this == InputType.date) {
-      prefixIcon = const Padding(
+      prefixIcon = Padding(
         padding: EdgeInsets.only(top: BudglySpacing.lg),
-        child: Icon(Icons.calendar_today),
+        child: const Icon(Icons.calendar_today),
       );
     }
 

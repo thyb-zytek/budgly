@@ -39,7 +39,7 @@ class PeriodSelector extends SliverPersistentHeaderDelegate {
       child: SizedBox(
         height: maxExtent,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: BudglySpacing.lg,
             vertical: BudglySpacing.sm,
           ),

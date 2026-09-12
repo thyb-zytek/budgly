@@ -35,7 +35,7 @@ class UndebitedBulkActionBar extends StatelessWidget {
           if (viewModel.isProcessing)
             const LinearProgressIndicator(minHeight: 2),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               BudglySpacing.lg,
               BudglySpacing.sm,
               BudglySpacing.lg,

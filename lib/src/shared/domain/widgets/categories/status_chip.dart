@@ -21,7 +21,7 @@ class StatusChip extends StatelessWidget {
 
     return Chip(
       avatar: Icon(icon, size: 16, color: color),
-      labelPadding: const EdgeInsets.only(right: BudglySpacing.xs),
+      labelPadding: EdgeInsets.only(right: BudglySpacing.xs),
       label: Text(
         label,
         maxLines: 1,
@@ -34,7 +34,7 @@ class StatusChip extends StatelessWidget {
       backgroundColor:
           isHighlighted ? color.withAlpha(28) : Colors.transparent,
       side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xxs, vertical: 0),
+      padding: EdgeInsets.symmetric(horizontal: BudglySpacing.xxs, vertical: 0),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );

@@ -118,7 +118,7 @@ class Avatar extends StatelessWidget {
                 customBorder: const CircleBorder(),
                 onTap: onRemove,
                 child: Padding(
-                  padding: const EdgeInsets.all(BudglySpacing.sm),
+                  padding: EdgeInsets.all(BudglySpacing.sm),
                   child: Icon(
                     Icons.close_rounded,
                     size: 18,
@@ -136,7 +136,7 @@ class Avatar extends StatelessWidget {
               color: theme.colorScheme.primary,
               shape: const CircleBorder(),
               child: Padding(
-                padding: const EdgeInsets.all(BudglySpacing.sm),
+                padding: EdgeInsets.all(BudglySpacing.sm),
                 child: Icon(
                   Icons.photo_camera_rounded,
                   size: size < 60 ? 13 : 16,

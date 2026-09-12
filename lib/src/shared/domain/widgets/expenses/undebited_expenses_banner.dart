@@ -38,7 +38,7 @@ class UndebitedExpensesBanner extends StatelessWidget {
         return Material(
           color: theme.colorScheme.primaryContainer,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.lg, BudglySpacing.md,
             ),
             child: Column(
@@ -48,7 +48,7 @@ class UndebitedExpensesBanner extends StatelessWidget {
                 Row(
                   children: [
                     Icon(Icons.pending_actions_rounded, color: foreground),
-                    const SizedBox(width: BudglySpacing.sm),
+                    SizedBox(width: BudglySpacing.sm),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

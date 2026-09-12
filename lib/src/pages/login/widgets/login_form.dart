@@ -61,7 +61,7 @@ class LoginForm extends StatelessWidget {
               children: [
                 if (errorCode != null)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: BudglySpacing.lg),
+                    padding: EdgeInsets.only(bottom: BudglySpacing.lg),
                     child: Text(
                       _getErrorMessageText(context),
                       style: theme.textTheme.bodyMedium!.copyWith(
@@ -116,7 +116,7 @@ class LoginForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.only(top: BudglySpacing.xl),
+          padding: EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
                         onPressed: onSubmitForm,
             child: Text(

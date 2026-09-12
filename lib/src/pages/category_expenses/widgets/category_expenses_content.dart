@@ -38,7 +38,7 @@ class CategoryExpensesContent extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.sm),
+          padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.sm),
           child: CategoryExpenses(
             summary: summary,
             currencyCode: viewModel.currencyCode,
@@ -61,11 +61,10 @@ class CategoryExpensesContent extends StatelessWidget {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, 88),
+                  padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, 88),
                   sliver: SliverList.separated(
                     itemCount: occurrences.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: BudglySpacing.md),
+                    separatorBuilder: (_, _) => SizedBox(height: BudglySpacing.md),
                     itemBuilder: (context, index) {
                       final occurrence = occurrences[index];
                       final card = ExpenseCard(
@@ -92,10 +91,10 @@ class CategoryExpensesContent extends StatelessWidget {
                   ),
                 ),
               if (viewModel.isLoadingMore)
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.lg, 88),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
                 ),
             ],

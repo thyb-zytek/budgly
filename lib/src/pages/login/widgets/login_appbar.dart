@@ -24,7 +24,7 @@ class LoginAppbar extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: BudglySpacing.lg),
+              padding: EdgeInsets.only(left: BudglySpacing.lg),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
@@ -33,7 +33,7 @@ class LoginAppbar extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: BudglySpacing.xl),
+              padding: EdgeInsets.only(bottom: BudglySpacing.xl),
               child: Text(
                 "Budgly",
                 style: theme.textTheme.displayLarge!.copyWith(
@@ -45,7 +45,7 @@ class LoginAppbar extends StatelessWidget {
         ),
         if (!isCompact)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.lg),
+            padding: EdgeInsets.symmetric(horizontal: BudglySpacing.lg),
             child: Text(
               tr.appDescription,
               style: theme.textTheme.titleLarge!.copyWith(

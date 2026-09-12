@@ -5,6 +5,7 @@ import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/shared/ui/widgets/banners/sync_issue_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_screenutil_plus/flutter_screenutil_plus.dart';
 
 class BudglyApp extends StatelessWidget {
   const BudglyApp({super.key});
@@ -17,45 +18,53 @@ class BudglyApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: profileService,
       builder: (context, child) {
-        return MaterialApp.router(
-          debugShowCheckedModeBanner: false,
-          onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-          restorationScopeId: 'budgly_app',
-          scrollBehavior: const _BounceScrollBehavior(),
-          theme: _theme.light(),
-          darkTheme: _theme.dark(),
-          themeMode: profileService.themeMode,
-          locale: profileService.locale,
-          supportedLocales: const [Locale('en'), Locale('fr')],
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          routerConfig: NavigationHelper.router,
-          builder: (context, routerChild) {
-            final mediaQuery = MediaQuery.of(context);
-            final clampedTextScaler = TextScaler.linear(
-              mediaQuery.textScaler.scale(1.0).clamp(0.8, 1.2),
-            );
+        return ScreenUtilPlusInit(
+          designSize: const Size(427, 952),
+          minTextAdapt: true,
+          ensureScreenSize: false,
+          builder: (context, child) {
+            return MaterialApp.router(
+              debugShowCheckedModeBanner: false,
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)!.appTitle,
+              restorationScopeId: 'budgly_app',
+              scrollBehavior: const _BounceScrollBehavior(),
+              theme: _theme.light(),
+              darkTheme: _theme.dark(),
+              themeMode: profileService.themeMode,
+              locale: profileService.locale,
+              supportedLocales: const [Locale('en'), Locale('fr')],
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              routerConfig: NavigationHelper.router,
+              builder: (context, routerChild) {
+                final mediaQuery = MediaQuery.of(context);
+                final clampedTextScaler = TextScaler.linear(
+                  mediaQuery.textScaler.scale(1.0).clamp(0.8, 1.2),
+                );
 
-            return MediaQuery(
-              data: mediaQuery.copyWith(textScaler: clampedTextScaler),
-              child: Material(
-                // Solid surface behind the top inset so the status-bar area
-                // never shows a see-through hole over the page below.
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: SafeArea(
-                  bottom: false,
-                  child: Column(
-                    children: [
-                      const SyncIssueBanner(),
-                      Expanded(child: routerChild!),
-                    ],
+                return MediaQuery(
+                  data: mediaQuery.copyWith(textScaler: clampedTextScaler),
+                  child: Material(
+                    // Solid surface behind the top inset so the status-bar area
+                    // never shows a see-through hole over the page below.
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Column(
+                        children: [
+                          const SyncIssueBanner(),
+                          Expanded(child: routerChild!),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );

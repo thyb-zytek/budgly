@@ -53,7 +53,7 @@ class AccountSelector extends StatelessWidget {
 
   Widget _buildAllItem(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(BudglySpacing.xs),
+      padding: EdgeInsets.all(BudglySpacing.xs),
       child: Row(
         spacing: 16,
         children: [
@@ -118,7 +118,7 @@ class AccountSelector extends StatelessWidget {
         itemBuilder: (context, item) => item.id == null
             ? _buildAllItem(context)
             : Padding(
-                padding: const EdgeInsets.all(BudglySpacing.xs),
+                padding: EdgeInsets.all(BudglySpacing.xs),
                 child: AccountView(
                   account: item,
                   color: Colors.transparent,
@@ -162,7 +162,7 @@ class AccountSelector extends StatelessWidget {
             value: account,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Padding(
-              padding: const EdgeInsets.all(BudglySpacing.xs),
+              padding: EdgeInsets.all(BudglySpacing.xs),
               child: AccountView(account: account, color: Colors.transparent),
             ),
           ),

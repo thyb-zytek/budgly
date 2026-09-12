@@ -78,7 +78,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
+              padding: EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
               child: AutofillGroup(
                 child: Form(
                   key: _formKey,
@@ -118,7 +118,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
+              padding: EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
               child: FormActions(
                 destructiveCancel: true,
                 dense: true,

@@ -20,7 +20,7 @@ class CreationRecap extends StatelessWidget {
         Card(
           margin: EdgeInsets.zero,
           child: Padding(
-            padding: const EdgeInsets.all(BudglySpacing.lg),
+            padding: EdgeInsets.all(BudglySpacing.lg),
             child: Row(
               spacing: 16,
               children: [
@@ -61,7 +61,7 @@ class CreationRecap extends StatelessWidget {
 
         if (viewModel.createdCategories.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: BudglySpacing.xxl, top: BudglySpacing.md),
+            padding: EdgeInsets.only(left: BudglySpacing.xxl, top: BudglySpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 12,

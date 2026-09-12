@@ -45,7 +45,7 @@ class UndebitedSwipeActionsSheet extends StatelessWidget {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           BudglySpacing.lg,
           BudglySpacing.xs,
           BudglySpacing.lg,
@@ -61,7 +61,7 @@ class UndebitedSwipeActionsSheet extends StatelessWidget {
               style: theme.textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: BudglySpacing.xs),
+            SizedBox(height: BudglySpacing.xs),
             FilledButton.icon(
               style: ButtonType.primary.filledStyle(theme, dense: true),
               icon: const Icon(Icons.schedule_send_rounded),

@@ -51,7 +51,7 @@ class CategoryIconView extends StatelessWidget {
                   color: theme.colorScheme.primary,
                   shape: const CircleBorder(),
                   child: Padding(
-                    padding: const EdgeInsets.all(BudglySpacing.xs),
+                    padding: EdgeInsets.all(BudglySpacing.xs),
                     child: Icon(
                       Icons.edit_rounded,
                       size: size < 60 ? 11 : 13,

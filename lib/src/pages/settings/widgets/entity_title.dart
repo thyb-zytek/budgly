@@ -11,7 +11,7 @@ class EntityTitle extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: BudglySpacing.lg),
+      padding: EdgeInsets.symmetric(vertical: BudglySpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,

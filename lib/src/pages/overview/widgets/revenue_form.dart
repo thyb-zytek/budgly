@@ -75,9 +75,9 @@ class _RevenueFormState extends State<RevenueForm> {
     final tr = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.md, BudglySpacing.lg, 0),
+      padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.md, BudglySpacing.lg, 0),
       child: Container(
-        padding: const EdgeInsets.all(BudglySpacing.lg),
+        padding: EdgeInsets.all(BudglySpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(16),

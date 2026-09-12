@@ -39,14 +39,14 @@ class UndebitedSelectionBanner extends StatelessWidget {
         );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         BudglySpacing.lg,
         BudglySpacing.xs,
         BudglySpacing.lg,
         BudglySpacing.sm,
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: BudglySpacing.md,
           vertical: BudglySpacing.sm,
         ),
@@ -72,7 +72,7 @@ class UndebitedSelectionBanner extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: BudglySpacing.sm),
+            SizedBox(width: BudglySpacing.sm),
             Expanded(
               child: Text(
                 tr.selected,
@@ -82,7 +82,7 @@ class UndebitedSelectionBanner extends StatelessWidget {
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
-            const SizedBox(width: BudglySpacing.xs),
+            SizedBox(width: BudglySpacing.xs),
             scopeAction(
               selectionEnabled ? viewModel.selectAll : null,
               tr.selectAll,
@@ -99,7 +99,7 @@ class UndebitedSelectionBanner extends StatelessWidget {
 
   ButtonStyle _pillButtonStyle(ThemeData theme) => TextButton.styleFrom(
         foregroundColor: theme.colorScheme.primary,
-        padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
+        padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
         minimumSize: const Size(0, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         visualDensity: VisualDensity.compact,
