@@ -29,7 +29,7 @@ class LoginAppbar extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 width: isCompact ? 100 : 125,
-                child: Image.asset('assets/images/logo.png'),
+                child: Image.asset('assets/images/logo_v2.png'),
               ),
             ),
             Padding(
