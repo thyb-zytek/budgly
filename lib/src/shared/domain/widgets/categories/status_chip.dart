@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class StatusChip extends StatelessWidget {
@@ -20,11 +21,12 @@ class StatusChip extends StatelessWidget {
 
     return Chip(
       avatar: Icon(icon, size: 16, color: color),
+      labelPadding: const EdgeInsets.only(right: BudglySpacing.xs),
       label: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.labelMedium?.copyWith(
+        style: theme.textTheme.labelSmall?.copyWith(
           color: color,
           fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
         ),
@@ -32,7 +34,7 @@ class StatusChip extends StatelessWidget {
       backgroundColor:
           isHighlighted ? color.withAlpha(28) : Colors.transparent,
       side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xxs, vertical: 0),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
