@@ -70,7 +70,7 @@ class OverviewContent extends StatelessWidget {
                   duration: const Duration(milliseconds: 200),
                   child: showEditor
                       ? Padding(
-                          padding: const EdgeInsets.only(top: BudglySpacing.md),
+                          padding: EdgeInsets.only(top: BudglySpacing.md),
                           child: RevenueForm(
                             key: const ValueKey('revenue-editor'),
                             viewModel: viewModel,
@@ -126,7 +126,7 @@ class OverviewContent extends StatelessWidget {
                 );
               },
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: BudglySpacing.lg)),
+           SliverToBoxAdapter(child: SizedBox(height: BudglySpacing.lg)),
             ViewModelSelector<OverviewViewModel, (Period, String?, List<CategoryExpenseSummary>, String, String, int)>(
               model: viewModel,
               selector: (model) => (

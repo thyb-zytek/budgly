@@ -80,7 +80,7 @@ class _AccountsTabState extends State<AccountsTab>
         return Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.all(BudglySpacing.lg),
+              padding: EdgeInsets.all(BudglySpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -97,7 +97,7 @@ class _AccountsTabState extends State<AccountsTab>
                             itemBuilder: (context, index) {
                               final account = accounts[index];
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: BudglySpacing.sm),
+                                padding: EdgeInsets.only(bottom: BudglySpacing.sm),
                                 child: Card(
                                   key: ValueKey(
                                     account.id ?? identityHashCode(account),

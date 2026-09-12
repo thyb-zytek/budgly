@@ -71,7 +71,7 @@ class ResetPasswordForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.only(top: BudglySpacing.xl),
+          padding: EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
                         onPressed: onSubmitForm,
             child: Text(

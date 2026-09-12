@@ -16,7 +16,7 @@ class UserCard extends StatelessWidget {
       elevation: 0,
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.all(BudglySpacing.lg),
+        padding: EdgeInsets.all(BudglySpacing.lg),
         child: Row(
           spacing: BudglySpacing.lg,
           children: [

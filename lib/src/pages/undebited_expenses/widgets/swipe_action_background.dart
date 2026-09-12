@@ -67,7 +67,7 @@ class UndebitedSwipeActionBackground extends StatelessWidget {
           : MainAxisAlignment.end,
       children: [
         Icon(action.icon, size: 22, color: foregroundColor),
-        const SizedBox(width: BudglySpacing.sm),
+        SizedBox(width: BudglySpacing.sm),
         Flexible(
           child: Text(
             action.label,

@@ -42,7 +42,7 @@ class OverviewExpensesSliver extends StatelessWidget {
     return ValueListenableBuilder<int>(
       valueListenable: slideDirection,
       builder: (context, direction, child) => SliverPadding(
-        padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, 0, BudglySpacing.lg, 88),
+        padding: EdgeInsets.fromLTRB(BudglySpacing.lg, 0, BudglySpacing.lg, 88),
         sliver: SliverToBoxAdapter(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

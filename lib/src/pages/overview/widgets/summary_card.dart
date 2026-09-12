@@ -40,7 +40,7 @@ class OverviewSummaryCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: BudglySpacing.md,
             vertical: BudglySpacing.sm,
           ),
@@ -109,7 +109,7 @@ class OverviewSummaryCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.all(BudglySpacing.md),
+        padding: EdgeInsets.all(BudglySpacing.md),
         child: SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
           child: Column(
@@ -125,7 +125,7 @@ class OverviewSummaryCard extends StatelessWidget {
                 onSelect: onSelectAccount,
               ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.md),
+              padding: EdgeInsets.symmetric(horizontal: BudglySpacing.md),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -139,7 +139,7 @@ class OverviewSummaryCard extends StatelessWidget {
               spacing: BudglySpacing.lg,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.md),
+                  padding: EdgeInsets.symmetric(horizontal: BudglySpacing.md),
                   child: RepaintBoundary(
                     child: CategoryDonutChart(
                       summaries: viewModel.categorySummaries,

@@ -61,7 +61,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
         height: height,
         width: double.infinity,
         child: Padding(
-          padding: const EdgeInsets.all(BudglySpacing.sm),
+          padding: EdgeInsets.all(BudglySpacing.sm),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),
             switchInCurve: Curves.easeIn,

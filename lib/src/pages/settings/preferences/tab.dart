@@ -30,7 +30,7 @@ class _PreferencesTabState extends State<PreferencesTab> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
+      padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
       child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -38,7 +38,7 @@ class _PreferencesTabState extends State<PreferencesTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 28, left: BudglySpacing.lg),
+              padding: EdgeInsets.only(bottom: 28, left: BudglySpacing.lg),
               child: Text(
                 tr.appearance,
                 textAlign: TextAlign.start,

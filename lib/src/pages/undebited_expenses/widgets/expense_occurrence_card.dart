@@ -90,7 +90,7 @@ class UndebitedExpenseCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.all(BudglySpacing.md),
+        padding: EdgeInsets.all(BudglySpacing.md),
         decoration: BoxDecoration(
           color: selected
               ? theme.colorScheme.primaryContainer
@@ -122,7 +122,7 @@ class UndebitedExpenseCard extends StatelessWidget {
                           key: ValueKey('normal'),
                         ),
                 ),
-                const SizedBox(width: BudglySpacing.md),
+                SizedBox(width: BudglySpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +173,7 @@ class UndebitedExpenseCard extends StatelessWidget {
       child: removing
           ? const SizedBox.shrink()
           : Padding(
-              padding: const EdgeInsets.only(bottom: BudglySpacing.sm),
+              padding: EdgeInsets.only(bottom: BudglySpacing.sm),
               child: Semantics(
                 // Swipe gestures aren't discoverable for assistive tech, so
                 // the two actions they trigger are also exposed as custom

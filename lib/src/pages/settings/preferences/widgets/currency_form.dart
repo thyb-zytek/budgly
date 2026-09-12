@@ -38,7 +38,7 @@ class CurrencyForm extends StatelessWidget {
           tabs: reversedCurrencies
               .map(
                 (currency) => Padding(
-                  padding: const EdgeInsets.all(BudglySpacing.sm),
+                  padding: EdgeInsets.all(BudglySpacing.sm),
                   child: Icon(
                     currency.currencyIcon,
                     size: 22,

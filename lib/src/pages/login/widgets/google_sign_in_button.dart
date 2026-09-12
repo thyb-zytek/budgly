@@ -19,7 +19,7 @@ class GoogleSignInButton extends StatelessWidget {
           borderRadius: BudglyRadius.small,
         ),
         side: BorderSide(color: theme.colorScheme.outline),
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: BudglySpacing.xl,
           vertical: BudglySpacing.md,
         ),

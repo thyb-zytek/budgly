@@ -50,7 +50,7 @@ class RecurrenceSelector extends StatelessWidget {
       onSelect: onRecurrenceChanged,
       itemBuilder: (context, recurrence) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
           child: Text(recurrenceLabel(tr, recurrence)),
         );
       },

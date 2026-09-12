@@ -1,100 +1,101 @@
 import 'package:flutter/material.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
+import 'package:flutter_screenutil_plus/flutter_screenutil_plus.dart';
 
 class MaterialTheme {
   const MaterialTheme();
 
-  static TextTheme textTheme = const TextTheme(
+  static TextTheme textTheme = TextTheme(
     displayLarge: TextStyle(
-      fontSize: 48,
+      fontSize: 48.sp,
       fontWeight: FontWeight.w700,
       letterSpacing: -1.0,
       height: 1.1,
     ),
     displayMedium: TextStyle(
-      fontSize: 40,
+      fontSize: 40.sp,
       fontWeight: FontWeight.w700,
       letterSpacing: -0.5,
       height: 1.1,
     ),
     displaySmall: TextStyle(
-      fontSize: 32,
+      fontSize: 32.sp,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.2,
     ),
 
     headlineLarge: TextStyle(
-      fontSize: 28,
+      fontSize: 28.sp,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.3,
     ),
     headlineMedium: TextStyle(
-      fontSize: 24,
+      fontSize: 24.sp,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.3,
     ),
     headlineSmall: TextStyle(
-      fontSize: 20,
+      fontSize: 20.sp,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.3,
     ),
 
     titleLarge: TextStyle(
-      fontSize: 18,
+      fontSize: 18.sp,
       fontWeight: FontWeight.w600,
       letterSpacing: 0,
       height: 1.4,
     ),
     titleMedium: TextStyle(
-      fontSize: 16,
+      fontSize: 16.sp,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.1,
       height: 1.4,
     ),
     titleSmall: TextStyle(
-      fontSize: 14,
+      fontSize: 14.sp,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.1,
       height: 1.4,
     ),
 
     bodyLarge: TextStyle(
-      fontSize: 16,
+      fontSize: 16.sp,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.2,
       height: 1.5,
     ),
     bodyMedium: TextStyle(
-      fontSize: 14,
+      fontSize: 14.sp,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.2,
       height: 1.5,
     ),
     bodySmall: TextStyle(
-      fontSize: 12,
+      fontSize: 12.sp,
       fontWeight: FontWeight.w400,
       letterSpacing: 0.3,
       height: 1.5,
     ),
 
     labelLarge: TextStyle(
-      fontSize: 14,
+      fontSize: 14.sp,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.1,
       height: 1.4,
     ),
     labelMedium: TextStyle(
-      fontSize: 12,
+      fontSize: 12.sp,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.2,
       height: 1.4,
     ),
     labelSmall: TextStyle(
-      fontSize: 11,
+      fontSize: 11.sp,
       fontWeight: FontWeight.w500,
       letterSpacing: 0.3,
       height: 1.4,

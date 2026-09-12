@@ -16,7 +16,7 @@ class PreferenceSection extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.sm, BudglySpacing.xs),
+      padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.sm, BudglySpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 8,

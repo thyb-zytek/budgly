@@ -33,7 +33,7 @@ class CurrencyInput extends StatelessWidget {
       labelText: labelText,
       type: InputType.currency,
       suffix: Padding(
-        padding: const EdgeInsets.only(right: BudglySpacing.sm),
+        padding: EdgeInsets.only(right: BudglySpacing.sm),
         child: Icon(
           currencyCode.currencyIcon,
           size: 20,

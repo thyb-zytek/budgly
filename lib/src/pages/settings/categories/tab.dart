@@ -105,7 +105,7 @@ class _CategoriesTabState extends State<CategoriesTab>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.lg, vertical: BudglySpacing.sm),
+          padding: EdgeInsets.symmetric(horizontal: BudglySpacing.lg, vertical: BudglySpacing.sm),
           child: EntityTitle(
             title: tr.categories,
             subtitle: tr.selectAccountToManageCategories,
@@ -144,7 +144,7 @@ class _CategoriesTabState extends State<CategoriesTab>
               return Stack(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: BudglySpacing.lg,
                       vertical: BudglySpacing.sm,
                     ),

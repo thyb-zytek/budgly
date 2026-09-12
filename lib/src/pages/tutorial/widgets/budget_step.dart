@@ -45,7 +45,7 @@ class BudgetStep extends StatelessWidget {
             labelText: tr.revenue,
             type: InputType.currency,
             suffix: Padding(
-              padding: const EdgeInsets.only(right: BudglySpacing.sm),
+              padding: EdgeInsets.only(right: BudglySpacing.sm),
               child: Icon(
                 viewModel.currencyCode.currencyIcon,
                 size: 20,

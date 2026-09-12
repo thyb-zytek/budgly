@@ -53,7 +53,7 @@ class TabSwitcher extends StatelessWidget {
                             : Colors.transparent,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: BudglySpacing.xs,
                     ),
                     child: DefaultTextStyle(

@@ -94,7 +94,7 @@ class _TextInputState extends State<TextInput> {
     hintText: widget.hintText,
     helperText: widget.helperText,
     errorText: widget.errorText,
-    contentPadding: const EdgeInsets.all(BudglySpacing.lg)
+    contentPadding: EdgeInsets.all(BudglySpacing.lg)
   );
 
   return widget.type.decorate(
@@ -116,7 +116,7 @@ class _TextInputState extends State<TextInput> {
     final tr = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: BudglySpacing.sm, left: BudglySpacing.xs, right: BudglySpacing.xs),
+      padding: EdgeInsets.only(bottom: BudglySpacing.sm, left: BudglySpacing.xs, right: BudglySpacing.xs),
       child: TextFormField(
         controller: widget.controller,
         focusNode: _focusNode,

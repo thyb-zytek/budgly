@@ -47,7 +47,7 @@ class AccountView extends StatelessWidget {
                 ),
                 Flexible(
                   child: Padding(
-                    padding: const EdgeInsets.only(right: BudglySpacing.sm),
+                    padding: EdgeInsets.only(right: BudglySpacing.sm),
                     child: Text(
                       account.name,
                       maxLines: 1,

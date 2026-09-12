@@ -49,7 +49,7 @@ class _UserDetailsState extends State<UserDetails> {
       elevation: 0,
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.all(BudglySpacing.lg).copyWith(top: BudglySpacing.xl),
+        padding: EdgeInsets.all(BudglySpacing.lg).copyWith(top: BudglySpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -87,7 +87,7 @@ class _UserDetailsState extends State<UserDetails> {
                           ),
                         )
                         : Padding(
-                          padding: const EdgeInsets.only(left: BudglySpacing.sm),
+                          padding: EdgeInsets.only(left: BudglySpacing.sm),
                           child: Text(
                             widget.user.profile?.fullName ?? tr.notAvailable,
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -152,7 +152,7 @@ class _UserDetailsState extends State<UserDetails> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: BudglySpacing.sm),
+                  padding: EdgeInsets.only(left: BudglySpacing.sm),
                   child: Text(
                     widget.user.email ?? tr.notAvailable,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -176,7 +176,7 @@ class _UserDetailsState extends State<UserDetails> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: BudglySpacing.sm),
+                  padding: EdgeInsets.only(left: BudglySpacing.sm),
                   child: Text(
                     widget.user.profile?.createdAt != null
                         ? DateFormat(

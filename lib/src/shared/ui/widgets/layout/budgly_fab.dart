@@ -54,7 +54,7 @@ class BudglyFab extends StatelessWidget {
                 ),
                 if (hasLabel)
                   Padding(
-                    padding: const EdgeInsets.only(left: BudglySpacing.xs, right: BudglySpacing.md),
+                    padding: EdgeInsets.only(left: BudglySpacing.xs, right: BudglySpacing.md),
                     child: Text(
                       label!,
                       maxLines: 1,

@@ -82,7 +82,7 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
           }).toList(),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
+          padding: EdgeInsets.symmetric(horizontal: BudglySpacing.xl),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOut,
@@ -95,7 +95,7 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(BudglySpacing.xl, 0, BudglySpacing.xl, BudglySpacing.sm),
+          padding: EdgeInsets.fromLTRB(BudglySpacing.xl, 0, BudglySpacing.xl, BudglySpacing.sm),
           child: FormActions(
             destructiveCancel: true,
             dense: true,

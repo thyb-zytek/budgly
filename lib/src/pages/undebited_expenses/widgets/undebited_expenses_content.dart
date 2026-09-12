@@ -34,7 +34,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             BudglySpacing.lg,
             BudglySpacing.sm,
             BudglySpacing.lg,
@@ -103,7 +103,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     ThemeData theme,
   ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         BudglySpacing.lg,
         BudglySpacing.sm,
         BudglySpacing.lg,
@@ -143,7 +143,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     ThemeData theme,
   ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         BudglySpacing.lg,
         BudglySpacing.xs,
         BudglySpacing.lg,
@@ -156,7 +156,7 @@ class UndebitedExpensesContent extends StatelessWidget {
             size: 16,
             color: theme.colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: BudglySpacing.sm),
+          SizedBox(width: BudglySpacing.sm),
           Expanded(
             child: Text(
               tr.undebitedLongPressHint,
@@ -179,7 +179,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     ThemeData theme,
   ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         BudglySpacing.lg,
         BudglySpacing.xs,
         BudglySpacing.lg,
@@ -192,7 +192,7 @@ class UndebitedExpensesContent extends StatelessWidget {
             size: 16,
             color: theme.colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: BudglySpacing.sm),
+          SizedBox(width: BudglySpacing.sm),
           Expanded(
             child: Text(
               tr.undebitedSelectionModeHint,
@@ -214,7 +214,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     final occurrences = viewModel.occurrences;
     if (occurrences.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: BudglySpacing.xxl),
+        padding: EdgeInsets.only(bottom: BudglySpacing.xxl),
         child: EmptyState(
           icon: Icons.check_circle_outline_rounded,
           title: tr.undebitedNoExpenses,
@@ -226,7 +226,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     for (final group in viewModel.grouped) {
       children.add(
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: BudglySpacing.xs),
+          padding: EdgeInsets.symmetric(vertical: BudglySpacing.xs),
           child: Text(
             group.period.label(viewModel.localeName),
             style: theme.textTheme.labelLarge?.copyWith(
@@ -252,7 +252,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         BudglySpacing.lg,
         BudglySpacing.xs,
         BudglySpacing.lg,

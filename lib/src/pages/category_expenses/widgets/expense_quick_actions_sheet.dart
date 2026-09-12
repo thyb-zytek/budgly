@@ -37,7 +37,7 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.lg),
+        padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.lg),
         child: Row(
           spacing: 12,
           children: [

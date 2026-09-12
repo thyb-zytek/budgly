@@ -38,7 +38,7 @@ class ThemeForm extends StatelessWidget {
     return PreferenceSection(
       title: tr.theme,
       child: Padding(
-        padding: const EdgeInsets.only(top: BudglySpacing.sm),
+        padding: EdgeInsets.only(top: BudglySpacing.sm),
         child: TabSwitcher(
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
           spaceBetween: 8,
@@ -47,7 +47,7 @@ class ThemeForm extends StatelessWidget {
           tabs: ThemeMode.values
               .map(
                 (e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: BudglySpacing.sm, horizontal: BudglySpacing.xs),
+                  padding: EdgeInsets.symmetric(vertical: BudglySpacing.sm, horizontal: BudglySpacing.xs),
                   child: Row(
                     spacing: 4,
                     children: [

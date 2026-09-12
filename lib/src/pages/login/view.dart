@@ -86,7 +86,7 @@ class _LoginPageState extends State<LoginPage> {
                   MediaQuery.of(context).viewInsets.bottom > 0;
 
               return Padding(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                   horizontal: BudglySpacing.lg,
                 ).copyWith(top: isKeyboardOpen ? 64 : 112),
                 child: Column(
@@ -100,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: LoginAppbar(isCompact: isKeyboardOpen),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(top: BudglySpacing.xl),
+                      padding: EdgeInsets.only(top: BudglySpacing.xl),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         switchInCurve: Curves.easeOut,
@@ -118,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                                       if (state.errorCode != null &&
                                           _translateErrorMessage(tr, state) != null)
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: EdgeInsets.symmetric(
                                         vertical: BudglySpacing.lg,
                                       ),
                                       child: Text(

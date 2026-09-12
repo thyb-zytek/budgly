@@ -65,7 +65,7 @@ class _SelectorState<T> extends State<Selector<T>> {
           children: [
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
+                padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
                 child: widget.itemBuilder(context, currentItem),
               ),
             ),
