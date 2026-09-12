@@ -10,10 +10,11 @@ import 'package:flutter/material.dart';
 /// Bottom-pinned block carrying the three bulk actions for the current
 /// selection.
 ///
-/// It reuses [UndebitedActionButton] — the exact widget the per-card actions
-/// use in normal mode — so selection and normal modes share the same buttons.
-/// Selection bookkeeping (count and select/deselect scope) lives in the strip
-/// above the list instead.
+/// Outside of selection mode, the same three actions are available per card
+/// via swipe gestures instead of buttons (see [UndebitedExpenseCard]); a
+/// bulk selection can't be expressed as a single swipe, so it keeps this
+/// dedicated button bar. Selection bookkeeping (count and select/deselect
+/// scope) lives in the strip above the list instead.
 class UndebitedBulkActionBar extends StatelessWidget {
   final UndebitedExpensesViewModel viewModel;
 

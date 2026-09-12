@@ -91,6 +91,27 @@ class _FakeProfileService extends ProfileService {
   void removeListener(VoidCallback listener) {}
 }
 
+/// Locates the swipeable [Dismissible] wrapping the card whose title is
+/// [name], so tests can drag it instead of tapping the old per-card buttons.
+Finder _cardFor(String name) =>
+    find.ancestor(of: find.text(name), matching: find.byType(Dismissible));
+
+/// Swipes the card left (endToStart): triggers "debit on original period"
+/// directly, without any confirmation sheet.
+Future<void> _swipeLeft(WidgetTester tester, String name) async {
+  await tester.fling(_cardFor(name), const Offset(-500, 0), 1000);
+  await tester.pump();
+  await tester.pumpAndSettle();
+}
+
+/// Swipes the card right (startToEnd): always snaps back and opens the
+/// bottom sheet offering the two current-period actions.
+Future<void> _swipeRight(WidgetTester tester, String name) async {
+  await tester.fling(_cardFor(name), const Offset(500, 0), 1000);
+  await tester.pump();
+  await tester.pumpAndSettle();
+}
+
 Account _account(String id, String name) =>
     Account(id: id, name: name, color: Colors.blueGrey);
 
@@ -283,91 +304,189 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     expect(find.text('2 dépense(s) en attente'), findsOneWidget);
   });
 
-  testWidgets('carry action moves an occurrence to the current period', (tester) async {
-    final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
-      accounts: [_account('account-1', 'Compte courant')],
-      expensesByAccount: {
-        'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-        ],
-      },
-    );
+  testWidgets(
+    'swiping right blocks the card and opens a sheet naming the current '
+    'period for both actions',
+    (tester) async {
+      final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-    );
-    await tester.tap(find.text('Reporter vers Septembre 2026'));
-    await tester.pumpAndSettle();
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
 
-    expect(viewModel.occurrences, isEmpty);
-    expect(expenses.moves, hasLength(1));
-    expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
-    expect(expenses.moves.single.$4, isFalse);
-  });
+      // The old per-card buttons are gone; nothing is tappable until the
+      // user swipes.
+      expect(find.text('Reporter vers Septembre 2026'), findsNothing);
+      expect(find.text('Débiter en Septembre 2026'), findsNothing);
 
-  testWidgets('debit on original period marks the historical occurrence', (tester) async {
-    final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
-      accounts: [_account('account-1', 'Compte courant')],
-      expensesByAccount: {
-        'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-        ],
-      },
-    );
+      await _swipeRight(tester, 'Loyer');
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-    );
-    await tester.tap(find.text('Débiter sur Août 2026'));
-    await tester.pumpAndSettle();
+      // The card is still there (right swipe never completes on its own)...
+      expect(find.text('Loyer'), findsOneWidget);
+      // The swipe background previews the same two actions as the sheet, so
+      // the assertions target the sheet's buttons to disambiguate.
+      expect(find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
+          findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
+          findsOneWidget);
+      expect(find.text('Choisir une action'), findsOneWidget);
+    },
+  );
 
-    expect(expenses.marks, hasLength(1));
-    expect(expenses.marks.single.$2, DateTime(2026, 8, 5));
-  });
+  testWidgets(
+    'swiping right then choosing "report" carries the occurrence to the '
+    'current period',
+    (tester) async {
+      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
 
-  testWidgets('debit now moves and debits the occurrence on the current period', (tester) async {
-    final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
-      accounts: [_account('account-1', 'Compte courant')],
-      expensesByAccount: {
-        'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-        ],
-      },
-    );
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+      await _swipeRight(tester, 'Loyer');
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
+      );
+      await tester.pumpAndSettle();
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-    );
-    await tester.tap(find.text('Débiter en Septembre 2026'));
-    await tester.pumpAndSettle();
+      expect(viewModel.occurrences, isEmpty);
+      expect(expenses.moves, hasLength(1));
+      expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
+      expect(expenses.moves.single.$4, isFalse);
+    },
+  );
 
-    expect(expenses.moves, hasLength(1));
-    expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
-    expect(expenses.moves.single.$4, isTrue);
-  });
+  testWidgets(
+    'swiping right then choosing "debit now" moves and debits the '
+    'occurrence on the current period',
+    (tester) async {
+      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
 
-  testWidgets('action buttons target the origin and current periods by name', (tester) async {
-    final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
-      accounts: [_account('account-1', 'Compte courant')],
-      expensesByAccount: {
-        'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-        ],
-      },
-    );
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+      await _swipeRight(tester, 'Loyer');
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
+      );
+      await tester.pumpAndSettle();
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-    );
+      expect(expenses.moves, hasLength(1));
+      expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
+      expect(expenses.moves.single.$4, isTrue);
+    },
+  );
 
-    expect(find.text('Reporter vers Septembre 2026'), findsOneWidget);
-    expect(find.text('Débiter sur Août 2026'), findsOneWidget);
-    expect(find.text('Débiter en Septembre 2026'), findsOneWidget);
-  });
+  testWidgets(
+    'swiping right and dismissing the sheet without a choice leaves the '
+    'occurrence untouched',
+    (tester) async {
+      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
+
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+      await _swipeRight(tester, 'Loyer');
+      // Tap outside the sheet to dismiss it without picking an action.
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loyer'), findsOneWidget);
+      expect(expenses.moves, isEmpty);
+      expect(expenses.marks, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'swiping left immediately debits the occurrence on its original period, '
+    'with no sheet involved',
+    (tester) async {
+      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
+
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+      await _swipeLeft(tester, 'Loyer');
+
+      expect(find.text('Choisir une action'), findsNothing);
+      expect(expenses.marks, hasLength(1));
+      expect(expenses.marks.single.$2, DateTime(2026, 8, 5));
+    },
+  );
+
+  testWidgets(
+    'swipe is disabled in selection mode; tapping a card toggles it instead',
+    (tester) async {
+      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
+
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+      await tester.longPress(find.text('Loyer'));
+      await tester.pumpAndSettle();
+      expect(viewModel.isSelectionMode, isTrue);
+
+      final dismissible = tester.widget<Dismissible>(_cardFor('Loyer'));
+      expect(dismissible.direction, DismissDirection.none);
+
+      // A swipe attempt has no effect while selecting...
+      await _swipeRight(tester, 'Loyer');
+      expect(find.text('Choisir une action'), findsNothing);
+      expect(expenses.moves, isEmpty);
+
+      // ...but a plain tap toggles the card out of the selection.
+      await tester.tap(find.text('Loyer'));
+      await tester.pumpAndSettle();
+      expect(viewModel.isSelected(viewModel.occurrences.single), isFalse);
+    },
+  );
 
   testWidgets('sheet amounts always honor the profile decimal places', (tester) async {
     final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
@@ -501,4 +620,61 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     expect(find.text('0 dépense(s) en attente'), findsOneWidget);
     expect(find.text('Aucune dépense non débitée'), findsOneWidget);
   });
+
+  testWidgets(
+    'the gesture hint mentions swiping now that per-card buttons are gone',
+    (tester) async {
+      final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
+
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+
+      expect(
+        find.text(
+          'Glissez une dépense pour des actions rapides, ou appuyez '
+          "longuement pour en sélectionner plusieurs.",
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'selection mode shows a dedicated hint explaining swipe is disabled',
+    (tester) async {
+      final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          ],
+        },
+      );
+
+      await pumpApp(
+        tester,
+        UndebitedExpensesPage(injectedViewModel: viewModel),
+      );
+
+      await tester.longPress(find.text('Loyer'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          "Appuyez sur une dépense pour l'ajouter ou la retirer de la "
+          'sélection. Le glissement est désactivé pendant la sélection.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }

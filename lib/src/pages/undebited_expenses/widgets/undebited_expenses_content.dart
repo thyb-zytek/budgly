@@ -6,6 +6,7 @@ import 'package:budgly/src/pages/undebited_expenses/view_model.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/bulk_action_bar.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/expense_occurrence_card.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/selection_banner.dart';
+import 'package:budgly/src/pages/undebited_expenses/widgets/swipe_hint_wrapper.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,16 @@ import 'package:flutter/material.dart';
 class UndebitedExpensesContent extends StatelessWidget {
   final UndebitedExpensesViewModel viewModel;
 
-  const UndebitedExpensesContent({super.key, required this.viewModel});
+  /// Tracks the transient swipe-hint animation shown on the first card so it
+  /// can be stopped as soon as the user interacts with any card. Owned by
+  /// the page's state so its identity survives this widget being rebuilt.
+  final GlobalKey<UndebitedSwipeHintWrapperState> swipeHintKey;
+
+  const UndebitedExpensesContent({
+    super.key,
+    required this.viewModel,
+    required this.swipeHintKey,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +49,14 @@ class UndebitedExpensesContent extends StatelessWidget {
           alignment: Alignment.topCenter,
           clipBehavior: Clip.hardEdge,
           child: viewModel.isSelectionMode
-              ? UndebitedSelectionBanner(viewModel: viewModel)
-              : _buildLongPressHint(context, tr, theme),
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    UndebitedSelectionBanner(viewModel: viewModel),
+                    _buildSelectionModeHint(context, tr, theme),
+                  ],
+                )
+              : _buildGestureHint(context, tr, theme),
         ),
         Expanded(child: _buildList(context, tr, theme)),
         AnimatedSize(
@@ -118,7 +134,10 @@ class UndebitedExpensesContent extends StatelessWidget {
     );
   }
 
-  Widget _buildLongPressHint(
+  /// Shown above the list outside of selection mode: explains both ways to
+  /// act on a card now that the per-item buttons are gone (swipe for quick
+  /// actions, long-press to start a multi-select).
+  Widget _buildGestureHint(
     BuildContext context,
     AppLocalizations tr,
     ThemeData theme,
@@ -133,7 +152,7 @@ class UndebitedExpensesContent extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.touch_app_outlined,
+            Icons.info_outline_rounded,
             size: 16,
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -141,6 +160,42 @@ class UndebitedExpensesContent extends StatelessWidget {
           Expanded(
             child: Text(
               tr.undebitedLongPressHint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shown while in selection mode, right below the selection strip: swipe
+  /// is disabled there (it would be ambiguous with toggling a card), so this
+  /// clarifies the tap-to-toggle behavior instead.
+  Widget _buildSelectionModeHint(
+    BuildContext context,
+    AppLocalizations tr,
+    ThemeData theme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        BudglySpacing.lg,
+        BudglySpacing.xs,
+        BudglySpacing.lg,
+        0,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.touch_app_outlined,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: BudglySpacing.sm),
+          Expanded(
+            child: Text(
+              tr.undebitedSelectionModeHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -166,6 +221,36 @@ class UndebitedExpensesContent extends StatelessWidget {
         ),
       );
     }
+    var isFirstCard = true;
+    final children = <Widget>[];
+    for (final group in viewModel.grouped) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: BudglySpacing.xs),
+          child: Text(
+            group.period.label(viewModel.localeName),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+      for (final occurrence in group.occurrences) {
+        final card = UndebitedExpenseCard(
+          viewModel: viewModel,
+          occurrence: occurrence,
+          onUserInteracted: () => swipeHintKey.currentState?.stop(),
+        );
+        children.add(
+          isFirstCard
+              ? UndebitedSwipeHintWrapper(key: swipeHintKey, child: card)
+              : card,
+        );
+        isFirstCard = false;
+      }
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         BudglySpacing.lg,
@@ -173,25 +258,7 @@ class UndebitedExpensesContent extends StatelessWidget {
         BudglySpacing.lg,
         BudglySpacing.lg,
       ),
-      children: [
-        for (final group in viewModel.grouped) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: BudglySpacing.xs),
-            child: Text(
-              group.period.label(viewModel.localeName),
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          for (final occurrence in group.occurrences)
-            UndebitedExpenseCard(
-              viewModel: viewModel,
-              occurrence: occurrence,
-            ),
-        ],
-      ],
+      children: children,
     );
   }
 }
