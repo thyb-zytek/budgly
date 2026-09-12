@@ -124,7 +124,7 @@ jobs:
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: budgly-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
