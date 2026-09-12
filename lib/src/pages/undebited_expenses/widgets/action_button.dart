@@ -1,9 +1,13 @@
 import 'package:budgly/src/core/theme/button_styles.dart';
 import 'package:flutter/material.dart';
 
-/// Single undebited action button, shared by the per-card actions
-/// ([UndebitedExpenseCard]) and the bottom bulk bar
-/// ([UndebitedBulkActionBar]) so both modes render the exact same buttons.
+/// Single undebited action button used by the bottom bulk bar
+/// ([UndebitedBulkActionBar]) when several expenses are selected.
+///
+/// The single-item equivalent used to live on [UndebitedExpenseCard] as
+/// three of these buttons; that card now drives its actions through swipe
+/// gestures instead (see [UndebitedExpenseCard]'s doc comment), so this
+/// widget only backs the bulk bar today.
 class UndebitedActionButton extends StatelessWidget {
   final ButtonType type;
   final Widget icon;

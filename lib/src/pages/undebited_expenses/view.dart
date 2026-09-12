@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/view_models/view_model_selector.dart';
 import 'package:budgly/src/pages/undebited_expenses/view_model.dart';
+import 'package:budgly/src/pages/undebited_expenses/widgets/swipe_hint_wrapper.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/undebited_expenses_content.dart';
 import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,8 @@ class UndebitedExpensesPage extends StatefulWidget {
 class _UndebitedExpensesPageState extends State<UndebitedExpensesPage> {
   late final UndebitedExpensesViewModel _viewModel;
   late final bool _ownsViewModel;
+  final GlobalKey<UndebitedSwipeHintWrapperState> _swipeHintKey =
+      GlobalKey<UndebitedSwipeHintWrapperState>();
 
   @override
   void initState() {
@@ -65,8 +68,10 @@ class _UndebitedExpensesPageState extends State<UndebitedExpensesPage> {
             model.isProcessing,
             model.busyKey,
           ),
-          builder: (context, _) =>
-              UndebitedExpensesContent(viewModel: _viewModel),
+          builder: (context, _) => UndebitedExpensesContent(
+            viewModel: _viewModel,
+            swipeHintKey: _swipeHintKey,
+          ),
         ),
       ),
     );
