@@ -19,9 +19,13 @@ class ExpensesStore extends ChangeNotifier {
 
   bool hasLoadedAccount(String accountId) => _loadedAccounts.contains(accountId);
 
+  void _sortByDebitDateDesc(List<Expense> expenses) {
+    expenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+  }
+
   void setExpensesForAccount(String accountId, List<Expense> expenses) {
-    final sorted = List<Expense>.from(expenses)
-      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    final sorted = List<Expense>.from(expenses);
+    _sortByDebitDateDesc(sorted);
     _expensesByAccount[accountId] = sorted;
     _loadedAccounts.add(accountId);
     notifyListeners();
@@ -50,8 +54,8 @@ class ExpensesStore extends ChangeNotifier {
         byId[id] = expense;
       }
     }
-    final merged = [...byId.values, ...unnamed]
-      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    final merged = [...byId.values, ...unnamed];
+    _sortByDebitDateDesc(merged);
     _expensesByAccount[accountId] = merged;
     _loadedAccounts.add(accountId);
     notifyListeners();
@@ -69,7 +73,7 @@ class ExpensesStore extends ChangeNotifier {
   void addExpense(Expense expense) {
     final list = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
     list.add(expense);
-    list.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _sortByDebitDateDesc(list);
     notifyListeners();
   }
 
@@ -84,7 +88,7 @@ class ExpensesStore extends ChangeNotifier {
     final list = _expensesByAccount.putIfAbsent(next.accountId, () => []);
     list.add(previous);
     list.add(next);
-    list.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _sortByDebitDateDesc(list);
     notifyListeners();
   }
 
@@ -109,7 +113,7 @@ class ExpensesStore extends ChangeNotifier {
 
     final target = _expensesByAccount.putIfAbsent(expense.accountId, () => []);
     target.add(expense);
-    target.sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    _sortByDebitDateDesc(target);
     notifyListeners();
   }
 
