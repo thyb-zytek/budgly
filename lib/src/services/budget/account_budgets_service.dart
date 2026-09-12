@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:budgly/src/core/async/in_flight_registry.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/budget/account_budget.dart';
 import 'package:budgly/src/models/budget/period.dart';
@@ -20,7 +21,7 @@ class AccountBudgetsService {
 
   final AccountBudgetFirestore _provider;
   final AccountBudgetsStore _store;
-  final Map<String, Future<void>> _inFlight = {};
+  final _inFlight = InFlightRegistry<String>();
 
   AccountBudgetsService({
     AccountBudgetFirestore? provider,
@@ -135,7 +136,7 @@ class AccountBudgetsService {
     bool forceRefresh = false,
   }) async {
     final key = _key(accountId, year, month);
-    final existing = _inFlight[key];
+    final existing = _inFlight.peek<void>(key);
     if (existing != null) {
       if (forceRefresh) await existing;
       return;
@@ -181,16 +182,12 @@ class AccountBudgetsService {
     int year,
     int month,
   ) {
-    final existing = _inFlight[key];
+    final existing = _inFlight.peek<void>(key);
     if (existing != null) return existing;
 
     final future = _fetchAndStoreRevenue(key, accountId, year, month);
-    _inFlight[key] = future;
-    return future.whenComplete(() {
-      if (identical(_inFlight[key], future)) {
-        _inFlight.remove(key);
-      }
-    });
+    _inFlight.register(key, future);
+    return future.whenComplete(() => _inFlight.release(key, future));
   }
 
   Future<void> _fetchAndStoreRevenue(

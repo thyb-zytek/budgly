@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' hide Category;
+import 'package:budgly/src/core/async/in_flight_registry.dart';
+import 'package:budgly/src/core/async/refresh_throttle.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/category/category.dart';
@@ -28,9 +30,8 @@ class CategoriesService {
   final LocalCache _localCache = LocalCache();
   final SyncQueue _syncQueue = SyncQueue.instance;
 
-  final Map<String, Future<void>> _inFlight = {};
-  final Map<String, DateTime> _lastRemoteRefresh = {};
-  static const _refreshInterval = Duration(minutes: 1);
+  final _inFlight = InFlightRegistry<String>();
+  final _refreshThrottle = RefreshThrottle<String>(const Duration(minutes: 1));
 
   CategoriesService({
     CategorySupabase? categorySupabase,
@@ -59,13 +60,13 @@ class CategoriesService {
 
   void invalidateCache() {
     _inFlight.clear();
-    _lastRemoteRefresh.clear();
+    _refreshThrottle.clear();
     _store.clearAll();
   }
 
   void invalidateAccountCache(String accountId) {
     _inFlight.remove(accountId);
-    _lastRemoteRefresh.remove(accountId);
+    _refreshThrottle.remove(accountId);
     _store.clearAccountCache(accountId);
   }
 
@@ -128,20 +129,18 @@ class CategoriesService {
       );
     }
 
-    final lastRefresh = _lastRemoteRefresh[accountId];
-    final refreshNeeded = forceRefresh ||
-        lastRefresh == null ||
-        DateTime.now().difference(lastRefresh) >= _refreshInterval;
-    if (!refreshNeeded) return _store.getCategoriesForAccount(accountId);
+    if (!_refreshThrottle.isDue(accountId, forceRefresh: forceRefresh)) {
+      return _store.getCategoriesForAccount(accountId);
+    }
 
-    final existing = _inFlight[accountId];
+    final existing = _inFlight.peek<List<Category>>(accountId);
     if (existing != null) {
       if (forceRefresh || !hasCache) await existing;
       return _store.getCategoriesForAccount(accountId);
     }
 
     final future = _refreshCategoriesFromRemote(accountId);
-    _inFlight[accountId] = future;
+    _inFlight.register(accountId, future);
     if (!forceRefresh && hasCache) {
       unawaited(future);
       return _store.getCategoriesForAccount(accountId);
@@ -149,7 +148,7 @@ class CategoriesService {
     try {
       await future;
     } finally {
-      if (identical(_inFlight[accountId], future)) _inFlight.remove(accountId);
+      _inFlight.release(accountId, future);
     }
     return _store.getCategoriesForAccount(accountId);
   }
@@ -173,7 +172,7 @@ class CategoriesService {
           freshCategories.map(_hydrateCategoryIcon).toList(growable: false);
       _store.setCategoriesForAccount(accountId, categoriesWithIcons);
       await _localCache.saveCategories(accountId, categoriesWithIcons);
-      _lastRemoteRefresh[accountId] = DateTime.now();
+      _refreshThrottle.markRefreshed(accountId);
       return categoriesWithIcons;
     } catch (e, stackTrace) {
       AnalyticsService.instance.track('category_load_failed', {'error': e.toString()});

@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:async';
 
+import 'package:budgly/src/core/async/in_flight_registry.dart';
+import 'package:budgly/src/core/async/refresh_throttle.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/account/account.dart';
@@ -29,10 +31,9 @@ class AccountsService {
   fb.FirebaseAuth get _auth => _authInput ?? fb.FirebaseAuth.instance;
   final String _bucketId = AppConstants.bucketAccounts;
 
-  final Map<String, Future<void>> _inFlight = {};
-  final Map<String, DateTime> _lastRemoteRefresh = {};
+  final _inFlight = InFlightRegistry<String>();
+  final _refreshThrottle = RefreshThrottle<String>(const Duration(minutes: 1));
 
-  static const _refreshInterval = Duration(minutes: 1);
   final AccountsStore _store;
   final LocalCache _localCache = LocalCache();
   final SyncQueue _syncQueue = SyncQueue.instance;
@@ -58,7 +59,7 @@ class AccountsService {
 
   void invalidateCache() {
     _inFlight.clear();
-    _lastRemoteRefresh.clear();
+    _refreshThrottle.clear();
   }
 
   String get _currentUserId {
@@ -73,12 +74,12 @@ class AccountsService {
     final userId = _currentUserId;
     if (_loadedUserId != null && _loadedUserId != userId) {
       _inFlight.clear();
-      _lastRemoteRefresh.clear();
+      _refreshThrottle.clear();
       _store.clearLocalAccounts();
     }
     _loadedUserId = userId;
 
-    final existing = _inFlight[userId];
+    final existing = _inFlight.peek<void>(userId);
     if (existing != null) return existing;
 
     final cached = await _localCache.loadAccounts(userId);
@@ -87,16 +88,10 @@ class AccountsService {
       _store.setAccounts(cached);
     }
 
-    final lastRefresh = _lastRemoteRefresh[userId];
-    final refreshNeeded =
-        forceRefresh ||
-        lastRefresh == null ||
-        DateTime.now().difference(lastRefresh) >= _refreshInterval;
-
-    if (!refreshNeeded) return;
+    if (!_refreshThrottle.isDue(userId, forceRefresh: forceRefresh)) return;
 
     final future = _refreshAccountsFromRemote(userId);
-    _inFlight[userId] = future;
+    _inFlight.register(userId, future);
     if (!forceRefresh && hasCache) {
       unawaited(future);
       return;
@@ -104,7 +99,7 @@ class AccountsService {
     try {
       await future;
     } finally {
-      if (identical(_inFlight[userId], future)) _inFlight.remove(userId);
+      _inFlight.release(userId, future);
     }
   }
 
@@ -119,7 +114,7 @@ class AccountsService {
 
       _store.setAccounts(accounts);
       await _localCache.saveAccounts(userId, accounts);
-      _lastRemoteRefresh[userId] = DateTime.now();
+      _refreshThrottle.markRefreshed(userId);
 
       unawaited(_refreshPictureUrls(accounts, userId));
     } catch (e, stackTrace) {
@@ -363,7 +358,7 @@ class AccountsService {
 
   void clearLocalAccounts() {
     _inFlight.clear();
-    _lastRemoteRefresh.clear();
+    _refreshThrottle.clear();
     _loadedUserId = null;
     _store.clearLocalAccounts();
   }
