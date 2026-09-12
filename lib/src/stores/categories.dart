@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/extensions/collection_equality.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:flutter/material.dart';
@@ -23,15 +24,9 @@ class CategoriesStore extends ChangeNotifier {
   CategoriesStore._();
 
   void setAvailableIcons(List<CategoryIcon> icons) {
-    if (_iconsLoaded && _availableIcons.length == icons.length) {
-      var same = true;
-      for (var i = 0; i < icons.length; i++) {
-        if (_availableIcons[i] != icons[i]) {
-          same = false;
-          break;
-        }
-      }
-      if (same) return;
+    if (_iconsLoaded &&
+        listContentEquals(_availableIcons, icons, (a, b) => a == b)) {
+      return;
     }
 
     _availableIcons = List.from(icons);
@@ -43,29 +38,22 @@ class CategoriesStore extends ChangeNotifier {
     final previous = _categoriesByAccount[accountId];
     if (_hasLoadedByAccount[accountId] == true &&
         previous != null &&
-        _sameCategories(previous, categories)) {
+        listContentEquals(
+          previous,
+          categories,
+          (a, b) =>
+              a.id == b.id &&
+              a.name == b.name &&
+              a.color == b.color &&
+              a.iconCode == b.iconCode &&
+              a.icon == b.icon &&
+              a.accountId == b.accountId,
+        )) {
       return;
     }
     _categoriesByAccount[accountId] = List.from(categories);
     _hasLoadedByAccount[accountId] = true;
     notifyListeners();
-  }
-
-  bool _sameCategories(List<Category> a, List<Category> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      final left = a[i];
-      final right = b[i];
-      if (left.id != right.id ||
-          left.name != right.name ||
-          left.color != right.color ||
-          left.iconCode != right.iconCode ||
-          left.icon != right.icon ||
-          left.accountId != right.accountId) {
-        return false;
-      }
-    }
-    return true;
   }
 
   bool hasLoadedAccount(String accountId) {
