@@ -2,12 +2,14 @@ import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/pages/settings/accounts/view_model.dart';
 import 'package:budgly/src/pages/settings/categories/view_model.dart';
-import 'package:budgly/src/pages/settings/preferences/view_model.dart';
+import 'package:budgly/src/pages/settings/preferences/preferences_provider.dart';
+import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/stores/accounts.dart';
 import 'package:budgly/src/stores/categories.dart';
 import 'package:budgly/src/stores/expenses.dart';
 import 'package:budgly/src/stores/profile.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../fixtures/builders.dart';
@@ -22,6 +24,7 @@ void main() {
 
   tearDown(() {
     clearAllTestStores();
+    ProfileStore.instance.clear();
   });
 
   test('AccountsViewModel propagates account store mutations to listeners', () {
@@ -76,11 +79,17 @@ void main() {
     expect(notifications, greaterThanOrEqualTo(2));
   });
 
-  test('PreferencesViewModel reflects external profile preference mutations', () {
-    final vm = PreferencesViewModel();
-    addTearDown(vm.dispose);
+  test('Preferences (Riverpod) reflects external profile preference mutations', () {
+    final container = ProviderContainer(
+      overrides: [
+        profileServiceProvider.overrideWithValue(ProfileService(store: ProfileStore.instance)),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(preferencesProvider); // ensure build() ran, listener attached
     var notifications = 0;
-    vm.addListener(() => notifications++);
+    container.listen(preferencesProvider, (previous, next) => notifications++);
 
     ProfileStore.instance.setPreferences(
       themeMode: ThemeMode.dark,
@@ -89,10 +98,11 @@ void main() {
       amountDecimalPlaces: 0,
     );
 
-    expect(vm.mode, ThemeMode.dark);
-    expect(vm.locale.languageCode, 'en');
-    expect(vm.currency, 'USD');
-    expect(vm.amountDecimalPlaces, 0);
+    final state = container.read(preferencesProvider);
+    expect(state.mode, ThemeMode.dark);
+    expect(state.locale.languageCode, 'en');
+    expect(state.currency, 'USD');
+    expect(state.amountDecimalPlaces, 0);
     expect(notifications, greaterThanOrEqualTo(1));
   });
 

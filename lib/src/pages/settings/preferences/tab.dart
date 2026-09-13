@@ -1,33 +1,22 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/pages/settings/preferences/view_model.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
+import 'package:budgly/src/pages/settings/preferences/preferences_provider.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/amount_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/currency_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/locale_form.dart';
 import 'package:budgly/src/pages/settings/preferences/widgets/theme_form.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:budgly/src/core/view_models/view_model_selector.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PreferencesTab extends StatefulWidget {
+class PreferencesTab extends ConsumerWidget {
   const PreferencesTab({super.key});
 
   @override
-  State<PreferencesTab> createState() => _PreferencesTabState();
-}
-
-class _PreferencesTabState extends State<PreferencesTab> {
-  final PreferencesViewModel _viewModel = PreferencesViewModel();
-
-  @override
-  void dispose() {
-    _viewModel.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final notifier = ref.read(preferencesProvider.notifier);
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm, vertical: BudglySpacing.lg),
@@ -48,39 +37,45 @@ class _PreferencesTabState extends State<PreferencesTab> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ViewModelSelector(
-                  model: _viewModel,
-                  selector: (model) => model.mode,
-                  builder: (context, mode) => ThemeForm(
-                    currentThemeMode: mode,
-                    onThemeChanged: _viewModel.changeTheme,
-                  ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final mode = ref.watch(preferencesProvider.select((s) => s.mode));
+                    return ThemeForm(
+                      currentThemeMode: mode,
+                      onThemeChanged: notifier.changeTheme,
+                    );
+                  },
                 ),
-                ViewModelSelector(
-                  model: _viewModel,
-                  selector: (model) => model.locale,
-                  builder: (context, locale) => LocaleForm(
-                    currentLocale: locale,
-                    onLocaleChanged: _viewModel.changeLocale,
-                  ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final locale = ref.watch(preferencesProvider.select((s) => s.locale));
+                    return LocaleForm(
+                      currentLocale: locale,
+                      onLocaleChanged: notifier.changeLocale,
+                    );
+                  },
                 ),
-                ViewModelSelector(
-                  model: _viewModel,
-                  selector: (model) => model.currency,
-                  builder: (context, currency) => CurrencyForm(
-                    currentCurrency: currency,
-                    supportedCurrencies: _viewModel.supportedCurrencies,
-                    onCurrencyChanged: _viewModel.changeCurrency,
-                  ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final currency = ref.watch(preferencesProvider.select((s) => s.currency));
+                    return CurrencyForm(
+                      currentCurrency: currency,
+                      supportedCurrencies: AppConstants.supportedCurrencies,
+                      onCurrencyChanged: notifier.changeCurrency,
+                    );
+                  },
                 ),
-                ViewModelSelector(
-                  model: _viewModel,
-                  selector: (model) => (model.currency, model.amountDecimalPlaces),
-                  builder: (context, value) => AmountForm(
-                    amountDecimalPlaces: value.$2,
-                    onChanged: _viewModel.changeAmountDecimalPlaces,
-                    currency: value.$1,
-                  ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final value = ref.watch(
+                      preferencesProvider.select((s) => (s.currency, s.amountDecimalPlaces)),
+                    );
+                    return AmountForm(
+                      amountDecimalPlaces: value.$2,
+                      onChanged: notifier.changeAmountDecimalPlaces,
+                      currency: value.$1,
+                    );
+                  },
                 ),
               ],
             ),
