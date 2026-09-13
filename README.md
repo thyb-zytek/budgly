@@ -20,7 +20,7 @@ Elle couvre notamment :
 ```bash
 flutter pub get
 flutter gen-l10n
-flutter analyze
+dart analyze
 flutter test
 ```
 

@@ -69,7 +69,9 @@ do not move a feature between backends accidentally.
 ## Commands
 
 - `flutter pub get` -- install dependencies and generate localizations.
-- `flutter analyze` -- run static analysis.
+- `flutter analyze` -- run static analysis. Since Riverpod 3.x / `riverpod_lint`
+  3.x (plugin `analysis_server_plugin`), `flutter analyze` does not report plugin
+  diagnostics (known bug). Run **`dart analyze`** as the analysis gate, which does.
 - `flutter test` -- run the test suite.
 - `flutter gen-l10n` -- regenerate localization output after ARB changes.
 - `dart run flutter_launcher_icons` -- regenerate launcher icons after changing

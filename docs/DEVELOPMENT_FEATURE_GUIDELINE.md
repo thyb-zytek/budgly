@@ -264,7 +264,7 @@ Avant de considérer l'issue terminée :
 
 ```bash
 flutter pub get
-flutter analyze
+dart analyze
 flutter test
 flutter test --coverage
 ```
@@ -294,7 +294,7 @@ Puis vérifier manuellement le parcours principal sur l'environnement cible lors
 - [ ] Aucun PII dans Analytics/logs.
 - [ ] Pas de requête/rebuild inutile évident.
 - [ ] Documentation mise à jour si nécessaire.
-- [ ] `flutter analyze` sans erreur/warning.
+- [ ] `dart analyze` sans erreur/warning.
 - [ ] Tous les tests passent.
 - [ ] Couverture examinée sur le code modifié et non uniquement sur le pourcentage global.
 
