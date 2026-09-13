@@ -100,3 +100,6 @@ ios/!default.perspectivev3
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_en.dart
 lib/l10n/app_localizations_fr.dart
+
+# Riverpod codegen (riverpod_generator / build_runner) — issue M0
+**/*.g.dart
