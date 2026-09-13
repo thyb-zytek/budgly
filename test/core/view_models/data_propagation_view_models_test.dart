@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/riverpod/profile_providers.dart';
 import 'package:budgly/src/pages/category_expenses/view_model.dart';
 import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:budgly/src/pages/settings/accounts/view_model.dart';

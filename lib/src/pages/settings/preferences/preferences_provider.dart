@@ -1,23 +1,9 @@
+import 'package:budgly/src/core/riverpod/profile_providers.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'preferences_provider.g.dart';
-
-/// Bridge exposing the still-singleton [ProfileService] to Riverpod.
-///
-/// `ProfileService` is not migrated in this issue (M1): it backs the whole
-/// user session (auth, sign-out, offline sync) and is consumed by several
-/// other services, so converting it belongs to the dedicated services-layer
-/// migration (issue M3), done together with its other callers.
-///
-/// This provider is the seam that lets [Preferences] depend on Riverpod
-/// (`ref.watch`) while tests override a single provider
-/// (`profileServiceProvider.overrideWithValue(fake)`) instead of subclassing
-/// the service. When M3 migrates `ProfileService` itself, only this
-/// provider's implementation changes — consumers stay the same.
-@riverpod
-ProfileService profileService(Ref ref) => ProfileService.instance;
 
 /// Immutable snapshot of the preferences relevant to [PreferencesTab].
 class PreferencesState {

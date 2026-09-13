@@ -12,6 +12,15 @@ class AccountBudgetsStore extends ChangeNotifier {
   bool hasLoaded(String key) => _loadedKeys.contains(key);
   AccountBudget? get(String key) => _budgets[key];
 
+  /// Read-only view of the whole cache, keyed as stored (`accountId_year_month`).
+  ///
+  /// Added for `AccountBudgetsSession` (issue M2), the Riverpod mirror of
+  /// this store — no existing method changed.
+  Map<String, AccountBudget?> get budgets => Map.unmodifiable(_budgets);
+
+  /// Read-only view of every key currently loaded. See [budgets].
+  Set<String> get loadedKeys => Set.unmodifiable(_loadedKeys);
+
   void set(String key, AccountBudget? budget) {
     if (_loadedKeys.contains(key) && _budgets[key]?.revenue == budget?.revenue) {
       return;

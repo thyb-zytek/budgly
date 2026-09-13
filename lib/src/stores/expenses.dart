@@ -19,6 +19,16 @@ class ExpensesStore extends ChangeNotifier {
 
   bool hasLoadedAccount(String accountId) => _loadedAccounts.contains(accountId);
 
+  /// Read-only view of the whole per-account cache.
+  ///
+  /// Added for `ExpensesSession` (issue M2), the Riverpod mirror of this
+  /// store — no existing method changed.
+  Map<String, List<Expense>> get expensesByAccount => Map.unmodifiable(_expensesByAccount);
+
+  /// Read-only view of every account currently loaded. See
+  /// [expensesByAccount].
+  Set<String> get loadedAccounts => Set.unmodifiable(_loadedAccounts);
+
   void _sortByDebitDateDesc(List<Expense> expenses) {
     expenses.sort((a, b) => b.debitDate.compareTo(a.debitDate));
   }
