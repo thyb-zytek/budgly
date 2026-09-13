@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/riverpod/profile_providers.dart';
 import 'package:budgly/src/pages/settings/preferences/preferences_provider.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/stores/profile.dart';
