@@ -273,4 +273,4 @@ d'acceptation.
 ne bloque jamais sur le réseau), frontières de backend intangibles, logique
 métier dans des calculators purs testables, localisation FR/EN de chaque chaîne
 visible, analytics anonymes sans PII, tests sur les comportements importants,
-commits gitmoji atomiques, `flutter analyze` propre avant tout commit.
+commits gitmoji atomiques, `dart analyze` propre avant tout commit.

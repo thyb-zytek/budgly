@@ -55,11 +55,15 @@ Les commits suivent les conventions **gitmoji** ([carloscuesta/gitmoji](https://
 **Règles :**
 - Commits **atomiques** (une seule fonctionnalité par commit)
 - Ne jamais inclure de signatures Devin dans les messages
-- Toujours exécuter `flutter analyze` avant de commit
+- Toujours exécuter `dart analyze` avant de commit (voir § Commandes Flutter — seul
+  `dart analyze` remonte les diagnostics de `riverpod_lint`)
 
 **Fichiers exclus du commit :**
 - `firebase.json`, `supabase/` (config locale)
 - `lib/l10n/app_localizations*.dart` (générés)
+- `**/*.g.dart` (générés par `riverpod_generator`/`build_runner`, migration en
+  cours — voir issue M0 ; régénérés via `dart run build_runner build`, y compris
+  en CI avant `dart analyze`/`flutter test`)
 - `assets/.env` (secrets)
 - `android/app/google-services.json`, `lib/firebase_options.dart`
 
@@ -84,6 +88,29 @@ Les tests couvrent la logique pure : math de récurrence, Period, calculators, q
 - **Allowlist stricte** : seuls les événements listés dans `_allowedEvents` sont autorisés
 - **Filtrage PII** : les clés sensibles (`amount`, `name`, `email`, `merchant`, etc.) sont automatiquement supprimées
 - Voir `docs/ANALYTICS.md` pour la liste complète des événements
+
+### CI
+
+Le workflow `.github/workflows/main.yml` se déclenche sur `push` vers
+`master`, sur `pull_request` vers `master`, et sur un cron hebdomadaire de
+"keep-alive" (évite la dérive de dépendances sur un repo peu actif).
+
+- Le job `test` (`dart analyze` + `flutter test`) tourne sur toute PR
+  avant merge — la branche `master` doit être protégée en conséquence côté
+  réglages GitHub (statut requis avant merge).
+- Le job `build` (APK release) ne tourne **pas** sur les pull requests
+  (inutile de builder un APK à chaque PR, et les secrets ne sont pas
+  garantis disponibles en contexte PR) — seulement sur push `master`,
+  `workflow_dispatch` et le cron.
+- Les deux jobs exécutent `dart run build_runner build` avant toute autre
+  étape, car les fichiers générés par `riverpod_generator` (`*.g.dart`) ne
+  sont pas commités (voir ci-dessus).
+- L'analyse passe par `dart analyze`, **pas** `flutter analyze`. Depuis
+  `riverpod_lint` 3.x (plugin `analysis_server_plugin` déclaré dans le champ
+  top-level `plugins:` de `analysis_options.yaml`), `flutter analyze` souffre
+  d'un bug connu qui sort avant que les diagnostics des plugins soient
+  reportés (flutter/flutter#28327). `dart analyze` les remonte correctement ;
+  si `flutter analyze` est corrigé, on pourra y revenir.
 
 ### Guideline de développement
 
@@ -129,13 +156,21 @@ flutter pub get
 flutter run
 
 # Analyser le code (AVANT chaque commit)
-flutter analyze
+# `dart analyze` (et non `flutter analyze`) : seul `dart analyze` charge le
+# plugin riverpod_lint et remonte ses diagnostics (voir § CI).
+dart analyze
 
 # Lancer les tests
 flutter test
 
 # Générer les icons d'app
 dart run flutter_launcher_icons
+
+# Générer le code Riverpod (providers @riverpod)
+dart run build_runner build
+
+# ... en mode watch pendant le dev
+dart run build_runner watch
 
 # Générer la localisation
 flutter gen-l10n
