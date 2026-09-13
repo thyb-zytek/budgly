@@ -20,6 +20,8 @@
 
 Après la phase 6, le projet privilégie une architecture MVVM pragmatique, un offline-first explicite et le minimum d’abstractions nécessaires. Les détails sont dans `ARCHITECTURE.md`.
 
+Une migration vers Riverpod est en cours (voir la roadmap de migration dans les issues GitHub `M0`-`M8`). Le pattern retenu — codegen, convention de nommage, provider-pont pour les services pas encore migrés, tests via `ProviderContainer` — est documenté dans `architecture-riverpod.md`, au fur et à mesure des pages migrées. Tant qu'une page n'est pas migrée, elle suit `ARCHITECTURE.md`.
+
 ## Guidelines
 
 ### Git
@@ -215,6 +217,7 @@ Selon ton installation :
 
 ### Documentation technique
 - `ARCHITECTURE.md` — architecture et responsabilités actuelles + contrat offline-first
+- `architecture-riverpod.md` — pattern de migration Riverpod (codegen, provider-pont, tests), mis à jour au fil des pages migrées
 - `DEVELOPMENT_FEATURE_GUIDELINE.md` — exigences de développement et Definition of Done des nouvelles fonctionnalités
 - `ANALYTICS.md` — événements PostHog autorisés
 - `CRASHLYTICS.md` — activation et vérification de Firebase Crashlytics
