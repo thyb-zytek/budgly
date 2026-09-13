@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+  pull_request:
+    branches:
+      - master
+
   schedule:
     # Every Sunday at 03:00 UTC.
     - cron: "0 3 * * 0"
@@ -64,12 +68,15 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.7"
+          flutter-version: "3.47.2"
           channel: stable
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate code (build_runner)
+        run: dart run build_runner build
 
       - name: Create .env file
         run: |
@@ -79,7 +86,7 @@ jobs:
           echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
 
       - name: Analyze
-        run: flutter analyze
+        run: dart analyze
 
       - name: Run tests
         run: flutter test
@@ -90,6 +97,7 @@ jobs:
     if: |
       always() &&
       needs.test.result == 'success' &&
+      github.event_name != 'pull_request' &&
       (
         github.event_name != 'schedule' ||
         needs.check-schedule.outputs.should_run == 'true'
@@ -103,12 +111,15 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.44.7"
+          flutter-version: "3.47.2"
           channel: stable
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate code (build_runner)
+        run: dart run build_runner build
 
       - name: Create .env file
         run: |
