@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app.dart';
@@ -48,7 +49,10 @@ Future<void> main() async {
     ),
   ]);
 
-  runApp(const BudglyApp());
+  // ProviderScope posé ici en préparation de la migration Riverpod
+  // (issue M0). Aucun provider n'est encore migré à ce stade : l'app
+  // continue de fonctionner sur l'infra MVVM existante à l'identique.
+  runApp(const ProviderScope(child: BudglyApp()));
 
   SyncManager.instance.start();
   unawaited(ProfileService.instance.refreshUserProfileInBackground());
