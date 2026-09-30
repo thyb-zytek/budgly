@@ -7,7 +7,9 @@ import '../helpers/pump_app.dart';
 
 void main() {
   group('CustomizationPicker', () {
-    testWidgets('shows the first tab by default and switches on tap', (tester) async {
+    testWidgets('shows the first tab by default and switches on tap', (
+      tester,
+    ) async {
       await pumpApp(
         tester,
         CustomizationPicker(
@@ -17,10 +19,7 @@ void main() {
             TabTitle(icon: Icons.category_rounded, title: 'Icône'),
             TabTitle(icon: Icons.palette_rounded, title: 'Couleur'),
           ],
-          tabs: const [
-            Text('icon-tab-content'),
-            Text('color-tab-content'),
-          ],
+          tabs: const [Text('icon-tab-content'), Text('color-tab-content')],
           onValidate: () {},
           onCancel: () {},
         ),
@@ -36,7 +35,9 @@ void main() {
       expect(find.text('icon-tab-content'), findsNothing);
     });
 
-    testWidgets('calls onValidate and onCancel from the action row', (tester) async {
+    testWidgets('calls onValidate and onCancel from the action row', (
+      tester,
+    ) async {
       var validateCalls = 0;
       var cancelCalls = 0;
 

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,8 +14,11 @@ class PendingWriteExpenseFirestore extends ExpenseFirestore {
   final List<Expense> serverExpenses = [];
   bool acknowledgeCreate = false;
 
+  /// Like the real SDK, an unacknowledged write is a Future that stays pending
+  /// (it never resolves to `null`).
   @override
-  Future<Expense?> create(Expense expense) async => acknowledgeCreate ? expense : null;
+  Future<Expense?> create(Expense expense) =>
+      acknowledgeCreate ? Future.value(expense) : Completer<Expense?>().future;
 
   @override
   Future<List<Expense>> listByAccountAndPeriod(
@@ -48,13 +54,14 @@ void main() {
 
   setUp(() {
     firestore = PendingWriteExpenseFirestore();
-    service = ExpensesService(expenseFirestore: firestore);
+    service = ExpensesService(
+      expenseFirestore: firestore,
+      analytics: AnalyticsService(),
+    );
     service.invalidateCache();
   });
 
-  tearDown(() {
-    service.dispose();
-  });
+  tearDown(() {});
 
   Expense expense({String id = 'e1', String accountId = 'a1'}) => Expense(
     id: id,
@@ -65,63 +72,67 @@ void main() {
     debitDate: DateTime(2026, 8, 15),
   );
 
-  test('created expense is visible from the period cache immediately', () async {
-    await service.createExpense(expense());
+  test(
+    'created expense is visible from the period cache immediately',
+    () async {
+      await service.createExpense(expense());
 
-    final listed = await service.listExpensesForPeriod('a1', period);
+      final listed = await service.listExpensesForPeriod('a1', period);
 
-    expect(listed.map((e) => e.id), ['e1']);
-  });
+      expect(listed.map((e) => e.id), ['e1']);
+    },
+  );
 
-  test('a stale server refresh does not drop a just-created first expense',
-      () async {
-    // The account currently has nothing on the server.
-    expect(await service.listExpensesForPeriod('a1', period), isEmpty);
+  test(
+    'a stale server refresh does not drop a just-created first expense',
+    () async {
+      // The account currently has nothing on the server.
+      expect(await service.listExpensesForPeriod('a1', period), isEmpty);
 
-    final created = await service.createExpense(expense());
-    expect(created.id, 'e1');
+      final created = await service.createExpense(expense());
+      expect(created.id, 'e1');
 
-    // The server has not acknowledged the write yet: a forced refresh must
-    // keep the optimistic expense instead of flushing the cache to empty.
-    final listed = await service.listExpensesForPeriod(
-      'a1',
-      period,
-      forceRefresh: true,
-    );
+      // The server has not acknowledged the write yet: a forced refresh must
+      // keep the optimistic expense instead of flushing the cache to empty.
+      final listed = await service.listExpensesForPeriod(
+        'a1',
+        period,
+        forceRefresh: true,
+      );
 
-    expect(listed.map((e) => e.id), ['e1']);
-  });
+      expect(listed.map((e) => e.id), ['e1']);
+    },
+  );
 
-  test('optimistic shield is released once the server acknowledges the expense',
-      () async {
-    firestore.acknowledgeCreate = true;
+  test(
+    'optimistic shield is released once the server acknowledges the expense',
+    () async {
+      firestore.acknowledgeCreate = true;
 
-    await service.createExpense(expense());
-    firestore.serverExpenses.add(expense());
+      await service.createExpense(expense());
+      firestore.serverExpenses.add(expense());
 
-    final listed = await service.listExpensesForPeriod(
-      'a1',
-      period,
-      forceRefresh: true,
-    );
+      final listed = await service.listExpensesForPeriod(
+        'a1',
+        period,
+        forceRefresh: true,
+      );
 
-    expect(listed.map((e) => e.id), ['e1']);
+      expect(listed.map((e) => e.id), ['e1']);
 
-    // Now that the id is acknowledged, a server-side deletion propagates.
-    firestore.serverExpenses.clear();
-    final afterRemoteDelete = await service.listExpensesForPeriod(
-      'a1',
-      period,
-      forceRefresh: true,
-    );
-    expect(afterRemoteDelete, isEmpty);
-  });
+      // Now that the id is acknowledged, a server-side deletion propagates.
+      firestore.serverExpenses.clear();
+      final afterRemoteDelete = await service.listExpensesForPeriod(
+        'a1',
+        period,
+        forceRefresh: true,
+      );
+      expect(afterRemoteDelete, isEmpty);
+    },
+  );
 
   test('server data is restored for the period cache on refresh', () async {
-    firestore.serverExpenses.addAll([
-      expense(),
-      expense(id: 'e2'),
-    ]);
+    firestore.serverExpenses.addAll([expense(), expense(id: 'e2')]);
 
     final listed = await service.listExpensesForPeriod(
       'a1',
@@ -132,28 +143,30 @@ void main() {
     expect(listed.map((e) => e.id).toSet(), {'e1', 'e2'});
   });
 
-  test('forced account list queries the server and propagates remote deletions',
-      () async {
-    firestore.serverExpenses.addAll([
-      expense(),
-      expense(id: 'e2'),
-    ]);
+  test(
+    'forced account list queries the server and propagates remote deletions',
+    () async {
+      firestore.serverExpenses.addAll([expense(), expense(id: 'e2')]);
 
-    expect(
-      (await service.listExpensesForAccount('a1', forceRefresh: true))
-          .map((e) => e.id)
-          .toSet(),
-      {'e1', 'e2'},
-    );
+      expect(
+        (await service.listExpensesForAccount(
+          'a1',
+          forceRefresh: true,
+        )).map((e) => e.id).toSet(),
+        {'e1', 'e2'},
+      );
 
-    // A remote deletion must be reflected by the account-wide refresh.
-    firestore.serverExpenses.removeWhere((e) => e.id == 'e2');
-    expect(
-      (await service.listExpensesForAccount('a1', forceRefresh: true))
-          .map((e) => e.id),
-      ['e1'],
-    );
-  });
+      // A remote deletion must be reflected by the account-wide refresh.
+      firestore.serverExpenses.removeWhere((e) => e.id == 'e2');
+      expect(
+        (await service.listExpensesForAccount(
+          'a1',
+          forceRefresh: true,
+        )).map((e) => e.id),
+        ['e1'],
+      );
+    },
+  );
 
   test('forced account list keeps an unacknowledged local expense', () async {
     await service.createExpense(expense());
@@ -168,39 +181,33 @@ void main() {
     expect(listed.map((e) => e.id), ['e1']);
   });
 
-  test(
-    'a stale server refresh does not drop a previously-created expense '
-    'when a second expense is created',
-    () async {
-      // Simulate the first expense being persisted (server acknowledges it
-      // locally) and the optimistic shield being released.
-      firestore.acknowledgeCreate = true;
-      await service.createExpense(expense());
+  test('a stale server refresh does not drop a previously-created expense '
+      'when a second expense is created', () async {
+    // Simulate the first expense being persisted (server acknowledges it
+    // locally) and the optimistic shield being released.
+    firestore.acknowledgeCreate = true;
+    await service.createExpense(expense());
 
-      // The server has not yet synced the expense to its query results.
-      // A background refresh triggered by the second creation must not
-      // drop the first expense.
-      final e2 = Expense(
-        id: 'e2',
-        accountId: 'a1',
-        categoryId: 'c2',
-        name: 'Transport',
-        amount: 12.0,
-        debitDate: DateTime(2026, 8, 15),
-      );
-      await service.createExpense(e2);
+    // The server has not yet synced the expense to its query results.
+    // A background refresh triggered by the second creation must not
+    // drop the first expense.
+    final e2 = Expense(
+      id: 'e2',
+      accountId: 'a1',
+      categoryId: 'c2',
+      name: 'Transport',
+      amount: 12.0,
+      debitDate: DateTime(2026, 8, 15),
+    );
+    await service.createExpense(e2);
 
-      // Simulate a background refresh that returns stale server data.
-      final listed = await service.listExpensesForPeriod(
-        'a1',
-        period,
-        forceRefresh: true,
-      );
+    // Simulate a background refresh that returns stale server data.
+    final listed = await service.listExpensesForPeriod(
+      'a1',
+      period,
+      forceRefresh: true,
+    );
 
-      expect(
-        listed.map((e) => e.id).toSet(),
-        containsAll(['e1', 'e2']),
-      );
-    },
-  );
+    expect(listed.map((e) => e.id).toSet(), containsAll(['e1', 'e2']));
+  });
 }

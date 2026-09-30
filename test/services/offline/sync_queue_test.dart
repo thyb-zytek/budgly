@@ -11,7 +11,7 @@ void main() {
   });
 
   setUp(() async {
-    queue = SyncQueue.instance;
+    queue = SyncQueue();
     await queue.clear();
   });
 
@@ -35,7 +35,7 @@ void main() {
     expect(operations.single.payload['name'], 'New');
   });
 
-  test('cancels create followed by delete', () async {
+  test('keeps create followed by delete for crash-safe replay', () async {
     await queue.enqueue(
       id: 'category:create:1',
       type: 'categories',
@@ -49,6 +49,6 @@ void main() {
       payload: {'id': '1', 'account_id': 'account'},
     );
 
-    expect(await queue.all(), isEmpty);
+    expect(await queue.all(), hasLength(2));
   });
 }

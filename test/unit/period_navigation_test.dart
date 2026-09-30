@@ -14,34 +14,37 @@ void main() {
 
     test('February leap year boundaries', () {
       const feb2024 = Period(year: 2024, month: 2);
-      expect(feb2024.endOfMonth.day, 29);
+      expect(feb2024.lastDay.day, 29);
       const feb2025 = Period(year: 2025, month: 2);
-      expect(feb2025.endOfMonth.day, 28);
+      expect(feb2025.lastDay.day, 28);
       const feb2028 = Period(year: 2028, month: 2);
-      expect(feb2028.endOfMonth.day, 29);
+      expect(feb2028.lastDay.day, 29);
     });
 
     test('30/31 day months end correctly', () {
-      expect(const Period(year: 2026, month: 4).endOfMonth.day, 30);
-      expect(const Period(year: 2026, month: 6).endOfMonth.day, 30);
-      expect(const Period(year: 2026, month: 9).endOfMonth.day, 30);
-      expect(const Period(year: 2026, month: 11).endOfMonth.day, 30);
-      expect(const Period(year: 2026, month: 1).endOfMonth.day, 31);
-      expect(const Period(year: 2026, month: 7).endOfMonth.day, 31);
-      expect(const Period(year: 2026, month: 12).endOfMonth.day, 31);
+      expect(const Period(year: 2026, month: 4).lastDay.day, 30);
+      expect(const Period(year: 2026, month: 6).lastDay.day, 30);
+      expect(const Period(year: 2026, month: 9).lastDay.day, 30);
+      expect(const Period(year: 2026, month: 11).lastDay.day, 30);
+      expect(const Period(year: 2026, month: 1).lastDay.day, 31);
+      expect(const Period(year: 2026, month: 7).lastDay.day, 31);
+      expect(const Period(year: 2026, month: 12).lastDay.day, 31);
     });
 
-    test('P0 regression: Overview selecting March then opening category keeps March', () {
-      // The bug: detail screen replaced selectedPeriod with Period.current()
-      // Simulate ViewModel keeping explicit period param
-      const selected = Period(year: 2026, month: 3);
-      const current = Period(year: 2026, month: 5);
-      // CategoryExpensesViewModel receives period via constructor and never overwrites it
-      const vmPeriod = selected;
-      expect(vmPeriod, isNot(current));
-      expect(vmPeriod, selected);
-      expect(vmPeriod.month, 3);
-    });
+    test(
+      'P0 regression: Overview selecting March then opening category keeps March',
+      () {
+        // The bug: detail screen replaced selectedPeriod with Period.current()
+        // Simulate ViewModel keeping explicit period param
+        const selected = Period(year: 2026, month: 3);
+        const current = Period(year: 2026, month: 5);
+        // category expenses provider receives period via constructor and never overwrites it
+        const vmPeriod = selected;
+        expect(vmPeriod, isNot(current));
+        expect(vmPeriod, selected);
+        expect(vmPeriod.month, 3);
+      },
+    );
 
     test('swipe navigation: addMonths handles large deltas', () {
       const base = Period(year: 2026, month: 6);
@@ -54,7 +57,12 @@ void main() {
     test('contains respects inclusive start and exclusive after end', () {
       const march = Period(year: 2026, month: 3);
       expect(march.contains(DateTime(2026, 3, 1, 0, 0, 0)), isTrue);
-      expect(march.contains(DateTime(2026, 3, 1).subtract(const Duration(milliseconds: 1))), isFalse);
+      expect(
+        march.contains(
+          DateTime(2026, 3, 1).subtract(const Duration(milliseconds: 1)),
+        ),
+        isFalse,
+      );
       expect(march.contains(DateTime(2026, 3, 31, 23, 59, 59)), isTrue);
       expect(march.contains(DateTime(2026, 4, 1)), isFalse);
       // February leap boundary

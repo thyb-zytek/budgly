@@ -21,18 +21,21 @@ void main() {
       expect(GoogleSignInInitializer.ensureInitialized(), same(second));
     });
 
-    test('reinitializeForTest(null) clears the cache so the next call re-initializes', () {
-      final first = Future<void>.value();
-      GoogleSignInInitializer.reinitializeForTest(future: first);
-      expect(GoogleSignInInitializer.ensureInitialized(), same(first));
+    test(
+      'reinitializeForTest(null) clears the cache so the next call re-initializes',
+      () {
+        final first = Future<void>.value();
+        GoogleSignInInitializer.reinitializeForTest(future: first);
+        expect(GoogleSignInInitializer.ensureInitialized(), same(first));
 
-      GoogleSignInInitializer.reinitializeForTest();
-      // Re-seed immediately so the real (platform-dependent) initialize()
-      // call is never actually reached by this test.
-      final replacement = Future<void>.value();
-      GoogleSignInInitializer.reinitializeForTest(future: replacement);
-      expect(GoogleSignInInitializer.ensureInitialized(), same(replacement));
-      expect(GoogleSignInInitializer.ensureInitialized(), isNot(same(first)));
-    });
+        GoogleSignInInitializer.reinitializeForTest();
+        // Re-seed immediately so the real (platform-dependent) initialize()
+        // call is never actually reached by this test.
+        final replacement = Future<void>.value();
+        GoogleSignInInitializer.reinitializeForTest(future: replacement);
+        expect(GoogleSignInInitializer.ensureInitialized(), same(replacement));
+        expect(GoogleSignInInitializer.ensureInitialized(), isNot(same(first)));
+      },
+    );
   });
 }

@@ -11,7 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers/pump_app.dart';
 
 void main() {
-  testWidgets('Google sign-in button renders and invokes callback', (tester) async {
+  testWidgets('Google sign-in button renders and invokes callback', (
+    tester,
+  ) async {
     var calls = 0;
     await pumpApp(tester, GoogleSignInButton(onPressed: () => calls++));
     expect(find.text('Se connecter avec Google'), findsOneWidget);
@@ -20,14 +22,19 @@ void main() {
     expect(calls, 1);
   });
 
-  testWidgets('login appbar covers regular and compact layouts', (tester) async {
+  testWidgets('login appbar covers regular and compact layouts', (
+    tester,
+  ) async {
     await pumpApp(
       tester,
       const Column(children: [LoginAppbar(), LoginAppbar(isCompact: true)]),
       size: const Size(700, 740),
     );
     expect(find.text('Budgly'), findsNWidgets(2));
-    expect(find.text('Gérer votre budget en toute simplicité.'), findsOneWidget);
+    expect(
+      find.text('Gérer votre budget en toute simplicité.'),
+      findsOneWidget,
+    );
     expect(find.byType(Image), findsNWidgets(2));
   });
 
@@ -40,22 +47,27 @@ void main() {
     var submit = 0;
     var signUp = 0;
 
-    await pumpApp(tester, LoginForm(
-      formKey: GlobalKey<FormState>(),
-      emailController: email,
-      passwordController: password,
-      validateEmail: (value) {
-        if (value == null || value.isEmpty) return 'emailRequired';
-        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'emailInvalid';
-        return null;
-      },
-      validatePassword: (value) =>
-          value == null || value.isEmpty ? 'passwordRequired' : null,
-      errorCode: 'emailRequired',
-      onResetPassword: () => reset++,
-      onSubmitForm: () => submit++,
-      onSignUpPressed: () => signUp++,
-    ));
+    await pumpApp(
+      tester,
+      LoginForm(
+        formKey: GlobalKey<FormState>(),
+        emailController: email,
+        passwordController: password,
+        validateEmail: (value) {
+          if (value == null || value.isEmpty) return 'emailRequired';
+          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+            return 'emailInvalid';
+          }
+          return null;
+        },
+        validatePassword: (value) =>
+            value == null || value.isEmpty ? 'passwordRequired' : null,
+        errorCode: 'emailRequired',
+        onResetPassword: () => reset++,
+        onSubmitForm: () => submit++,
+        onSignUpPressed: () => signUp++,
+      ),
+    );
 
     expect(find.text('Veuillez fournir une adresse mail.'), findsOneWidget);
     await tester.tap(find.text('Reinitialiser le mot de passe'));
@@ -67,41 +79,53 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
-    await pumpApp(tester, LoginForm(
-      formKey: GlobalKey<FormState>(),
-      emailController: email,
-      passwordController: password,
-      validateEmail: (value) {
-        if (value == null || value.isEmpty) return 'emailRequired';
-        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'emailInvalid';
-        return null;
-      },
-      validatePassword: (value) =>
-          value == null || value.isEmpty ? 'passwordRequired' : null,
-      errorCode: 'passwordRequired',
-      onResetPassword: () {},
-      onSubmitForm: () {},
-      onSignUpPressed: () {},
-    ));
+    await pumpApp(
+      tester,
+      LoginForm(
+        formKey: GlobalKey<FormState>(),
+        emailController: email,
+        passwordController: password,
+        validateEmail: (value) {
+          if (value == null || value.isEmpty) return 'emailRequired';
+          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+            return 'emailInvalid';
+          }
+          return null;
+        },
+        validatePassword: (value) =>
+            value == null || value.isEmpty ? 'passwordRequired' : null,
+        errorCode: 'passwordRequired',
+        onResetPassword: () {},
+        onSubmitForm: () {},
+        onSignUpPressed: () {},
+      ),
+    );
     expect(find.text('Veuillez fournir un mot de passe.'), findsOneWidget);
   });
 
-  testWidgets('reset password form renders and exposes both actions', (tester) async {
+  testWidgets('reset password form renders and exposes both actions', (
+    tester,
+  ) async {
     final email = TextEditingController();
     addTearDown(email.dispose);
     var submit = 0;
     var signIn = 0;
-    await pumpApp(tester, ResetPasswordForm(
-      formKey: GlobalKey<FormState>(),
-      emailController: email,
-      validateEmail: (value) {
-        if (value == null || value.isEmpty) return 'emailRequired';
-        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'emailInvalid';
-        return null;
-      },
-      onSubmitForm: () => submit++,
-      onSignInPressed: () => signIn++,
-    ));
+    await pumpApp(
+      tester,
+      ResetPasswordForm(
+        formKey: GlobalKey<FormState>(),
+        emailController: email,
+        validateEmail: (value) {
+          if (value == null || value.isEmpty) return 'emailRequired';
+          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+            return 'emailInvalid';
+          }
+          return null;
+        },
+        onSubmitForm: () => submit++,
+        onSignInPressed: () => signIn++,
+      ),
+    );
     expect(find.textContaining('adresse mail'), findsOneWidget);
     await tester.tap(find.text('Envoyer le mail'));
     await tester.tap(find.text('Se connecter'));
@@ -118,22 +142,28 @@ void main() {
     addTearDown(password2.dispose);
     var submit = 0;
     var signIn = 0;
-    await pumpApp(tester, SignUpForm(
-      formKey: GlobalKey<FormState>(),
-      emailController: email,
-      passwordController: password,
-      password2Controller: password2,
-      validateEmail: (value) {
-        if (value == null || value.isEmpty) return 'emailRequired';
-        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return 'emailInvalid';
-        return null;
-      },
-      validatePassword: (value) =>
-          value == null || value.isEmpty ? 'passwordRequired' : null,
-      validateConfirmPassword: (value) => value == password.text ? null : 'invalid',
-      onSubmitForm: () => submit++,
-      onSignInPressed: () => signIn++,
-    ));
+    await pumpApp(
+      tester,
+      SignUpForm(
+        formKey: GlobalKey<FormState>(),
+        emailController: email,
+        passwordController: password,
+        password2Controller: password2,
+        validateEmail: (value) {
+          if (value == null || value.isEmpty) return 'emailRequired';
+          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+            return 'emailInvalid';
+          }
+          return null;
+        },
+        validatePassword: (value) =>
+            value == null || value.isEmpty ? 'passwordRequired' : null,
+        validateConfirmPassword: (value) =>
+            value == password.text ? null : 'invalid',
+        onSubmitForm: () => submit++,
+        onSignInPressed: () => signIn++,
+      ),
+    );
     expect(find.text('Adresse mail'), findsOneWidget);
     expect(find.text('Mot de passe'), findsOneWidget);
     expect(find.text('Confirmer le mot de passe'), findsOneWidget);
@@ -143,28 +173,43 @@ void main() {
     expect(signIn, 1);
   });
 
-  testWidgets('loading page selects each authentication message', (tester) async {
+  testWidgets('loading page selects each authentication message', (
+    tester,
+  ) async {
     for (final form in AuthForm.values) {
-      await pumpApp(tester, LoginLoadingView(formType: form, isGoogleSignIn: false), settle: false);
+      await pumpApp(
+        tester,
+        LoginLoadingView(formType: form, isGoogleSignIn: false),
+        settle: false,
+      );
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     }
-    await pumpApp(tester, const LoginLoadingView(formType: AuthForm.signIn, isGoogleSignIn: true), settle: false);
+    await pumpApp(
+      tester,
+      const LoginLoadingView(formType: AuthForm.signIn, isGoogleSignIn: true),
+      settle: false,
+    );
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(find.textContaining('Google'), findsOneWidget);
   });
 
-  testWidgets('verify email exposes resend and sign-in actions', (tester) async {
+  testWidgets('verify email exposes resend and sign-in actions', (
+    tester,
+  ) async {
     var resend = 0;
     var signIn = 0;
     var reload = 0;
-    await pumpApp(tester, VerifyEmail(
-      email: 'alexis@example.com',
-      onSignInPressed: () => signIn++,
-      onResendPressed: () => resend++,
-      onReload: () => reload++,
-    ));
+    await pumpApp(
+      tester,
+      VerifyEmail(
+        email: 'alexis@example.com',
+        onSignInPressed: () => signIn++,
+        onResendPressed: () => resend++,
+        onReload: () => reload++,
+      ),
+    );
     expect(find.textContaining('alexis@example.com'), findsOneWidget);
     await tester.tap(find.text('Renvoyer l\'email de vérification'));
     await tester.tap(find.text('Se connecter'));

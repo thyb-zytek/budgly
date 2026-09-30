@@ -84,33 +84,28 @@ void main() {
       expect(data.hasEndDateBeforeDebitDate, isFalse);
     });
 
-    test('is true when the end date is a full day before, even with times close together', () {
-      final data = build(
-        recurrence: RecurrenceType.monthly,
-        debitDate: DateTime(2026, 6, 15, 0, 1),
-        endDate: DateTime(2026, 6, 14, 23, 59),
-      );
-      expect(data.hasEndDateBeforeDebitDate, isTrue);
-    });
+    test(
+      'is true when the end date is a full day before, even with times close together',
+      () {
+        final data = build(
+          recurrence: RecurrenceType.monthly,
+          debitDate: DateTime(2026, 6, 15, 0, 1),
+          endDate: DateTime(2026, 6, 14, 23, 59),
+        );
+        expect(data.hasEndDateBeforeDebitDate, isTrue);
+      },
+    );
   });
 
   group('ExpenseEditingData constructor', () {
     test('defaults debitDate to now when not provided', () {
-      final before = DateTime.now();
+      final now = DateTime.now();
       final data = ExpenseEditingData(
         nameController: TextEditingController(),
         amountController: TextEditingController(),
       );
-      final after = DateTime.now();
 
-      expect(
-        data.debitDate.isAfter(before.subtract(const Duration(seconds: 1))),
-        isTrue,
-      );
-      expect(
-        data.debitDate.isBefore(after.add(const Duration(seconds: 1))),
-        isTrue,
-      );
+      expect(data.debitDate, DateTime(now.year, now.month, now.day));
     });
 
     test('defaults recurrence to none and showAdvancedOptions to false', () {

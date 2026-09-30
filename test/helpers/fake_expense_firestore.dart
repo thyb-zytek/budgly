@@ -30,9 +30,9 @@ class RefreshAwareExpenseFirestore extends ExpenseFirestore {
       if (expense.accountId != accountId) return false;
       if (categoryId != null && expense.categoryId != categoryId) return false;
       if (expense.isRecurring) {
-        final endDate = expense.endOfEndDate;
-        return !expense.debitDate.isAfter(period.endOfMonth) &&
-            (endDate == null || !endDate.isBefore(period.startOfMonth));
+        final endDate = expense.endDateExclusive;
+        return expense.debitDate.isBefore(period.startOfNextMonth) &&
+            (endDate == null || endDate.isAfter(period.startOfMonth));
       }
       return period.contains(expense.debitDate);
     }).toList();
@@ -51,13 +51,28 @@ class RefreshAwareExpenseFirestore extends ExpenseFirestore {
       if (expense.accountId != accountId) return false;
       if (expense.categoryId != categoryId) return false;
       if (expense.isRecurring) {
-        final endDate = expense.endOfEndDate;
-        return !expense.debitDate.isAfter(period.endOfMonth) &&
-            (endDate == null || !endDate.isBefore(period.startOfMonth));
+        final endDate = expense.endDateExclusive;
+        return expense.debitDate.isBefore(period.startOfNextMonth) &&
+            (endDate == null || endDate.isAfter(period.startOfMonth));
       }
       return period.contains(expense.debitDate);
     }).toList();
     return ExpensePage(expenses: expenses, cursor: null, hasMore: false);
+  }
+
+  @override
+  Future<List<Expense>> listByAccountBefore(
+    String accountId,
+    DateTime endExclusive, {
+    Source source = Source.server,
+  }) async {
+    return serverExpenses
+        .where(
+          (expense) =>
+              expense.accountId == accountId &&
+              expense.debitDate.isBefore(endExclusive),
+        )
+        .toList();
   }
 
   @override
@@ -86,5 +101,15 @@ class RefreshAwareExpenseFirestore extends ExpenseFirestore {
   Future<bool> delete(String expenseId) async {
     serverExpenses.removeWhere((expense) => expense.id == expenseId);
     return true;
+  }
+
+  @override
+  Future<Expense?> splitRecurringExpense({
+    required Expense previous,
+    required Expense next,
+  }) async {
+    await update(previous);
+    await create(next);
+    return next;
   }
 }

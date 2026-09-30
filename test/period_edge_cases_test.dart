@@ -18,9 +18,17 @@ void main() {
       expect(period.totalWeekends(), 5);
     });
 
-    test('contains includes the final millisecond of the month', () {
+    test('contains uses the calendar day regardless of time', () {
       const period = Period(year: 2026, month: 2);
       expect(period.contains(DateTime(2026, 2, 28, 23, 59, 59, 999)), isTrue);
+      expect(period.contains(DateTime(2026, 3, 1, 0, 0)), isFalse);
+    });
+
+    test('a debit date with a time remains in its calendar month', () {
+      expect(
+        Period.fromDate(DateTime(2026, 9, 30, 18, 30)),
+        const Period(year: 2026, month: 9),
+      );
     });
   });
 }

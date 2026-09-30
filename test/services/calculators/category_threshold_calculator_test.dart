@@ -10,7 +10,10 @@ void main() {
     expect(result.remaining, 21);
   });
   test('uses warning state at 80 percent boundary', () {
-    expect(calculator.calculate(total: 80, threshold: 100).state, CategoryThresholdState.warning);
+    expect(
+      calculator.calculate(total: 80, threshold: 100).state,
+      CategoryThresholdState.warning,
+    );
   });
   test('uses exceeded state at threshold and clamps progress', () {
     final result = calculator.calculate(total: 130, threshold: 100);

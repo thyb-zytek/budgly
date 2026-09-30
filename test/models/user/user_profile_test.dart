@@ -150,4 +150,22 @@ void main() {
       expect(copy.updatedAt, isNotNull);
     });
   });
+
+  group('equality', () {
+    test(
+      'two profiles with the same id are equal, even with different fields',
+      () {
+        final a = UserProfile(id: 'u1', email: 'a@example.com', fullName: 'A');
+        final b = UserProfile(id: 'u1', email: 'b@example.com', fullName: 'B');
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
+
+    test('two profiles with different ids are not equal', () {
+      final a = UserProfile(id: 'u1', email: 'a@example.com', fullName: 'A');
+      final b = UserProfile(id: 'u2', email: 'a@example.com', fullName: 'A');
+      expect(a, isNot(equals(b)));
+    });
+  });
 }

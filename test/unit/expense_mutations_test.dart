@@ -21,14 +21,14 @@ void main() {
     RecurrenceType recurrence = RecurrenceType.none,
     bool isDebited = false,
   }) => Fixtures.expense(
-        id: id,
-        accountId: accountId,
-        categoryId: categoryId,
-        amount: amount,
-        debitDate: debitDate,
-        recurrence: recurrence,
-        isDebited: isDebited,
-      );
+    id: id,
+    accountId: accountId,
+    categoryId: categoryId,
+    amount: amount,
+    debitDate: debitDate,
+    recurrence: recurrence,
+    isDebited: isDebited,
+  );
 
   group('Expense CRUD invariants', () {
     test('création: fields preserved', () {
@@ -69,7 +69,10 @@ void main() {
       final oldAccExpenses = <Expense>[];
       final newAccExpenses = [moved];
       expect(oldAccExpenses.where((ex) => ex.accountId == 'acc-A'), isEmpty);
-      expect(newAccExpenses.where((ex) => ex.accountId == 'acc-B'), hasLength(1));
+      expect(
+        newAccExpenses.where((ex) => ex.accountId == 'acc-B'),
+        hasLength(1),
+      );
     });
 
     test('changement catégorie + compte simultanément', () {
@@ -78,7 +81,10 @@ void main() {
       expect(moved.accountId, 'acc-B');
       expect(moved.categoryId, 'cat-B');
       // both old combos absent, new present
-      expect(moved.accountId != e.accountId && moved.categoryId != e.categoryId, isTrue);
+      expect(
+        moved.accountId != e.accountId && moved.categoryId != e.categoryId,
+        isTrue,
+      );
     });
 
     test('changement date/période: occurrence migre de période', () {
@@ -131,7 +137,9 @@ void main() {
       final updated = e.copyWith(amount: 200);
       final store = [e];
       // update replaces
-      final after = store.map((ex) => ex.id == updated.id ? updated : ex).toList();
+      final after = store
+          .map((ex) => ex.id == updated.id ? updated : ex)
+          .toList();
       expect(after.where((ex) => ex.id == 'e1'), hasLength(1));
       expect(after.singleWhere((ex) => ex.id == 'e1').amount, 200);
     });
@@ -162,16 +170,36 @@ void main() {
       ];
       expect(expenses.where((e) => e.accountId == 'acc-1'), hasLength(2));
       expect(expenses.where((e) => e.categoryId == 'cat-1'), hasLength(2));
-      expect(expenses.where((e) => e.accountId == 'acc-1' && e.categoryId == 'cat-1'), hasLength(1));
+      expect(
+        expenses.where(
+          (e) => e.accountId == 'acc-1' && e.categoryId == 'cat-1',
+        ),
+        hasLength(1),
+      );
     });
   });
 
   group('Statistics via calculators', () {
     test('calcul des occurrences trié: non-débité avant débité', () {
       final expenses = [
-        exp(id: 'e1', amount: 50, debitDate: DateTime(2026, 3, 5), isDebited: true),
-        exp(id: 'e2', amount: 30, debitDate: DateTime(2026, 3, 10), isDebited: false),
-        exp(id: 'e3', amount: 20, debitDate: DateTime(2026, 3, 15), isDebited: false),
+        exp(
+          id: 'e1',
+          amount: 50,
+          debitDate: DateTime(2026, 3, 5),
+          isDebited: true,
+        ),
+        exp(
+          id: 'e2',
+          amount: 30,
+          debitDate: DateTime(2026, 3, 10),
+          isDebited: false,
+        ),
+        exp(
+          id: 'e3',
+          amount: 20,
+          debitDate: DateTime(2026, 3, 15),
+          isDebited: false,
+        ),
       ];
       const period = Period(year: 2026, month: 3);
       final occ = calculator.forPeriod(expenses, period);
@@ -187,9 +215,24 @@ void main() {
       final cat1 = Fixtures.category(id: 'cat-1', accountId: acc.id!);
       final cat2 = Fixtures.category(id: 'cat-2', accountId: acc.id!);
       final expenses = [
-        exp(id: 'e1', categoryId: 'cat-1', amount: 100, debitDate: DateTime(2026, 3, 5)),
-        exp(id: 'e2', categoryId: 'cat-1', amount: 50, debitDate: DateTime(2026, 3, 10)),
-        exp(id: 'e3', categoryId: 'cat-2', amount: 75, debitDate: DateTime(2026, 3, 15)),
+        exp(
+          id: 'e1',
+          categoryId: 'cat-1',
+          amount: 100,
+          debitDate: DateTime(2026, 3, 5),
+        ),
+        exp(
+          id: 'e2',
+          categoryId: 'cat-1',
+          amount: 50,
+          debitDate: DateTime(2026, 3, 10),
+        ),
+        exp(
+          id: 'e3',
+          categoryId: 'cat-2',
+          amount: 75,
+          debitDate: DateTime(2026, 3, 15),
+        ),
       ];
       const period = Period(year: 2026, month: 3);
       final occ = calculator.forPeriod(expenses, period);

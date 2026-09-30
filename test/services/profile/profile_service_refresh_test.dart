@@ -1,12 +1,15 @@
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../helpers.dart';
 
 void main() {
   late SyncManager manager;
   late SyncQueue queue;
+  late ProfileService service;
 
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,11 +17,16 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    manager = SyncManager.instance;
-    queue = SyncQueue.instance;
+    manager = testSyncManager;
+    queue = testSyncQueue;
+    service = ProfileService(
+      analytics: AnalyticsService(),
+      syncManager: manager,
+      syncQueue: queue,
+    );
     await manager.resetForTest();
     await queue.clear();
-    // Keep the shared SyncManager singleton deterministic between tests.
+    // Keep the shared SyncManager test instance deterministic between tests.
     manager.registerHandler('__test_reset__', (op) async {});
     await manager.flush();
   });
@@ -27,22 +35,29 @@ void main() {
     await manager.resetForTest();
   });
 
-  test('returns true when online: every pending mutation reaches the server', () async {
-    await queue.enqueue(
-      id: 'accounts:create:1',
-      type: 'accounts',
-      operation: 'create',
-      payload: {'id': 'acc-1'},
-    );
+  test(
+    'returns true when online: every pending mutation reaches the server',
+    () async {
+      await queue.enqueue(
+        id: 'accounts:create:1',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'acc-1'},
+      );
 
-    // A handler that succeeds mimics reaching the server (online).
-    manager.registerHandler('accounts', (op) async {});
+      // A handler that succeeds mimics reaching the server (online).
+      manager.registerHandler('accounts', (op) async {});
 
-    final online = await ProfileService.flushPendingMutations();
+      final online = await service.flushPendingMutations();
 
-    expect(online, isTrue, reason: 'queue must be empty after a successful flush');
-    expect(await queue.all(), isEmpty);
-  });
+      expect(
+        online,
+        isTrue,
+        reason: 'queue must be empty after a successful flush',
+      );
+      expect(await queue.all(), isEmpty);
+    },
+  );
 
   test('returns false when offline: a failing mutation stays queued', () async {
     await queue.enqueue(
@@ -57,14 +72,22 @@ void main() {
       throw Exception('network unreachable');
     });
 
-    final online = await ProfileService.flushPendingMutations();
+    final online = await service.flushPendingMutations();
 
-    expect(online, isFalse, reason: 'a pending mutation remains, device is offline');
-    expect(await queue.all(), hasLength(1), reason: 'nothing is dropped on failure');
+    expect(
+      online,
+      isFalse,
+      reason: 'a pending mutation remains, device is offline',
+    );
+    expect(
+      await queue.all(),
+      hasLength(1),
+      reason: 'nothing is dropped on failure',
+    );
   });
 
   test('returns true when there are no pending mutations at all', () async {
-    final online = await ProfileService.flushPendingMutations();
+    final online = await service.flushPendingMutations();
 
     expect(online, isTrue);
   });

@@ -81,17 +81,11 @@ void main() {
     });
 
     test('empty string falls back to unknown', () {
-      expect(
-        classifyError(Exception('')),
-        AppMessageKey.unknownError,
-      );
+      expect(classifyError(Exception('')), AppMessageKey.unknownError);
     });
 
     test('object with short description falls back to unknown', () {
-      expect(
-        classifyError('oops'),
-        AppMessageKey.unknownError,
-      );
+      expect(classifyError('oops'), AppMessageKey.unknownError);
     });
 
     test('connection keyword triggers network', () {

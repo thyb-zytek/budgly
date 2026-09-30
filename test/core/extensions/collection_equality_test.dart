@@ -16,7 +16,10 @@ void main() {
     });
 
     test('false when any element differs, regardless of position', () {
-      expect(listContentEquals([1, 2, 3], [1, 5, 3], (a, b) => a == b), isFalse);
+      expect(
+        listContentEquals([1, 2, 3], [1, 5, 3], (a, b) => a == b),
+        isFalse,
+      );
     });
 
     test('order matters: same elements in a different order are not equal', () {

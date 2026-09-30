@@ -1,12 +1,14 @@
 import 'package:budgly/src/services/auth/auth_service.dart';
-import 'package:budgly/src/services/offline/sync_manager.dart';
-import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../helpers.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 
 class _FakeAuthService extends AuthService {
   bool signedOut = false;
+
+  _FakeAuthService({required super.analytics});
 
   @override
   Future<void> signOut() async {
@@ -19,20 +21,26 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    await SyncManager.instance.resetForTest();
-    await SyncQueue.instance.clear();
+    await testSyncManager.resetForTest();
+    await testSyncQueue.clear();
   });
 
   tearDown(() async {
-    await SyncManager.instance.resetForTest();
-    await SyncQueue.instance.clear();
+    await testSyncManager.resetForTest();
+    await testSyncQueue.clear();
   });
 
-  test('logout waits for pending mutation to synchronize before signing out', () async {
-    final auth = _FakeAuthService();
-    final service = ProfileService(authService: auth);
+  test('logout first replays pending mutations, then signs out', () async {
+    final analytics = AnalyticsService();
+    final auth = _FakeAuthService(analytics: analytics);
+    final service = ProfileService(
+      authService: auth,
+      analytics: analytics,
+      syncManager: testSyncManager,
+      syncQueue: testSyncQueue,
+    );
 
-    await SyncQueue.instance.enqueue(
+    await testSyncQueue.enqueue(
       id: 'profile-update',
       type: 'user_profiles',
       operation: 'update',
@@ -40,7 +48,7 @@ void main() {
     );
 
     var syncCalls = 0;
-    SyncManager.instance.registerHandler('user_profiles', (_) async {
+    testSyncManager.registerHandler('user_profiles', (_) async {
       syncCalls++;
     });
 
@@ -48,25 +56,38 @@ void main() {
 
     expect(syncCalls, 1);
     expect(auth.signedOut, isTrue);
-    expect(await SyncQueue.instance.all(), isEmpty);
+    expect(await testSyncQueue.all(), isEmpty);
   });
 
-  test('logout does not sign out while a pending mutation still fails', () async {
-    final auth = _FakeAuthService();
-    final service = ProfileService(authService: auth);
+  test(
+    'logout still signs out when a pending mutation keeps failing, and keeps it queued',
+    () async {
+      final analytics = AnalyticsService();
+      final auth = _FakeAuthService(analytics: analytics);
+      final service = ProfileService(
+        authService: auth,
+        analytics: analytics,
+        syncManager: testSyncManager,
+        syncQueue: testSyncQueue,
+      );
 
-    await SyncQueue.instance.enqueue(
-      id: 'profile-offline',
-      type: 'user_profiles',
-      operation: 'update',
-      payload: {'id': 'u1'},
-    );
-    SyncManager.instance.registerHandler('user_profiles', (_) async {
-      throw StateError('offline');
-    });
+      await testSyncQueue.enqueue(
+        id: 'profile-offline',
+        type: 'user_profiles',
+        operation: 'update',
+        payload: {'id': 'u1'},
+      );
+      testSyncManager.registerHandler('user_profiles', (_) async {
+        throw StateError('offline');
+      });
 
-    await expectLater(service.signOut(), throwsStateError);
-    expect(auth.signedOut, isFalse);
-    expect(await SyncQueue.instance.all(), hasLength(1));
-  });
+      // A failing/offline queue must never trap the user in the app.
+      await service.signOut();
+
+      expect(auth.signedOut, isTrue);
+      // Nothing is lost: the operation stays durable for the next sign-in of
+      // the user who created it.
+      expect(await testSyncQueue.all(), hasLength(1));
+    },
+  );
 }

@@ -39,31 +39,34 @@ void main() {
   });
 
   group('CategoryIcon equality', () {
-    test('two icons with the same name/code/pack are equal, labels ignored', () {
-      const a = CategoryIcon(
-        iconName: 'restaurant',
-        iconCode: 1,
-        iconPack: 'MaterialIcons',
-        labels: {'en': 'Restaurant'},
-      );
-      const b = CategoryIcon(
-        iconName: 'restaurant',
-        iconCode: 1,
-        iconPack: 'MaterialIcons',
-        labels: {'en': 'Different label'},
-      );
-      expect(a, equals(b));
-      expect(a.hashCode, b.hashCode);
-    });
+    test(
+      'two icons with the same name/code/pack are equal, labels ignored',
+      () {
+        final a = CategoryIcon(
+          iconName: 'restaurant',
+          iconCode: 1,
+          iconPack: 'MaterialIcons',
+          labels: {'en': 'Restaurant'},
+        );
+        final b = CategoryIcon(
+          iconName: 'restaurant',
+          iconCode: 1,
+          iconPack: 'MaterialIcons',
+          labels: {'en': 'Different label'},
+        );
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
 
     test('a different iconCode makes icons unequal', () {
-      const a = CategoryIcon(
+      final a = CategoryIcon(
         iconName: 'restaurant',
         iconCode: 1,
         iconPack: 'MaterialIcons',
         labels: {},
       );
-      const b = CategoryIcon(
+      final b = CategoryIcon(
         iconName: 'restaurant',
         iconCode: 2,
         iconPack: 'MaterialIcons',
@@ -75,7 +78,7 @@ void main() {
 
   group('CategoryIcon.copyWith', () {
     test('overrides only the passed fields', () {
-      const base = CategoryIcon(
+      final base = CategoryIcon(
         iconName: 'restaurant',
         iconCode: 1,
         iconPack: 'MaterialIcons',

@@ -17,39 +17,48 @@ void main() {
       registry.register('a', completer.future);
 
       expect(registry.isPending('a'), isTrue);
-      expect(identical(registry.peek<List<int>>('a'), completer.future), isTrue);
+      expect(
+        identical(registry.peek<List<int>>('a'), completer.future),
+        isTrue,
+      );
 
       completer.complete([1, 2, 3]);
       await completer.future;
     });
 
-    test('release removes the entry only if it is still the current one', () async {
-      final registry = InFlightRegistry<String>();
-      final first = Future<void>.value();
-      final second = Future<void>.value();
+    test(
+      'release removes the entry only if it is still the current one',
+      () async {
+        final registry = InFlightRegistry<String>();
+        final first = Future<void>.value();
+        final second = Future<void>.value();
 
-      registry.register('a', first);
-      registry.register('a', second); // second call replaces the first
+        registry.register('a', first);
+        registry.register('a', second); // second call replaces the first
 
-      // Releasing the stale (first) future must not evict the current one.
-      registry.release('a', first);
-      expect(registry.isPending('a'), isTrue);
+        // Releasing the stale (first) future must not evict the current one.
+        registry.release('a', first);
+        expect(registry.isPending('a'), isTrue);
 
-      registry.release('a', second);
-      expect(registry.isPending('a'), isFalse);
-    });
+        registry.release('a', second);
+        expect(registry.isPending('a'), isFalse);
+      },
+    );
 
-    test('does not auto-release on completion — caller controls cleanup', () async {
-      final registry = InFlightRegistry<String>();
-      final future = Future<void>.value();
-      registry.register('a', future);
-      await future;
+    test(
+      'does not auto-release on completion — caller controls cleanup',
+      () async {
+        final registry = InFlightRegistry<String>();
+        final future = Future<void>.value();
+        registry.register('a', future);
+        await future;
 
-      // Mirrors the existing per-service behavior where some code paths
-      // (e.g. an unawaited background refresh) intentionally never call
-      // release(); this extraction must not silently change that.
-      expect(registry.isPending('a'), isTrue);
-    });
+        // Mirrors the existing per-service behavior where some code paths
+        // (e.g. an unawaited background refresh) intentionally never call
+        // release(); this extraction must not silently change that.
+        expect(registry.isPending('a'), isTrue);
+      },
+    );
 
     test('remove and clear drop entries unconditionally', () {
       final registry = InFlightRegistry<String>();

@@ -6,11 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const calculator = ExpenseSummaryCalculator();
-  final category = Category(
-    id: 'food',
-    accountId: 'account',
-    name: 'Food',
-  );
+  const category = Category(id: 'food', accountId: 'account', name: 'Food');
 
   ExpenseOccurrence occurrence(double amount, bool debited) {
     final expense = Expense(

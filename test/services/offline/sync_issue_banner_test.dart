@@ -1,11 +1,20 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
+import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/shared/ui/widgets/banners/sync_issue_banner.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+final testSyncQueue = SyncQueue();
+final testSyncManager = SyncManager(
+  queue: testSyncQueue,
+  analytics: AnalyticsService(),
+);
+
 void main() {
-  final syncManager = SyncManager.instance;
+  final syncManager = testSyncManager;
 
   setUp(() async {
     await syncManager.resetForTest();
@@ -15,38 +24,35 @@ void main() {
     await syncManager.resetForTest();
   });
 
-  testWidgets(
-    'hidden when there are no stuck operations',
-    (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
+  testWidgets('hidden when there are no stuck operations', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SyncIssueBanner(),
-          ),
+          home: Scaffold(body: SyncIssueBanner()),
         ),
-      );
+      ),
+    );
 
-      await tester.pump();
+    await tester.pump();
 
-      expect(find.byType(SyncIssueBanner), findsOneWidget);
+    expect(find.byType(SyncIssueBanner), findsOneWidget);
 
-      // The banner itself is present, but it must render no visible content.
-      expect(find.byIcon(Icons.sync_problem_rounded), findsNothing);
-      expect(find.text('Retry'), findsNothing);
-    },
-  );
+    // The banner itself is present, but it must render no visible content.
+    expect(find.byIcon(Icons.sync_problem_rounded), findsNothing);
+    expect(find.text('Retry'), findsNothing);
+  });
 
   testWidgets(
     'does not hang when retry is triggered without a registered handler',
     (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SyncIssueBanner(),
+        const ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: SyncIssueBanner()),
           ),
         ),
       );
@@ -68,24 +74,21 @@ void main() {
     },
   );
 
-  testWidgets(
-    'banner remains hidden when sync queue is empty',
-    (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
+  testWidgets('banner remains hidden when sync queue is empty', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SyncIssueBanner(),
-          ),
+          home: Scaffold(body: SyncIssueBanner()),
         ),
-      );
+      ),
+    );
 
-      await tester.pump();
+    await tester.pump();
 
-      expect(find.byIcon(Icons.sync_problem_rounded), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.text('Retry'), findsNothing);
-    },
-  );
+    expect(find.byIcon(Icons.sync_problem_rounded), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Retry'), findsNothing);
+  });
 }

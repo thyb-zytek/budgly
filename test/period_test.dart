@@ -30,9 +30,9 @@ void main() {
       expect(period.contains(DateTime(2026, 4, 1)), isFalse);
     });
 
-    test('endOfMonth is the last millisecond of the month', () {
+    test('lastDay is the last calendar day of the month', () {
       const period = Period(year: 2026, month: 2);
-      expect(period.endOfMonth, DateTime(2026, 3, 1).subtract(const Duration(milliseconds: 1)));
+      expect(period.lastDay, DateTime(2026, 2, 28));
     });
 
     test('isBefore and isAfter compare by year and month', () {

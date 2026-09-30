@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('User.isGoogleUser', () {
     test('is true for google provider', () {
-      final user = User(
+      const user = User(
         id: 'u1',
         email: 'test@gmail.com',
         provider: AuthProvider.google,
@@ -14,7 +14,7 @@ void main() {
     });
 
     test('is false for email provider', () {
-      final user = User(
+      const user = User(
         id: 'u1',
         email: 'test@example.com',
         provider: AuthProvider.email,
@@ -48,7 +48,7 @@ void main() {
     });
 
     test('can override provider explicitly', () {
-      final user = User(
+      const user = User(
         id: 'u1',
         email: 'test@example.com',
         provider: AuthProvider.google,
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('preserves provider when only id/email change', () {
-      final user = User(
+      const user = User(
         id: 'u1',
         email: 'old@gmail.com',
         provider: AuthProvider.google,
@@ -102,7 +102,7 @@ void main() {
   });
 
   test('empty id is not authenticated', () {
-    expect(User(id: '').isAuthenticated, isFalse);
-    expect(User(id: 'u1').isAuthenticated, isTrue);
+    expect(const User(id: '').isAuthenticated, isFalse);
+    expect(const User(id: 'u1').isAuthenticated, isTrue);
   });
 }

@@ -6,7 +6,9 @@ import '../../../helpers/pump_app.dart';
 
 void main() {
   group('CurrencyForm', () {
-    testWidgets('selecting a different currency calls onCurrencyChanged', (tester) async {
+    testWidgets('selecting a different currency calls onCurrencyChanged', (
+      tester,
+    ) async {
       String? changedTo;
 
       await pumpApp(

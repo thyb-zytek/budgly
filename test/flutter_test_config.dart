@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_screenutil_plus/flutter_screenutil_plus.dart';
 
-import 'package:budgly/src/services/offline/sync_manager.dart';
-import 'package:budgly/src/services/offline/sync_queue.dart';
-
 import 'helpers/test_bootstrap.dart';
+import 'helpers/sync_test_harness.dart';
 
 /// Test-wide bootstrap run before every test file under [test/].
 ///
@@ -23,11 +22,15 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     minTextAdapt: false,
     splitScreenMode: false,
   );
-  try {
-    await testMain();
-  } finally {
-    await SyncManager.instance.resetForTest();
-    await SyncQueue.instance.clear();
+  setUp(() async {
+    await testSyncManager.resetForTest();
+    await testSyncQueue.clear();
     TestBootstrap.resetSharedPreferences();
-  }
+  });
+  tearDown(() async {
+    await testSyncManager.resetForTest();
+    await testSyncQueue.clear();
+  });
+
+  await testMain();
 }

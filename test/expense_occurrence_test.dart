@@ -77,9 +77,7 @@ void main() {
 
   group('expandExpenseOccurrences', () {
     test('one-off expense appears only in its debit date period', () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 3, 12),
-      );
+      final expense = buildExpense(debitDate: DateTime(2026, 3, 12));
 
       final inMarch = expandExpenseOccurrences(
         expense,
@@ -120,22 +118,24 @@ void main() {
       expect(before, isEmpty);
     });
 
-    test('weekly recurring expense generates multiple occurrences in a month',
-        () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 2, 2),
-        recurrence: RecurrenceType.weekly,
-      );
+    test(
+      'weekly recurring expense generates multiple occurrences in a month',
+      () {
+        final expense = buildExpense(
+          debitDate: DateTime(2026, 2, 2),
+          recurrence: RecurrenceType.weekly,
+        );
 
-      final occurrences = expandExpenseOccurrences(
-        expense,
-        const Period(year: 2026, month: 2),
-      );
+        final occurrences = expandExpenseOccurrences(
+          expense,
+          const Period(year: 2026, month: 2),
+        );
 
-      expect(occurrences, hasLength(4));
-      expect(occurrences.first.date, DateTime(2026, 2, 2));
-      expect(occurrences.last.date, DateTime(2026, 2, 23));
-    });
+        expect(occurrences, hasLength(4));
+        expect(occurrences.first.date, DateTime(2026, 2, 2));
+        expect(occurrences.last.date, DateTime(2026, 2, 23));
+      },
+    );
 
     test('occurrence debited state is resolved per date', () {
       final expense = buildExpense(
@@ -181,6 +181,58 @@ void main() {
       expect(jan.key, 'expense-1@2026-01-15');
       expect(feb.key, 'expense-1@2026-02-15');
       expect(jan.key, isNot(feb.key));
+    });
+  });
+
+  group('equality', () {
+    test(
+      'two occurrences with the same expense/date/isDebited/sourceDate are equal',
+      () {
+        final expense = buildExpense();
+        final a = ExpenseOccurrence(
+          expense: expense,
+          date: DateTime(2026, 1, 15),
+          isDebited: false,
+        );
+        final b = ExpenseOccurrence(
+          expense: expense,
+          date: DateTime(2026, 1, 15),
+          isDebited: false,
+        );
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
+
+    test('a different date makes occurrences unequal', () {
+      final expense = buildExpense();
+      final a = ExpenseOccurrence(
+        expense: expense,
+        date: DateTime(2026, 1, 15),
+        isDebited: false,
+      );
+      final b = ExpenseOccurrence(
+        expense: expense,
+        date: DateTime(2026, 2, 15),
+        isDebited: false,
+      );
+      expect(a, isNot(equals(b)));
+    });
+
+    test('a different isDebited makes occurrences unequal', () {
+      final expense = buildExpense();
+      final date = DateTime(2026, 1, 15);
+      final a = ExpenseOccurrence(
+        expense: expense,
+        date: date,
+        isDebited: false,
+      );
+      final b = ExpenseOccurrence(
+        expense: expense,
+        date: date,
+        isDebited: true,
+      );
+      expect(a, isNot(equals(b)));
     });
   });
 }

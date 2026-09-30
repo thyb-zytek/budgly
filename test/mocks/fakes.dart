@@ -10,22 +10,40 @@ class FakeAccountBudgetProvider extends AccountBudgetFirestore {
   int getCalls = 0;
   int mostRecentCalls = 0;
 
-  String _key(String accountId, int year, int month) => '${accountId}_${year}_$month';
+  String _key(String accountId, int year, int month) =>
+      '${accountId}_${year}_$month';
 
   @override
-  Future<AccountBudget?> get(String accountId, int year, int month, {Source source = Source.server}) async {
+  Future<AccountBudget?> get(
+    String accountId,
+    int year,
+    int month, {
+    Source source = Source.server,
+  }) async {
     getCalls++;
     return store[_key(accountId, year, month)];
   }
 
   @override
-  Future<AccountBudget?> getMostRecentWithRevenue(String accountId, {required Period before, Source source = Source.server}) async {
+  Future<AccountBudget?> getMostRecentWithRevenue(
+    String accountId, {
+    required Period before,
+    Source source = Source.server,
+  }) async {
     mostRecentCalls++;
-    return firstRevenueBefore(store.values.whereType<AccountBudget>().toList(), before);
+    return firstRevenueBefore(
+      store.values.whereType<AccountBudget>().toList(),
+      before,
+    );
   }
 
   @override
-  Future<AccountBudget> setRevenue(String accountId, int year, int month, double revenue) async {
+  Future<AccountBudget> setRevenue(
+    String accountId,
+    int year,
+    int month,
+    double revenue,
+  ) async {
     final budget = AccountBudget(
       id: _key(accountId, year, month),
       accountId: accountId,

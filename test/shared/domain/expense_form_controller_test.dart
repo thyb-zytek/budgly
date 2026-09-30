@@ -20,7 +20,7 @@ void main() {
 
   test('resetForCreation initializes a clean form', () {
     const account = Account(id: 'a1', name: 'Compte');
-    final category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
+    const category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
 
     controller.resetForCreation(account: account, category: category);
 
@@ -96,7 +96,7 @@ void main() {
       date: DateTime(2026, 8, 10),
       isDebited: true,
     );
-    final category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
+    const category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
 
     controller.loadFromOccurrence(occurrence, category: category);
 
@@ -138,7 +138,7 @@ void main() {
   test('validate passes when the first category is preselected on open', () {
     final tr = AppLocalizationsFr();
     const account = Account(id: 'a1', name: 'Compte');
-    final category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
+    const category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
 
     controller.resetForCreation(account: account, category: category);
     controller.data.nameController.text = 'Courses';

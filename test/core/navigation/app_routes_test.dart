@@ -18,7 +18,12 @@ void main() {
   test('category route encodes period query when supplied', () {
     const period = Period(year: 2026, month: 8);
     expect(
-      AppRoutes.categoryExpensesPath('a', 'c', year: period.year, month: period.month),
+      AppRoutes.categoryExpensesPath(
+        'a',
+        'c',
+        year: period.year,
+        month: period.month,
+      ),
       '/overview/category/a/c?year=2026&month=8',
     );
   });

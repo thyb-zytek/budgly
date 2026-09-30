@@ -34,43 +34,49 @@ void main() {
 
   group('Category.toJson', () {
     test('includes the id when present', () {
-      final category = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+      const category = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
       expect(category.toJson()['id'], 'cat-1');
     });
 
     test('omits the id when null', () {
-      final category = Category(name: 'Food', accountId: 'acc-1');
+      const category = Category(name: 'Food', accountId: 'acc-1');
       expect(category.toJson().containsKey('id'), isFalse);
     });
 
-    test('derives the icon field from a CategoryIcon when set, ignoring iconCode', () {
-      final category = Category(
-        name: 'Food',
-        accountId: 'acc-1',
-        iconCode: 'should-be-ignored',
-        icon: const CategoryIcon(
-          iconName: 'restaurant',
-          iconCode: 0xe56c,
-          iconPack: 'MaterialIcons',
-          labels: {},
-        ),
-      );
-      expect(category.toJson()['icon'], '0xe56c');
-    });
+    test(
+      'derives the icon field from a CategoryIcon when set, ignoring iconCode',
+      () {
+        final category = Category(
+          name: 'Food',
+          accountId: 'acc-1',
+          iconCode: 'should-be-ignored',
+          icon: CategoryIcon(
+            iconName: 'restaurant',
+            iconCode: 0xe56c,
+            iconPack: 'MaterialIcons',
+            labels: {},
+          ),
+        );
+        expect(category.toJson()['icon'], '0xe56c');
+      },
+    );
 
-    test('falls back to the raw iconCode string when no CategoryIcon is set', () {
-      final category = Category(
-        name: 'Food',
-        accountId: 'acc-1',
-        iconCode: '0xe5d2',
-      );
-      expect(category.toJson()['icon'], '0xe5d2');
-    });
+    test(
+      'falls back to the raw iconCode string when no CategoryIcon is set',
+      () {
+        const category = Category(
+          name: 'Food',
+          accountId: 'acc-1',
+          iconCode: '0xe5d2',
+        );
+        expect(category.toJson()['icon'], '0xe5d2');
+      },
+    );
   });
 
   group('Category.copyWith', () {
     test('keeps existing values when nothing is passed', () {
-      final base = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+      const base = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
       final result = base.copyWith();
       expect(result.id, base.id);
       expect(result.name, base.name);
@@ -78,25 +84,27 @@ void main() {
     });
 
     test('overrides accountId when a new Account is passed', () {
-      final base = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
-      final result = base.copyWith(account: const Account(id: 'acc-2', name: 'Pro'));
+      const base = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+      final result = base.copyWith(
+        account: const Account(id: 'acc-2', name: 'Pro'),
+      );
       expect(result.accountId, 'acc-2');
     });
 
     test('keeps the original accountId when no Account is passed', () {
-      final base = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+      const base = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
       expect(base.copyWith(name: 'Groceries').accountId, 'acc-1');
     });
 
     test('updating the icon also refreshes the derived iconCode', () {
-      final base = Category(
+      const base = Category(
         id: 'cat-1',
         name: 'Food',
         accountId: 'acc-1',
         iconCode: '0x1',
       );
       final result = base.copyWith(
-        icon: const CategoryIcon(
+        icon: CategoryIcon(
           iconName: 'restaurant',
           iconCode: 0xe56c,
           iconPack: 'MaterialIcons',
@@ -108,11 +116,23 @@ void main() {
   });
 
   group('Category identity', () {
-    test('two categories with the same fields are not equal (no operator== override)', () {
-      final a = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
-      final b = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
-      expect(a, isNot(equals(b)));
-    });
+    test(
+      'two categories with the same id are equal, even with different fields',
+      () {
+        const a = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+        const b = Category(id: 'cat-1', name: 'Groceries', accountId: 'acc-1');
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
+
+    test(
+      'two categories with different ids are not equal, even with the same fields',
+      () {
+        const a = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+        const b = Category(id: 'cat-2', name: 'Food', accountId: 'acc-1');
+        expect(a, isNot(equals(b)));
+      },
+    );
   });
 }
-

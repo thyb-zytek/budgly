@@ -7,20 +7,16 @@ void main() {
   const versioning = RecurringExpenseVersioning();
 
   Expense buildExpense() => Expense(
-        id: 'expense-1',
-        accountId: 'account-1',
-        categoryId: 'category-1',
-        name: 'Rent',
-        amount: 900,
-        debitDate: DateTime(2026, 1, 31),
-        recurrence: RecurrenceType.monthly,
-        recurrenceAnchorDay: 31,
-        debitedOccurrences: const [
-          '2026-01-31',
-          '2026-02-28',
-          '2026-03-31',
-        ],
-      );
+    id: 'expense-1',
+    accountId: 'account-1',
+    categoryId: 'category-1',
+    name: 'Rent',
+    amount: 900,
+    debitDate: DateTime(2026, 1, 31),
+    recurrence: RecurrenceType.monthly,
+    recurrenceAnchorDay: 31,
+    debitedOccurrences: const ['2026-01-31', '2026-02-28', '2026-03-31'],
+  );
 
   test('keeps historical occurrences on the previous version', () {
     final original = buildExpense();

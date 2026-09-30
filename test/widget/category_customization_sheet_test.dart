@@ -5,13 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/pump_app.dart';
 
-const _iconA = CategoryIcon(
+final _iconA = CategoryIcon(
   iconName: 'category_rounded',
   iconCode: 0xe001,
   iconPack: 'MaterialIcons',
   labels: {'en': 'Category', 'fr': 'Catégorie'},
 );
-const _iconB = CategoryIcon(
+final _iconB = CategoryIcon(
   iconName: 'home_rounded',
   iconCode: 0xe002,
   iconPack: 'MaterialIcons',
@@ -29,10 +29,11 @@ Future<void> _openSheet(
       builder: (context) => ElevatedButton(
         onPressed: () => showCategoryCustomizationSheet(
           context,
-          availableIcons: const [_iconA, _iconB],
+          availableIcons: [_iconA, _iconB],
           initialIcon: _iconA,
           initialColor: Colors.blue,
-          previewBuilder: (context, icon, color) => Icon(icon.toIconData(), color: color),
+          previewBuilder: (context, icon, color) =>
+              Icon(icon.toIconData(), color: color),
           onIconChanged: onIconChanged,
           onColorChanged: onColorChanged,
         ),
@@ -46,30 +47,34 @@ Future<void> _openSheet(
 
 void main() {
   group('showCategoryCustomizationSheet', () {
-    testWidgets('cancelling after browsing a different icon does not commit it', (tester) async {
-      CategoryIcon? committedIcon;
+    testWidgets(
+      'cancelling after browsing a different icon does not commit it',
+      (tester) async {
+        CategoryIcon? committedIcon;
 
-      await _openSheet(
-        tester,
-        onIconChanged: (icon) => committedIcon = icon,
-        onColorChanged: (_) {},
-      );
+        await _openSheet(
+          tester,
+          onIconChanged: (icon) => committedIcon = icon,
+          onColorChanged: (_) {},
+        );
 
-      // Browse to a different icon than the initial one.
-      await tester.tap(find.byIcon(_iconB.toIconData()));
-      await tester.pump();
+        // Browse to a different icon than the initial one.
+        await tester.tap(find.byIcon(_iconB.toIconData()));
+        await tester.pump();
 
-      // Cancel instead of confirming.
-      await tester.tap(find.text('Annuler'));
-      await tester.pumpAndSettle();
+        // Cancel instead of confirming.
+        await tester.tap(find.text('Annuler'));
+        await tester.pumpAndSettle();
 
-      expect(
-        committedIcon,
-        isNull,
-        reason: 'browsing an icon without confirming must not commit it, '
-            'even after Cancel is tapped',
-      );
-    });
+        expect(
+          committedIcon,
+          isNull,
+          reason:
+              'browsing an icon without confirming must not commit it, '
+              'even after Cancel is tapped',
+        );
+      },
+    );
 
     testWidgets('confirming commits the last browsed icon', (tester) async {
       CategoryIcon? committedIcon;

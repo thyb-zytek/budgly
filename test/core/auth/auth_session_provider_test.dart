@@ -24,10 +24,15 @@ void main() {
   });
 
   test('increments on every auth state change', () async {
-    container.read(authSessionRevisionProvider); // ensure build() ran, listener attached
+    container.read(
+      authSessionRevisionProvider,
+    ); // ensure build() ran, listener attached
 
     var notifications = 0;
-    container.listen(authSessionRevisionProvider, (previous, next) => notifications++);
+    container.listen(
+      authSessionRevisionProvider,
+      (previous, next) => notifications++,
+    );
 
     await mockAuth.signInWithEmailAndPassword(
       email: 'test@budgly.app',
@@ -35,7 +40,10 @@ void main() {
     );
     await Future<void>.delayed(Duration.zero);
 
-    expect(container.read(authSessionRevisionProvider), greaterThanOrEqualTo(1));
+    expect(
+      container.read(authSessionRevisionProvider),
+      greaterThanOrEqualTo(1),
+    );
     expect(notifications, greaterThanOrEqualTo(1));
   });
 

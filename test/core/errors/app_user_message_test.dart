@@ -24,12 +24,15 @@ void main() {
       );
     });
 
-    test('classifies a 401/permission-flavored error as a permission error', () {
-      expect(
-        classifyError(Exception('401 Unauthorized')),
-        AppMessageKey.permissionError,
-      );
-    });
+    test(
+      'classifies a 401/permission-flavored error as a permission error',
+      () {
+        expect(
+          classifyError(Exception('401 Unauthorized')),
+          AppMessageKey.permissionError,
+        );
+      },
+    );
 
     test('classifies a row-level-security error as a permission error', () {
       expect(
@@ -40,7 +43,9 @@ void main() {
 
     test('classifies a not-found error', () {
       expect(
-        classifyError(Exception('PGRST116: Results contain 0 rows (not found)')),
+        classifyError(
+          Exception('PGRST116: Results contain 0 rows (not found)'),
+        ),
         AppMessageKey.notFoundError,
       );
     });

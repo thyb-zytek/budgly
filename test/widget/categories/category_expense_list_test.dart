@@ -40,7 +40,9 @@ void main() {
       expect(find.text('Loisirs'), findsOneWidget);
     });
 
-    testWidgets('tapping a row calls onTapCategory with the matching summary', (tester) async {
+    testWidgets('tapping a row calls onTapCategory with the matching summary', (
+      tester,
+    ) async {
       final courses = CategoryExpenseSummary(
         category: Fixtures.category(accountId: 'acc-1', name: 'Courses'),
         total: 50,

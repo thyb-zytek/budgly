@@ -1,6 +1,7 @@
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../helpers.dart';
 
 void main() {
   late SyncQueue queue;
@@ -11,7 +12,7 @@ void main() {
   });
 
   setUp(() async {
-    queue = SyncQueue.instance;
+    queue = testSyncQueue;
     await queue.clear();
   });
 
@@ -74,6 +75,7 @@ void main() {
         type: 'accounts',
         operation: 'create',
         payload: {'id': 'acc-1', 'name': 'Test'},
+        ownerUserId: 'user-1',
         attempts: 3,
         nextAttemptAt: DateTime(2026, 6, 15, 12, 0, 0),
       );
@@ -87,6 +89,7 @@ void main() {
       expect(restored.payload, sync.payload);
       expect(restored.attempts, sync.attempts);
       expect(restored.nextAttemptAt, sync.nextAttemptAt);
+      expect(restored.ownerUserId, sync.ownerUserId);
     });
 
     test('fromJson handles null attempts', () {
@@ -121,6 +124,53 @@ void main() {
       expect(copy.attempts, 5);
       expect(copy.nextAttemptAt, sync.nextAttemptAt);
     });
+  });
+
+  group('SyncQueue ownership', () {
+    test('captures the authenticated owner on every new mutation', () async {
+      var currentUserId = 'user-a';
+      final ownedQueue = SyncQueue(ownerUserIdProvider: () => currentUserId);
+
+      await ownedQueue.enqueue(
+        id: 'op-a',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'a'},
+      );
+
+      expect((await ownedQueue.all()).single.ownerUserId, 'user-a');
+    });
+
+    test('refuses mutations while no authenticated user exists', () async {
+      final ownedQueue = SyncQueue(ownerUserIdProvider: () => null);
+
+      expect(
+        () => ownedQueue.enqueue(
+          id: 'op-a',
+          type: 'accounts',
+          operation: 'create',
+          payload: {'id': 'a'},
+        ),
+        throwsStateError,
+      );
+    });
+
+    test(
+      'migrates legacy ownerless entries to the current authenticated user',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'offline.pending_sync.v2':
+              '[{"id":"legacy","type":"accounts","operation":"update","payload":{"id":"a"}}]',
+        });
+        final ownedQueue = SyncQueue(ownerUserIdProvider: () => 'user-a');
+
+        final operations = await ownedQueue.all();
+
+        expect(operations.single.ownerUserId, 'user-a');
+        final persisted = await ownedQueue.all();
+        expect(persisted.single.ownerUserId, 'user-a');
+      },
+    );
   });
 
   group('SyncQueue enqueue edge cases', () {
@@ -199,25 +249,31 @@ void main() {
       expect(operations, hasLength(2));
     });
 
-    test('entities without ids remain independent because they cannot be safely coalesced', () async {
-      await queue.enqueue(
-        id: 'op-1',
-        type: 'accounts',
-        operation: 'create',
-        payload: {'name': 'Account'},
-      );
-      await queue.enqueue(
-        id: 'op-2',
-        type: 'accounts',
-        operation: 'update',
-        payload: {'name': 'Updated'},
-      );
+    test(
+      'entities without ids remain independent because they cannot be safely coalesced',
+      () async {
+        await queue.enqueue(
+          id: 'op-1',
+          type: 'accounts',
+          operation: 'create',
+          payload: {'name': 'Account'},
+        );
+        await queue.enqueue(
+          id: 'op-2',
+          type: 'accounts',
+          operation: 'update',
+          payload: {'name': 'Updated'},
+        );
 
-      // An empty id is not a stable identity; never merge unrelated operations.
-      final operations = await queue.all();
-      expect(operations, hasLength(2));
-      expect(operations.map((operation) => operation.payload['name']), ['Account', 'Updated']);
-    });
+        // An empty id is not a stable identity; never merge unrelated operations.
+        final operations = await queue.all();
+        expect(operations, hasLength(2));
+        expect(operations.map((operation) => operation.payload['name']), [
+          'Account',
+          'Updated',
+        ]);
+      },
+    );
 
     test('forType filters by type', () async {
       await queue.enqueue(

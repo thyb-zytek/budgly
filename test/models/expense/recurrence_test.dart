@@ -20,8 +20,14 @@ void main() {
       expect(RecurrenceType.fromString('daily'), RecurrenceType.daily);
       expect(RecurrenceType.fromString('yearly'), RecurrenceType.yearly);
       expect(RecurrenceType.fromString('bimonthly'), RecurrenceType.bimonthly);
-      expect(RecurrenceType.fromString('trimonthly'), RecurrenceType.trimonthly);
-      expect(RecurrenceType.fromString('halfyearly'), RecurrenceType.halfyearly);
+      expect(
+        RecurrenceType.fromString('trimonthly'),
+        RecurrenceType.trimonthly,
+      );
+      expect(
+        RecurrenceType.fromString('halfyearly'),
+        RecurrenceType.halfyearly,
+      );
       expect(RecurrenceType.fromString('biyearly'), RecurrenceType.biyearly);
     });
   });
@@ -45,9 +51,9 @@ void main() {
       expect(result, DateTime(2026, 2, 28));
     });
 
-    test('Jan 31 -> Feb clamps to 29 in leap year', () {
-      final result = addMonthsClamped(DateTime(2025, 1, 31), 1);
-      expect(result, DateTime(2025, 2, 28));
+    test('Jan 31 -> Feb clamps to 29 in a leap year', () {
+      final result = addMonthsClamped(DateTime(2028, 1, 31), 1);
+      expect(result, DateTime(2028, 2, 29));
     });
 
     test('Jan 30 -> Feb keeps 28/29 if anchorDay is 30', () {
@@ -72,8 +78,12 @@ void main() {
 
     test('crossing year boundary backward', () {
       final result = addMonthsClamped(DateTime(2026, 2, 15), -3);
-      // Dart's ~/ truncates toward zero: (-2) ~/ 12 == 0, so year stays 2026
-      expect(result, DateTime(2026, 11, 15));
+      expect(result, DateTime(2025, 11, 15));
+    });
+
+    test('large negative month offset crosses multiple years correctly', () {
+      final result = addMonthsClamped(DateTime(2026, 2, 15), -14);
+      expect(result, DateTime(2024, 12, 15));
     });
 
     test('zero months returns same month', () {
@@ -99,42 +109,58 @@ void main() {
 
   group('RecurrenceType.nextOccurrenceAfter', () {
     test('daily advances by 1 day', () {
-      final result = RecurrenceType.daily.nextOccurrenceAfter(DateTime(2026, 2, 28));
+      final result = RecurrenceType.daily.nextOccurrenceAfter(
+        DateTime(2026, 2, 28),
+      );
       expect(result, DateTime(2026, 3, 1));
     });
 
     test('weekly advances by 7 days', () {
-      final result = RecurrenceType.weekly.nextOccurrenceAfter(DateTime(2026, 1, 1));
+      final result = RecurrenceType.weekly.nextOccurrenceAfter(
+        DateTime(2026, 1, 1),
+      );
       expect(result, DateTime(2026, 1, 8));
     });
 
     test('monthly advances by 1 month with clamping', () {
-      final result = RecurrenceType.monthly.nextOccurrenceAfter(DateTime(2026, 1, 31));
+      final result = RecurrenceType.monthly.nextOccurrenceAfter(
+        DateTime(2026, 1, 31),
+      );
       expect(result, DateTime(2026, 2, 28));
     });
 
     test('bimonthly advances by 2 months', () {
-      final result = RecurrenceType.bimonthly.nextOccurrenceAfter(DateTime(2026, 1, 15));
+      final result = RecurrenceType.bimonthly.nextOccurrenceAfter(
+        DateTime(2026, 1, 15),
+      );
       expect(result, DateTime(2026, 3, 15));
     });
 
     test('trimonthly advances by 3 months', () {
-      final result = RecurrenceType.trimonthly.nextOccurrenceAfter(DateTime(2026, 1, 15));
+      final result = RecurrenceType.trimonthly.nextOccurrenceAfter(
+        DateTime(2026, 1, 15),
+      );
       expect(result, DateTime(2026, 4, 15));
     });
 
     test('halfyearly advances by 6 months', () {
-      final result = RecurrenceType.halfyearly.nextOccurrenceAfter(DateTime(2026, 1, 15));
+      final result = RecurrenceType.halfyearly.nextOccurrenceAfter(
+        DateTime(2026, 1, 15),
+      );
       expect(result, DateTime(2026, 7, 15));
     });
 
     test('yearly advances by 12 months', () {
-      final result = RecurrenceType.yearly.nextOccurrenceAfter(DateTime(2026, 1, 15));
+      final result = RecurrenceType.yearly.nextOccurrenceAfter(
+        DateTime(2026, 1, 15),
+      );
       expect(result, DateTime(2027, 1, 15));
     });
 
     test('biyearly advances by 24 months', () {
-      final result = RecurrenceType.biyearly.nextOccurrenceAfter(DateTime(2026, 1, 15));
+      final result = RecurrenceType.biyearly.nextOccurrenceAfter(
+        DateTime(2026, 1, 15),
+      );
       expect(result, DateTime(2028, 1, 15));
     });
 
@@ -150,35 +176,56 @@ void main() {
         anchorDay: 31,
       );
       expect(result, DateTime(2026, 2, 28));
-      final mar = RecurrenceType.monthly.nextOccurrenceAfter(result, anchorDay: 31);
+      final mar = RecurrenceType.monthly.nextOccurrenceAfter(
+        result,
+        anchorDay: 31,
+      );
       expect(mar, DateTime(2026, 3, 31));
     });
   });
 
   group('RecurrenceType.previousOccurrenceBefore', () {
     test('daily goes back 1 day', () {
-      final result = RecurrenceType.daily.previousOccurrenceBefore(DateTime(2026, 3, 1));
+      final result = RecurrenceType.daily.previousOccurrenceBefore(
+        DateTime(2026, 3, 1),
+      );
       expect(result, DateTime(2026, 2, 28));
     });
 
     test('weekly goes back 7 days', () {
-      final result = RecurrenceType.weekly.previousOccurrenceBefore(DateTime(2026, 1, 15));
+      final result = RecurrenceType.weekly.previousOccurrenceBefore(
+        DateTime(2026, 1, 15),
+      );
       expect(result, DateTime(2026, 1, 8));
     });
 
     test('monthly goes back 1 month with clamping', () {
-      final result = RecurrenceType.monthly.previousOccurrenceBefore(DateTime(2026, 3, 31));
+      final result = RecurrenceType.monthly.previousOccurrenceBefore(
+        DateTime(2026, 3, 31),
+      );
       expect(result, DateTime(2026, 2, 28));
     });
 
     test('bimonthly goes back 2 months', () {
-      final result = RecurrenceType.bimonthly.previousOccurrenceBefore(DateTime(2026, 5, 15));
+      final result = RecurrenceType.bimonthly.previousOccurrenceBefore(
+        DateTime(2026, 5, 15),
+      );
       expect(result, DateTime(2026, 3, 15));
     });
 
-    test('yearly goes back 12 months within same year range', () {
-      final result = RecurrenceType.yearly.previousOccurrenceBefore(DateTime(2027, 12, 15));
-      expect(result, DateTime(2027, 12, 15));
+    test('yearly goes back exactly one year', () {
+      final result = RecurrenceType.yearly.previousOccurrenceBefore(
+        DateTime(2027, 12, 15),
+      );
+      expect(result, DateTime(2026, 12, 15));
+    });
+
+    test('yearly Feb 29 clamps backward in non-leap year', () {
+      final result = RecurrenceType.yearly.previousOccurrenceBefore(
+        DateTime(2028, 2, 29),
+        anchorDay: 29,
+      );
+      expect(result, DateTime(2027, 2, 28));
     });
 
     test('none returns the same date', () {
@@ -193,8 +240,53 @@ void main() {
         anchorDay: 31,
       );
       expect(result, DateTime(2026, 2, 28));
-      final jan = RecurrenceType.monthly.previousOccurrenceBefore(result, anchorDay: 31);
+      final jan = RecurrenceType.monthly.previousOccurrenceBefore(
+        result,
+        anchorDay: 31,
+      );
       expect(jan, DateTime(2026, 1, 31));
+    });
+  });
+
+  group('calendar edge matrix', () {
+    test('monthly 30th returns to the anchor after February', () {
+      final anchor = DateTime(2026, 1, 30);
+      final feb = RecurrenceType.monthly.nextOccurrenceAfter(
+        anchor,
+        anchorDay: 30,
+      );
+      final mar = RecurrenceType.monthly.nextOccurrenceAfter(
+        feb,
+        anchorDay: 30,
+      );
+      expect(feb, DateTime(2026, 2, 28));
+      expect(mar, DateTime(2026, 3, 30));
+    });
+
+    test('bimonthly 31st preserves the anchor across February', () {
+      final jan = DateTime(2026, 1, 31);
+      expect(
+        RecurrenceType.bimonthly.nextOccurrenceAfter(jan, anchorDay: 31),
+        DateTime(2026, 3, 31),
+      );
+      expect(
+        RecurrenceType.bimonthly.previousOccurrenceBefore(
+          DateTime(2026, 5, 31),
+          anchorDay: 31,
+        ),
+        DateTime(2026, 3, 31),
+      );
+    });
+
+    test('year boundary preserves day for monthly recurrence', () {
+      expect(
+        addMonthsClamped(DateTime(2026, 12, 31), 1),
+        DateTime(2027, 1, 31),
+      );
+      expect(
+        addMonthsClamped(DateTime(2027, 1, 31), -1),
+        DateTime(2026, 12, 31),
+      );
     });
   });
 
@@ -202,13 +294,19 @@ void main() {
     test('returns target when anchor is already on or after target', () {
       final anchor = DateTime(2026, 6, 15);
       final target = DateTime(2026, 5, 1);
-      final result = RecurrenceType.monthly.firstOccurrenceOnOrAfter(anchor, target);
+      final result = RecurrenceType.monthly.firstOccurrenceOnOrAfter(
+        anchor,
+        target,
+      );
       expect(result, anchor);
     });
 
     test('returns target when equal', () {
       final date = DateTime(2026, 6, 15);
-      final result = RecurrenceType.monthly.firstOccurrenceOnOrAfter(date, date);
+      final result = RecurrenceType.monthly.firstOccurrenceOnOrAfter(
+        date,
+        date,
+      );
       expect(result, date);
     });
 
@@ -217,7 +315,11 @@ void main() {
         DateTime(2026, 1, 1),
         DateTime(2026, 6, 10),
       );
-      expect(result.isAfter(DateTime(2026, 6, 9)) || result.isAtSameMomentAs(DateTime(2026, 6, 10)), isTrue);
+      expect(
+        result.isAfter(DateTime(2026, 6, 9)) ||
+            result.isAtSameMomentAs(DateTime(2026, 6, 10)),
+        isTrue,
+      );
       expect(!result.isBefore(DateTime(2026, 6, 10)), isTrue);
     });
 

@@ -4,6 +4,7 @@ import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/providers/firestore/accounts_budget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 
 class FakeBudgetProvider extends AccountBudgetFirestore {
   final List<AccountBudget> budgets;
@@ -86,7 +87,11 @@ void main() {
 
       final result = firstRevenueBefore(budgets, aug);
 
-      expect(result?.revenue, 500, reason: 'September must not leak into August');
+      expect(
+        result?.revenue,
+        500,
+        reason: 'September must not leak into August',
+      );
     });
 
     test('returns null when no earlier period carries revenue', () {
@@ -121,7 +126,10 @@ void main() {
         budget(year: 2026, month: 7, revenue: 500),
         budget(year: 2026, month: 3, revenue: 300),
       ]);
-      final service = AccountBudgetsService(provider: provider);
+      final service = AccountBudgetsService(
+        provider: provider,
+        analytics: AnalyticsService(),
+      );
 
       final inherited = await service.getMostRecentRevenue(
         'a1',
@@ -135,7 +143,10 @@ void main() {
       final provider = FakeBudgetProvider([
         budget(year: 2026, month: 3, revenue: 300),
       ]);
-      final service = AccountBudgetsService(provider: provider);
+      final service = AccountBudgetsService(
+        provider: provider,
+        analytics: AnalyticsService(),
+      );
 
       await service.getMostRecentRevenue(
         'a1',
