@@ -12,10 +12,8 @@ import 'package:flutter/services.dart';
 /// offline and does not require a remote request before a category can be
 /// displayed or edited.
 class CategoryIconsService {
-  static final CategoryIconsService instance = CategoryIconsService();
-
   CategoryIconsService({AssetBundle? assetBundle})
-      : _assetBundle = assetBundle ?? rootBundle;
+    : _assetBundle = assetBundle ?? rootBundle;
 
   final AssetBundle _assetBundle;
 

@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
-import 'package:budgly/src/services/image/image_service.dart';
+import 'package:budgly/src/services/image/local_image_store.dart';
 
 class ImageProcessResult {
   final String fileName;
@@ -21,7 +21,7 @@ class AccountImageHelper {
 
     final fileName =
         "${DateTime.now().millisecondsSinceEpoch}_${picture.split('/').last}";
-    final file = await ImageService.persistFile(picture, fileName);
+    final file = await LocalImageStore.persistFile(picture, fileName);
 
     return file != null ? ImageProcessResult(fileName, file) : null;
   }
@@ -41,6 +41,11 @@ class AccountImageHelper {
         image.fileName,
         account.id!,
       );
+      if (url != null) {
+        // The picture is stored remotely: drop the private copy made by
+        // prepareImage so avatars do not accumulate in the documents folder.
+        unawaited(image.file.delete().then<void>((_) {}, onError: (_) {}));
+      }
       return account.copyWith(pictureUrl: url);
     } catch (e, stackTrace) {
       // Degrade gracefully — the account is still created/updated without a

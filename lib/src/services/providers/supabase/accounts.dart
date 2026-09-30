@@ -10,8 +10,11 @@ class AccountSupabase {
 
   AccountSupabase({sb.SupabaseClient? client}) : _injected = client;
   Future<List<Account>> listByUserId(String userId) async {
-    final response =
-        await _client.from('accounts').select().eq('user_id', userId).timeout(AppConstants.networkTimeout);
+    final response = await _client
+        .from('accounts')
+        .select()
+        .eq('user_id', userId)
+        .timeout(AppConstants.networkTimeout);
 
     return (response as List<dynamic>)
         .map((json) => Account.fromJson(json as Map<String, dynamic>))
@@ -19,25 +22,23 @@ class AccountSupabase {
   }
 
   Future<Account?> create(Account account) async {
-    final response =
-        await _client
-            .from('accounts')
-            .insert(account.toJson())
-            .select()
-            .single();
+    final response = await _client
+        .from('accounts')
+        .upsert(account.toJson(), onConflict: 'id')
+        .select()
+        .single();
     return Account.fromJson(response);
   }
 
   Future<Account?> update(Account account) async {
     final id = account.id;
     if (id == null) return null;
-    final response =
-        await _client
-            .from('accounts')
-            .update(account.toJson())
-            .eq('id', id)
-            .select()
-            .maybeSingle();
+    final response = await _client
+        .from('accounts')
+        .update(account.toJson())
+        .eq('id', id)
+        .select()
+        .maybeSingle();
     return response == null ? null : Account.fromJson(response);
   }
 

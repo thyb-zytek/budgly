@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' hide Category;
 import 'package:budgly/src/core/async/in_flight_registry.dart';
 import 'package:budgly/src/core/async/refresh_throttle.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
@@ -8,7 +7,6 @@ import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/services/categories/category_icons_service.dart';
-import 'package:budgly/src/stores/categories.dart';
 import 'package:budgly/src/services/providers/supabase/categories.dart';
 import 'package:budgly/src/services/offline/local_cache.dart';
 import 'package:budgly/src/services/offline/offline_id.dart';
@@ -17,18 +15,12 @@ import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 
 class CategoriesService {
-  static CategoriesService? _instance;
-
-  static CategoriesService get instance {
-    _instance ??= CategoriesService._();
-    return _instance!;
-  }
-
   final CategorySupabase _categorySupabase;
   final CategoryIconsService _categoryIconsService;
-  final CategoriesStore _store;
-  final LocalCache _localCache = LocalCache();
-  final SyncQueue _syncQueue = SyncQueue.instance;
+  final LocalCache _localCache;
+  final SyncQueue _syncQueue;
+  final AnalyticsService _analytics;
+  final SyncManager _syncManager;
 
   final _inFlight = InFlightRegistry<String>();
   final _refreshThrottle = RefreshThrottle<String>(const Duration(minutes: 1));
@@ -36,47 +28,35 @@ class CategoriesService {
   CategoriesService({
     CategorySupabase? categorySupabase,
     CategoryIconsService? categoryIconsService,
-    CategoriesStore? store,
-  })  : _categorySupabase = categorySupabase ?? CategorySupabase(),
-        _categoryIconsService = categoryIconsService ?? CategoryIconsService.instance,
-        _store = store ?? CategoriesStore.instance {
-    SyncManager.instance.registerHandler('categories', _handlePendingSync);
-  }
+    required this._analytics,
+    required this._syncManager,
+    required this._syncQueue,
+    LocalCache? localCache,
+  }) : _categorySupabase = categorySupabase ?? CategorySupabase(),
+       _categoryIconsService = categoryIconsService ?? CategoryIconsService(),
+       // Production always injects the shared instance (localCacheProvider);
+       // the fallback only exists for tests that build the service directly.
+       _localCache = localCache ?? LocalCache();
 
-  CategoriesService._() : this();
-
-  List<CategoryIcon> get availableIcons => _store.availableIcons;
-  Map<String, List<Category>> get categoriesByAccount => _store.categoriesByAccount;
-  bool hasLoadedAccount(String accountId) => _store.hasLoadedAccount(accountId);
-  List<Category> getCategoriesForAccount(String accountId) => _store.getCategoriesForAccount(accountId);
-
-  void addListener(VoidCallback listener) {
-    _store.addListener(listener);
-  }
-
-  void removeListener(VoidCallback listener) {
-    _store.removeListener(listener);
+  void registerSyncHandler(SyncManager manager) {
+    manager.registerHandler('categories', _handlePendingSync);
   }
 
   void invalidateCache() {
     _inFlight.clear();
     _refreshThrottle.clear();
-    _store.clearAll();
   }
 
   void invalidateAccountCache(String accountId) {
     _inFlight.remove(accountId);
     _refreshThrottle.remove(accountId);
-    _store.clearAccountCache(accountId);
   }
 
-  Future<void> loadAvailableIcons() async {
-    if (_store.iconsLoaded) return;
-    final icons = await _categoryIconsService.getIcons();
-    _store.setAvailableIcons(icons);
+  Future<List<CategoryIcon>> loadAvailableIcons() async {
+    return _categoryIconsService.getIcons();
   }
 
-  Category _hydrateCategoryIcon(Category category) {
+  Category _hydrateCategoryIcon(Category category, List<CategoryIcon> icons) {
     if (category.icon != null) return category;
 
     final rawIconCode = category.iconCode ?? '0';
@@ -85,7 +65,7 @@ class CategoriesService {
         : int.tryParse(rawIconCode) ?? 0;
 
     if (iconCode != 0) {
-      for (final icon in _store.availableIcons) {
+      for (final icon in icons) {
         if (icon.iconCode == iconCode) {
           return category.copyWith(icon: icon);
         }
@@ -97,7 +77,7 @@ class CategoriesService {
     // réhydratation puisse retrouver la vraie icône dès que le catalogue
     // est disponible. Ne jamais réécrire iconCode ici : il est persisté tel
     // quel dans le cache local.
-    final fallback = _store.availableIcons.firstWhere(
+    final fallback = icons.firstWhere(
       (i) => i.iconName == AppConstants.defaultCategoryIcon.iconName,
       orElse: () => AppConstants.defaultCategoryIcon,
     );
@@ -113,136 +93,200 @@ class CategoriesService {
     );
   }
 
+  /// Cache-first load (RL-01 §3.2), mirroring `AccountsService.loadAccounts`:
+  /// see its doc comment for the [onRevalidated] contract.
   Future<List<Category>> listCategoriesByAccount(
     String accountId, {
     bool forceRefresh = false,
+    void Function(List<Category>)? onRevalidated,
   }) async {
     final cached = await _localCache.loadCategories(accountId);
-    final hasCache = cached != null;
-    if (hasCache && !_store.hasLoadedAccount(accountId)) {
-      if (!_store.iconsLoaded) {
-        await loadAvailableIcons();
-      }
-      _store.setCategoriesForAccount(
-        accountId,
-        cached.map(_hydrateCategoryIcon).toList(),
-      );
-    }
-
     if (!_refreshThrottle.isDue(accountId, forceRefresh: forceRefresh)) {
-      return _store.getCategoriesForAccount(accountId);
+      if (cached == null) return const [];
+      final icons = await _categoryIconsService.getIcons();
+      return cached.map((c) => _hydrateCategoryIcon(c, icons)).toList();
     }
-
     final existing = _inFlight.peek<List<Category>>(accountId);
-    if (existing != null) {
-      if (forceRefresh || !hasCache) await existing;
-      return _store.getCategoriesForAccount(accountId);
-    }
-
+    if (existing != null) return existing;
     final future = _refreshCategoriesFromRemote(accountId);
     _inFlight.register(accountId, future);
-    if (!forceRefresh && hasCache) {
-      unawaited(future);
-      return _store.getCategoriesForAccount(accountId);
+    if (!forceRefresh && cached != null) {
+      // See `AccountsService.loadAccounts`: release the in-flight guard and
+      // forward the eventual server result instead of leaking it forever.
+      unawaited(
+        future
+            .then((remote) => onRevalidated?.call(remote), onError: (_) {})
+            .whenComplete(() => _inFlight.release(accountId, future)),
+      );
+      final icons = await _categoryIconsService.getIcons();
+      return cached.map((c) => _hydrateCategoryIcon(c, icons)).toList();
     }
     try {
-      await future;
+      return await future;
     } finally {
       _inFlight.release(accountId, future);
     }
-    return _store.getCategoriesForAccount(accountId);
   }
 
-  Future<List<Category>> _refreshCategoriesFromRemote(
-    String accountId,
-  ) async {
-    if (await _syncQueue.hasPending(type: 'categories')) {
-      return _store.getCategoriesForAccount(accountId);
-    }
+  Future<List<Category>> _refreshCategoriesFromRemote(String accountId) async {
     try {
-      // Le catalogue d'icônes doit être disponible avant d'hydrater les
-      // catégories, sinon chaque icône inconnue retombe sur le défaut.
-      if (!_store.iconsLoaded) {
-        await loadAvailableIcons();
-      }
-      final freshCategories = await _categorySupabase
+      final fresh = await _categorySupabase
           .listByAccountId(accountId)
           .timeout(AppConstants.networkTimeout);
-      final categoriesWithIcons =
-          freshCategories.map(_hydrateCategoryIcon).toList(growable: false);
-      _store.setCategoriesForAccount(accountId, categoriesWithIcons);
-      await _localCache.saveCategories(accountId, categoriesWithIcons);
+      final icons = await _categoryIconsService.getIcons();
+      final hydrated = fresh
+          .map((c) => _hydrateCategoryIcon(c, icons))
+          .toList(growable: false);
+      // Merge pending operations and write the cache in one atomic step, so a
+      // mutation cannot interleave and be overwritten by this snapshot.
+      final categories = await _localCache.updateCategories(
+        accountId,
+        (_) async => _mergePendingCategories(
+          accountId,
+          hydrated,
+          await _syncQueue.forType('categories'),
+          icons,
+        ),
+      );
       _refreshThrottle.markRefreshed(accountId);
-      return categoriesWithIcons;
+      return categories ?? hydrated;
     } catch (e, stackTrace) {
-      AnalyticsService.instance.track('category_load_failed', {'error': e.toString()});
-      AppLogger.error('Failed to refresh categories from remote', e, stackTrace);
-      if (_store.hasLoadedAccount(accountId)) {
-        return _store.getCategoriesForAccount(accountId);
+      _analytics.track('category_load_failed', {'error': e.toString()});
+      AppLogger.error(
+        'Failed to refresh categories from remote',
+        e,
+        stackTrace,
+      );
+      final cached = await _localCache.loadCategories(accountId);
+      if (cached != null) {
+        final icons = await _categoryIconsService.getIcons();
+        return cached.map((c) => _hydrateCategoryIcon(c, icons)).toList();
       }
       rethrow;
     }
   }
 
+  /// Overlays queued local operations on the [remote] snapshot.
+  ///
+  /// Pure and synchronous on purpose: it runs while the cache lock is held.
+  /// A delete payload may lack the account id, so deletes are matched by the
+  /// (globally unique) category id instead of being filtered on payload fields.
+  List<Category> _mergePendingCategories(
+    String accountId,
+    List<Category> remote,
+    List<PendingSync> pending,
+    List<CategoryIcon> icons,
+  ) {
+    final byId = <String, Category>{
+      for (final category in remote)
+        if (category.id != null) category.id!: category,
+    };
+
+    for (final operation in pending) {
+      final id = operation.entityId;
+      if (id.isEmpty) continue;
+      switch (operation.operation) {
+        case 'create':
+        case 'update':
+          if (operation.payload['account_id']?.toString() != accountId) {
+            continue;
+          }
+          byId[id] = _hydrateCategoryIcon(
+            Category.fromJson(operation.payload),
+            icons,
+          );
+        case 'delete':
+          byId.remove(id);
+      }
+    }
+
+    return byId.values.toList(growable: false);
+  }
+
+  // Mutation contract (see docs/ARCHITECTURE.md): the durable queue entry is
+  // written first; the cache is a best-effort mirror written afterwards.
+
   Future<Category> createCategory(Category category) async {
     final optimistic = category.id == null
         ? category.copyWith(id: OfflineId.uuid())
         : category;
-    final hydrated = _hydrateCategoryIcon(optimistic);
-    _store.addCategory(hydrated);
-    await _localCache.saveCategories(
-      hydrated.accountId,
-      _store.getCategoriesForAccount(hydrated.accountId),
+    final hydrated = _hydrateCategoryIcon(
+      optimistic,
+      await _categoryIconsService.getIcons(),
     );
-    AnalyticsService.instance.track('category_created');
 
     await _queueAndFlush(
       id: 'category:${hydrated.id}',
       operation: 'create',
       payload: hydrated.toJson(),
     );
+    await _mirrorToCache(
+      hydrated.accountId,
+      (current) => [...?current, hydrated],
+    );
+    _analytics.track('category_created');
     return hydrated;
   }
 
   Future<Category> updateCategory(Category category) async {
-    final hydrated = _hydrateCategoryIcon(category);
-    _store.updateCategory(hydrated);
-    await _localCache.saveCategories(
-      hydrated.accountId,
-      _store.getCategoriesForAccount(hydrated.accountId),
+    final hydrated = _hydrateCategoryIcon(
+      category,
+      await _categoryIconsService.getIcons(),
     );
-    AnalyticsService.instance.track('category_updated');
 
     await _queueAndFlush(
       id: 'category:update:${category.id}',
       operation: 'update',
       payload: hydrated.toJson(),
     );
+    await _mirrorToCache(
+      hydrated.accountId,
+      (current) => current == null
+          ? null
+          : [
+              for (final item in current)
+                if (item.id == hydrated.id) hydrated else item,
+            ],
+    );
+    _analytics.track('category_updated');
     return hydrated;
   }
 
-  Future<bool> deleteCategory(String categoryId) async {
-    final category = _store.getCategoryById(categoryId);
-    _store.removeCategory(categoryId);
-    if (category != null) {
-      await _localCache.saveCategories(
-        category.accountId,
-        _store.getCategoriesForAccount(category.accountId),
-      );
-    }
-
+  Future<bool> deleteCategory(String categoryId, {String? accountId}) async {
     await _queueAndFlush(
       id: 'category:delete:$categoryId',
       operation: 'delete',
-      payload: {
-        'id': categoryId,
-        'account_id': category?.accountId,
-      },
+      payload: {'id': categoryId, 'account_id': accountId},
     );
-    AnalyticsService.instance.track('category_deleted');
+    if (accountId != null) {
+      await _mirrorToCache(
+        accountId,
+        (current) => current
+            ?.where((category) => category.id != categoryId)
+            .toList(growable: false),
+      );
+    }
+    _analytics.track('category_deleted');
     return true;
   }
 
+  /// Best-effort update of the cache mirror. The durable intent is already in
+  /// the queue, so a failure here is logged and never reported as a failed
+  /// mutation.
+  Future<void> _mirrorToCache(
+    String accountId,
+    List<Category>? Function(List<Category>? current) transform,
+  ) async {
+    try {
+      await _localCache.updateCategories(accountId, transform);
+    } catch (e, st) {
+      AppLogger.error('Failed to mirror category change to local cache', e, st);
+    }
+  }
+
+  /// Persists the mutation in the durable queue and requests a replay. A queue
+  /// failure is rethrown so the caller never shows a change that was not
+  /// persisted.
   Future<void> _queueAndFlush({
     required String id,
     required String operation,
@@ -255,16 +299,19 @@ class CategoriesService {
         operation: operation,
         payload: payload,
       );
-      unawaited(SyncManager.instance.flush());
     } catch (e, st) {
       AppLogger.error('Failed to persist category sync operation', e, st);
+      rethrow;
     }
+    unawaited(_syncManager.flush());
   }
 
   Future<void> _handlePendingSync(PendingSync operation) async {
     switch (operation.operation) {
       case 'create':
-        await _categorySupabase.create(Category.fromJson(operation.payload)).timeout(AppConstants.networkTimeout);
+        await _categorySupabase
+            .create(Category.fromJson(operation.payload))
+            .timeout(AppConstants.networkTimeout);
         return;
       case 'update':
         final category = Category.fromJson(operation.payload);
@@ -281,17 +328,26 @@ class CategoriesService {
         }
         return;
       case 'delete':
-        await _categorySupabase.delete(operation.payload['id'] as String).timeout(AppConstants.networkTimeout);
+        final categoryId = operation.payload['id'] as String;
+        await _categorySupabase
+            .delete(categoryId)
+            .timeout(AppConstants.networkTimeout);
+        // Durable cleanup of the category's Firestore expenses (see
+        // DeletionCleanupService); enqueued once the server delete succeeded.
+        await _syncQueue.enqueue(
+          id: 'cleanup:category:$categoryId',
+          type: 'cleanup',
+          operation: 'category',
+          payload: {'id': categoryId},
+        );
+        // See AccountsService._handlePendingSync: schedules a trailing pass
+        // instead of waiting for the next periodic trigger.
+        unawaited(_syncManager.flush());
         return;
       default:
         throw StateError(
           'Unknown category sync operation: ${operation.operation}',
         );
     }
-  }
-
-  Category? getCategoryById(String categoryId) {
-    final category = _store.getCategoryById(categoryId);
-    return category != null ? _hydrateCategoryIcon(category) : null;
   }
 }

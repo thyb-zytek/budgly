@@ -53,8 +53,8 @@ class CategoryThresholdCalculator {
     final state = safeTotal >= threshold
         ? CategoryThresholdState.exceeded
         : safeTotal >= threshold * warningRatio
-            ? CategoryThresholdState.warning
-            : CategoryThresholdState.normal;
+        ? CategoryThresholdState.warning
+        : CategoryThresholdState.normal;
     return CategoryThresholdProgress(
       total: safeTotal,
       threshold: threshold,

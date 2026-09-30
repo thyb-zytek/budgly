@@ -29,15 +29,18 @@ class AuthState {
   }) {
     return AuthState(
       formType: formType ?? this.formType,
-      errorCode:
-          errorCode == _sentinel ? this.errorCode : errorCode as String?,
-      errorMessage:
-          errorMessage == _sentinel ? this.errorMessage : errorMessage as String?,
+      errorCode: errorCode == _sentinel ? this.errorCode : errorCode as String?,
+      errorMessage: errorMessage == _sentinel
+          ? this.errorMessage
+          : errorMessage as String?,
       isLoading: isLoading ?? this.isLoading,
-      currentUser: currentUser == _sentinel ? this.currentUser : currentUser as User?,
+      currentUser: currentUser == _sentinel
+          ? this.currentUser
+          : currentUser as User?,
       isGoogleSignIn: isGoogleSignIn ?? this.isGoogleSignIn,
     );
   }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -51,19 +54,13 @@ class AuthState {
 
   @override
   int get hashCode => Object.hash(
-        formType,
-        errorCode,
-        errorMessage,
-        isLoading,
-        currentUser,
-        isGoogleSignIn,
-      );
-
+    formType,
+    errorCode,
+    errorMessage,
+    isLoading,
+    currentUser,
+    isGoogleSignIn,
+  );
 }
 
-enum AuthForm {
-  signUp,
-  signIn,
-  resetPassword,
-  verifyEmail;
-}
+enum AuthForm { signUp, signIn, resetPassword, verifyEmail }

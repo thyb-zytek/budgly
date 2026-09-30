@@ -6,25 +6,17 @@ import 'package:budgly/src/core/async/refresh_throttle.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/stores/accounts.dart';
 import 'package:budgly/src/services/providers/supabase/accounts.dart';
 import 'package:budgly/src/services/providers/supabase/storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:flutter/foundation.dart';
 import 'package:budgly/src/services/offline/local_cache.dart';
 import 'package:budgly/src/services/offline/offline_id.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 
 class AccountsService {
-  static AccountsService? _instance;
-
-  static AccountsService get instance {
-    _instance ??= AccountsService._();
-    return _instance!;
-  }
-
   final AccountSupabase _accountSupabase;
   final StorageSupabase _storageSupabase;
   final fb.FirebaseAuth? _authInput;
@@ -34,28 +26,30 @@ class AccountsService {
   final _inFlight = InFlightRegistry<String>();
   final _refreshThrottle = RefreshThrottle<String>(const Duration(minutes: 1));
 
-  final AccountsStore _store;
-  final LocalCache _localCache = LocalCache();
-  final SyncQueue _syncQueue = SyncQueue.instance;
+  final LocalCache _localCache;
+  final SyncQueue _syncQueue;
+  final AnalyticsService _analytics;
+  final SyncManager _syncManager;
   String? _loadedUserId;
 
   AccountsService({
     AccountSupabase? accountSupabase,
     StorageSupabase? storageSupabase,
     fb.FirebaseAuth? auth,
-    AccountsStore? store,
+    required this._analytics,
+    required this._syncManager,
+    required this._syncQueue,
+    LocalCache? localCache,
   }) : _accountSupabase = accountSupabase ?? AccountSupabase(),
        _storageSupabase = storageSupabase ?? StorageSupabase(),
        _authInput = auth,
-       _store = store ?? AccountsStore.instance {
-    SyncManager.instance.registerHandler('accounts', _handlePendingSync);
+       // Production always injects the shared instance (localCacheProvider);
+       // the fallback only exists for tests that build the service directly.
+       _localCache = localCache ?? LocalCache();
+
+  void registerSyncHandler(SyncManager manager) {
+    manager.registerHandler('accounts', _handlePendingSync);
   }
-
-  AccountsService._() : this();
-
-  Listenable get changeNotifier => _store;
-  List<Account> get accounts => _store.accounts;
-  bool get hasLoaded => _store.hasLoaded;
 
   void invalidateCache() {
     _inFlight.clear();
@@ -70,74 +64,127 @@ class AccountsService {
     return user.uid;
   }
 
-  Future<void> loadAccounts({bool forceRefresh = false}) async {
+  /// Cache-first load (RL-01 §3.2). When cached accounts already exist, they
+  /// are returned immediately and a background revalidation is kicked off;
+  /// [onRevalidated] is called with the server result once that revalidation
+  /// completes, so the caller (`AccountsSession`) can push the fresher data
+  /// into the reactive session state and let the UI rebuild — the service
+  /// itself never touches Riverpod state directly.
+  Future<List<Account>> loadAccounts({
+    bool forceRefresh = false,
+    void Function(List<Account>)? onRevalidated,
+  }) async {
     final userId = _currentUserId;
     if (_loadedUserId != null && _loadedUserId != userId) {
       _inFlight.clear();
       _refreshThrottle.clear();
-      _store.clearLocalAccounts();
     }
     _loadedUserId = userId;
 
-    final existing = _inFlight.peek<void>(userId);
+    final existing = _inFlight.peek<List<Account>>(userId);
     if (existing != null) return existing;
 
     final cached = await _localCache.loadAccounts(userId);
     final hasCache = cached != null;
-    if (hasCache && !_store.hasLoaded) {
-      _store.setAccounts(cached);
+    if (!_refreshThrottle.isDue(userId, forceRefresh: forceRefresh)) {
+      return cached ?? const [];
     }
-
-    if (!_refreshThrottle.isDue(userId, forceRefresh: forceRefresh)) return;
 
     final future = _refreshAccountsFromRemote(userId);
     _inFlight.register(userId, future);
     if (!forceRefresh && hasCache) {
-      unawaited(future);
-      return;
+      // Release the in-flight guard and hand the eventual server result to
+      // the caller regardless of outcome; a failure is already logged/tracked
+      // inside `_refreshAccountsFromRemote` and must not surface as an
+      // unhandled async error just because nobody awaits this branch.
+      unawaited(
+        future
+            .then((remote) => onRevalidated?.call(remote), onError: (_) {})
+            .whenComplete(() => _inFlight.release(userId, future)),
+      );
+      return cached;
     }
     try {
-      await future;
+      return await future;
     } finally {
       _inFlight.release(userId, future);
     }
   }
 
-  Future<void> _refreshAccountsFromRemote(String userId) async {
-    if (await _syncQueue.hasPending(type: 'accounts')) return;
+  Future<List<Account>> _refreshAccountsFromRemote(String userId) async {
     try {
-      // Account data and signed image URLs have different lifetimes. Persist
-      // the durable account data immediately; URLs are short-lived
-      // presentation data and are refreshed independently.
       final accounts = await _accountSupabase.listByUserId(userId);
-      if (_auth.currentUser?.uid != userId) return;
-
-      _store.setAccounts(accounts);
-      await _localCache.saveAccounts(userId, accounts);
+      if (_auth.currentUser?.uid != userId) return const [];
+      final withUrls = await _withSignedUrls(accounts);
+      // Merge pending operations and write the cache in one atomic step, so a
+      // mutation cannot interleave and be overwritten by this snapshot.
+      final merged = await _localCache.updateAccounts(
+        userId,
+        (current) async => _mergePendingAccounts(
+          userId,
+          withUrls,
+          await _syncQueue.forType('accounts'),
+          current ?? const [],
+        ),
+      );
       _refreshThrottle.markRefreshed(userId);
-
-      unawaited(_refreshPictureUrls(accounts, userId));
+      return merged ?? withUrls;
     } catch (e, stackTrace) {
-      AnalyticsService.instance.track('account_load_failed', {
-        'error': e.toString(),
-      });
+      _analytics.track('account_load_failed', {'error': e.toString()});
       AppLogger.error('Failed to refresh accounts from remote', e, stackTrace);
+      return await _localCache.loadAccounts(userId) ?? (throw e);
     }
   }
 
-  Future<void> _refreshPictureUrls(
-    List<Account> accounts,
+  /// Overlays queued local operations on the [remote] snapshot.
+  ///
+  /// Pure and synchronous on purpose: it runs while the cache lock is held.
+  /// Ownership comes from [PendingSync.ownerUserId]; a delete payload carries
+  /// only the id, so it must never be filtered on payload fields.
+  List<Account> _mergePendingAccounts(
     String userId,
-  ) async {
-    if (_auth.currentUser?.uid != userId) return;
-    final withUrls = await _withSignedUrls(accounts);
-    if (_auth.currentUser?.uid != userId) return;
+    List<Account> remote,
+    List<PendingSync> pending,
+    List<Account> cached,
+  ) {
+    final byId = <String, Account>{
+      for (final account in remote)
+        if (account.id != null) account.id!: account,
+    };
+    final cachedById = <String, Account>{
+      for (final account in cached)
+        if (account.id != null) account.id!: account,
+    };
 
-    for (final account in withUrls) {
-      if (account.pictureUrl != null) {
-        _store.updateAccount(account);
+    for (final operation in pending) {
+      final owner = operation.ownerUserId;
+      if (owner != null && owner != userId) continue;
+      final id = operation.entityId;
+      if (id.isEmpty) continue;
+      switch (operation.operation) {
+        case 'create':
+        case 'update':
+          // Legacy ownerless entries are attributed through their payload.
+          if (owner == null &&
+              operation.payload['user_id']?.toString() != userId) {
+            continue;
+          }
+          var account = Account.fromJson(operation.payload);
+          // Keep an already-resolved picture URL for the same picture file
+          // instead of resolving it again over the network.
+          final known = cachedById[id];
+          if (account.pictureUrl == null &&
+              known != null &&
+              known.picture == account.picture) {
+            account = account.copyWith(pictureUrl: known.pictureUrl);
+          }
+          byId[id] = account;
+        case 'delete':
+          byId.remove(id);
       }
     }
+
+    return byId.values.toList(growable: false);
   }
 
   Future<List<Account>> _withSignedUrls(List<Account> accounts) async {
@@ -166,60 +213,96 @@ class AccountsService {
     );
   }
 
+  // Mutation contract (see docs/ARCHITECTURE.md): the durable queue entry is
+  // written *first* and is the source of truth; the local cache is a
+  // best-effort mirror written afterwards. A crash between the two therefore
+  // loses nothing, and a queue failure is reported to the caller instead of
+  // leaving an optimistic change that would silently vanish.
+
   Future<Account> createAccount(Account account) async {
+    final userId = _currentUserId;
     final optimistic =
         (account.id == null ? account.copyWith(id: OfflineId.uuid()) : account)
-            .copyWith(userId: _currentUserId);
-
-    _store.addAccount(optimistic);
-    await _localCache.saveAccounts(_currentUserId, _store.accounts);
-    AnalyticsService.instance.track('account_created');
+            .copyWith(userId: userId);
 
     await _queueAndFlush(
       id: 'account:${optimistic.id}',
       operation: 'create',
       payload: optimistic.toJson(),
     );
+    await _mirrorToCache(userId, (current) => [...?current, optimistic]);
+    _analytics.track('account_created');
     return optimistic;
   }
 
   Future<Account> updateAccount(Account account) async {
-    final optimistic = account.copyWith(userId: _currentUserId);
-    _store.updateAccount(optimistic);
-    await _localCache.saveAccounts(_currentUserId, _store.accounts);
-    AnalyticsService.instance.track('account_updated');
+    final userId = _currentUserId;
+    final optimistic = account.copyWith(userId: userId);
 
     await _queueAndFlush(
       id: 'account:update:${account.id}',
       operation: 'update',
       payload: optimistic.toJson(),
     );
+    await _mirrorToCache(
+      userId,
+      (current) => current == null
+          ? null
+          : [
+              for (final item in current)
+                if (item.id == optimistic.id) optimistic else item,
+            ],
+    );
+    _analytics.track('account_updated');
     return optimistic;
   }
 
-  void updateLocalAccount(Account account) => _store.updateAccount(account);
-
   Future<bool> deleteAccount(String accountId) async {
-    _store.removeAccount(accountId);
-    await _localCache.clearAccount(accountId);
-    await _localCache.saveAccounts(_currentUserId, _store.accounts);
+    final userId = _currentUserId;
 
-    await _syncQueue.removeWhere(
-      (operation) =>
-          (operation.type == 'categories' &&
-              operation.payload['account_id']?.toString() == accountId) ||
-          (operation.type == 'expenses' &&
-              operation.payload['accountId']?.toString() == accountId),
-    );
+    // Child mutations are intentionally kept in the queue until the account
+    // deletion reaches the server. SyncManager will block them behind a
+    // failed account operation, and the delete handler removes them once the
+    // parent deletion has succeeded. This avoids losing durable child work
+    // during an offline account deletion.
     await _queueAndFlush(
       id: 'account:delete:$accountId',
       operation: 'delete',
       payload: {'id': accountId},
     );
-    AnalyticsService.instance.track('account_deleted');
+    await _mirrorToCache(
+      userId,
+      (current) => current
+          ?.where((account) => account.id != accountId)
+          .toList(growable: false),
+    );
+    try {
+      await _localCache.clearAccount(accountId);
+    } catch (e, st) {
+      AppLogger.error('Failed to clear cached categories', e, st);
+    }
+    _analytics.track('account_deleted');
     return true;
   }
 
+  /// Best-effort update of the cache mirror. The durable intent is already in
+  /// the queue, so a failure here is logged and never reported as a failed
+  /// mutation.
+  Future<void> _mirrorToCache(
+    String userId,
+    List<Account>? Function(List<Account>? current) transform,
+  ) async {
+    try {
+      await _localCache.updateAccounts(userId, transform);
+    } catch (e, st) {
+      AppLogger.error('Failed to mirror account change to local cache', e, st);
+    }
+  }
+
+  /// Persists the mutation in the durable queue and requests a replay.
+  ///
+  /// A queue failure is rethrown: the caller must know the change was not
+  /// persisted rather than show an optimistic state that will silently vanish.
   Future<void> _queueAndFlush({
     required String id,
     required String operation,
@@ -232,12 +315,11 @@ class AccountsService {
         operation: operation,
         payload: payload,
       );
-      unawaited(SyncManager.instance.flush());
     } catch (e, st) {
-      // The local mutation remains visible; keep diagnostics for a rare
-      // persistence failure in the queue itself.
       AppLogger.error('Failed to persist account sync operation', e, st);
+      rethrow;
     }
+    unawaited(_syncManager.flush());
   }
 
   Future<void> _handlePendingSync(PendingSync operation) async {
@@ -265,9 +347,31 @@ class AccountsService {
         await _uploadQueuedPicture(operation, account);
         return;
       case 'delete':
+        final accountId = operation.payload['id'] as String;
         await _accountSupabase
-            .delete(operation.payload['id'] as String)
+            .delete(accountId)
             .timeout(AppConstants.networkTimeout);
+        // The account is gone on the server: schedule the durable cleanup of
+        // what lives elsewhere (Firestore expenses/budgets, storage folder).
+        // Enqueued here, not at tap time, so it never runs while the account
+        // could still be restored by a failing delete.
+        await _syncQueue.enqueue(
+          id: 'cleanup:account:$accountId',
+          type: 'cleanup',
+          operation: 'account',
+          payload: {'id': accountId},
+        );
+        // Called from inside a running flush pass: this schedules a trailing
+        // pass (see SyncManager.flush) instead of waiting for the next
+        // periodic trigger, so cleanup starts right away when online.
+        unawaited(_syncManager.flush());
+        await _syncQueue.removeWhere(
+          (pending) =>
+              (pending.type == 'categories' &&
+                  pending.payload['account_id']?.toString() == accountId) ||
+              (pending.type == 'expenses' &&
+                  pending.payload['accountId']?.toString() == accountId),
+        );
         return;
       default:
         throw StateError(
@@ -280,23 +384,66 @@ class AccountsService {
     PendingSync operation,
     Account account,
   ) async {
-    final localPicturePath =
-        operation.payload['_local_picture_path'] as String?;
-    if (localPicturePath == null ||
-        account.id == null ||
-        account.picture == null) {
+    final localName = operation.payload['_local_picture_name'] as String?;
+    // Operations queued by older builds stored an absolute path.
+    final legacyPath = operation.payload['_local_picture_path'] as String?;
+    final fileName =
+        localName ?? (legacyPath?.split(Platform.pathSeparator).last);
+    if (fileName == null || account.id == null || account.picture == null) {
       return;
     }
-    await uploadPicture(
-      File(localPicturePath),
-      account.id!,
-      account.picture!,
-    );
+    // The account was edited again and now points to another picture (or none):
+    // this queued file is superseded and must not be uploaded under a name the
+    // account no longer references.
+    if (fileName != account.picture) return;
+
+    final file = await _resolveLocalPicture(fileName, legacyPath);
+    if (file == null) {
+      AppLogger.error(
+        'Queued account picture is no longer on disk',
+        StateError('Missing local picture $fileName'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    await uploadPicture(file, account.id!, account.picture!);
     final pictureUrl = await getSignedUrl(account.picture!, account.id!);
-    if (pictureUrl == null) return;
-    final updated = account.copyWith(pictureUrl: pictureUrl);
-    _store.updateAccount(updated);
-    await _localCache.saveAccounts(_currentUserId, _store.accounts);
+    if (pictureUrl != null) {
+      final updated = account.copyWith(pictureUrl: pictureUrl);
+      final userId = operation.ownerUserId ?? _currentUserId;
+      await _mirrorToCache(
+        userId,
+        (current) => current == null
+            ? null
+            : [
+                for (final item in current)
+                  if (item.id == updated.id) updated else item,
+              ],
+      );
+    }
+    try {
+      // The upload is durable now; the private copy is no longer needed.
+      await file.delete();
+    } catch (_) {}
+  }
+
+  /// The documents directory path changes across iOS app updates, so the file
+  /// is resolved from its name rather than trusting a stored absolute path.
+  Future<File?> _resolveLocalPicture(
+    String fileName,
+    String? legacyPath,
+  ) async {
+    final candidates = <File>[];
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      candidates.add(File('${directory.path}/$fileName'));
+    } catch (_) {}
+    if (legacyPath != null) candidates.add(File(legacyPath));
+    for (final candidate in candidates) {
+      if (await candidate.exists()) return candidate;
+    }
+    return null;
   }
 
   Future<void> queuePictureUpload(Account account, File file) {
@@ -304,7 +451,11 @@ class AccountsService {
     return _queueAndFlush(
       id: 'account:image:${account.id}',
       operation: 'update',
-      payload: {...account.toJson(), '_local_picture_path': file.path},
+      payload: {
+        ...account.toJson(),
+        // A name, not an absolute path: see _resolveLocalPicture.
+        '_local_picture_name': file.uri.pathSegments.last,
+      },
     );
   }
 
@@ -344,22 +495,21 @@ class AccountsService {
     return _storageSupabase.deleteFile(bucketId: _bucketId, filePath: fullPath);
   }
 
-  Future<void> deleteAccountFolder(String accountId) async {
+  Future<void> deleteAccountFolder(
+    String accountId, {
+    bool throwOnFailure = false,
+  }) async {
     final folderPath = '$_currentUserId/$accountId';
     await _storageSupabase.deleteFolder(
       bucketId: _bucketId,
       folderPath: folderPath,
+      throwOnFailure: throwOnFailure,
     );
-  }
-
-  Account? getAccountById(String id) {
-    return _store.getAccountById(id);
   }
 
   void clearLocalAccounts() {
     _inFlight.clear();
     _refreshThrottle.clear();
     _loadedUserId = null;
-    _store.clearLocalAccounts();
   }
 }

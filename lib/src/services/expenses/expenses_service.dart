@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
@@ -16,66 +15,76 @@ import 'package:budgly/src/services/providers/firestore/expense_page.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:budgly/src/services/offline/offline_id.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
-import 'package:budgly/src/services/offline/sync_queue.dart';
-import 'package:budgly/src/stores/expenses.dart';
+import 'package:budgly/src/services/offline/sync_queue.dart' show PendingSync;
 
-class ExpensesService extends ChangeNotifier {
-  static ExpensesService? _instance;
-
-  static ExpensesService get instance {
-    _instance ??= ExpensesService._();
-    return _instance!;
-  }
-
+class ExpensesService {
   final ExpenseFirestore _expenseFirestore;
-  final ExpensesStore _store;
   final RecurringExpenseVersioning _recurringVersioning;
   final _periodData = ExpensePeriodCache();
-  int _creationRevision = 0;
-
-  int get creationRevision => _creationRevision;
+  final AnalyticsService _analytics;
   late final ExpenseSyncHandler _syncHandler;
   late final RecurringExpensePersistence _recurringPersistence;
+  final _rejectedWrites = StreamController<String>.broadcast();
 
   ExpensesService({
     ExpenseFirestore? expenseFirestore,
-    ExpensesStore? store,
     RecurringExpenseVersioning? recurringVersioning,
+    required this._analytics,
   }) : _expenseFirestore = expenseFirestore ?? ExpenseFirestore(),
-       _store = store ?? ExpensesStore.instance,
        _recurringVersioning =
            recurringVersioning ?? const RecurringExpenseVersioning() {
     _syncHandler = ExpenseSyncHandler(
       firestore: _expenseFirestore,
       periodData: _periodData,
+      analytics: _analytics,
+      onWriteRejected: _handleRejectedWrite,
     );
     _recurringPersistence = RecurringExpensePersistence(
       firestore: _expenseFirestore,
       periodData: _periodData,
+      onWriteRejected: _handleRejectedWrite,
     );
-    _store.addListener(notifyListeners);
-    SyncManager.instance.registerHandler('expenses', _handlePendingSync);
   }
 
-  ExpensesService._() : this();
+  /// Account ids whose optimistic expense state was invalidated because
+  /// Firestore rejected a write asynchronously. Listeners (the session) should
+  /// reload the account to show the server truth.
+  Stream<String> get rejectedWrites => _rejectedWrites.stream;
 
-  @override
+  void _handleRejectedWrite(String accountId) {
+    _periodData.removeAccount(accountId);
+    if (!_rejectedWrites.isClosed) _rejectedWrites.add(accountId);
+  }
+
+  /// Closes [rejectedWrites]. The provider is `keepAlive`, so this only
+  /// matters for tests that create more than one instance.
   void dispose() {
-    _store.removeListener(notifyListeners);
-    super.dispose();
+    unawaited(_rejectedWrites.close());
+  }
+
+  /// Registers the drain for expense operations queued by older builds. New
+  /// writes never use the application queue (see [ExpenseSyncHandler]).
+  void registerSyncHandler(SyncManager manager) {
+    manager.registerHandler('expenses', _handlePendingSync);
   }
 
   void invalidateCache() {
     _periodData.clear();
-    _store.clearAll();
   }
 
-
+  /// Cache-first load (RL-01 §3.2). When Firestore's local cache already has
+  /// data, it is returned immediately and a background server revalidation
+  /// is kicked off; [onRevalidated] is called with the reconciled result once
+  /// that revalidation completes, so the caller (`ExpensesSession`, watched
+  /// by `PeriodExpenses`/Overview) can push the fresher data into the
+  /// reactive session and let the UI rebuild instead of the merge staying
+  /// trapped in this service's private `_periodData` cache forever.
   Future<List<Expense>> listExpensesForPeriod(
     String accountId,
     Period period, {
     String? categoryId,
     bool forceRefresh = false,
+    void Function(List<Expense>)? onRevalidated,
   }) async {
     final key = _periodData.key(accountId, period, categoryId);
     final memoryCached = _periodData.cached(key);
@@ -93,7 +102,6 @@ class ExpensesService extends ChangeNotifier {
         );
         if (cached.isNotEmpty) {
           _periodData.put(key, cached);
-          _store.upsertExpensesForAccount(accountId, cached);
 
           // Firestore owns its persistent offline cache. Once local data is
           // available, never make the caller wait for the server.
@@ -103,14 +111,14 @@ class ExpensesService extends ChangeNotifier {
               period,
               categoryId: categoryId,
               key: key,
+              onRevalidated: onRevalidated,
             ),
           );
           return List.unmodifiable(cached);
         }
 
-        // An empty cache does not mean the account has no expenses. Wait for
-        // the first server response so the Overview does not briefly show an
-        // empty state before its data arrives.
+        // Cache vide : on NE retourne PAS la liste vide, on attend le serveur.
+        // Cela évite d'afficher un état vide au premier lancement.
       } on FirebaseException catch (e) {
         // The local cache can be empty on the first launch. In that case the
         // server is needed to obtain the initial dataset.
@@ -120,6 +128,12 @@ class ExpensesService extends ChangeNotifier {
       }
     }
 
+    // Either an explicit refresh, or an empty/unavailable local cache.
+    //
+    // Only an explicit refresh insists on the server. When the cache was merely
+    // empty (a month without expenses is perfectly normal) the default source
+    // is used: online it returns the server data, offline it answers from the
+    // local cache at once instead of waiting for the network timeout.
     final existing = _periodData.inFlight(key);
     if (existing != null) return existing;
 
@@ -128,6 +142,7 @@ class ExpensesService extends ChangeNotifier {
       period,
       categoryId: categoryId,
       key: key,
+      source: forceRefresh ? Source.server : Source.serverAndCache,
     );
     _periodData.setInFlight(key, future);
     try {
@@ -149,9 +164,16 @@ class ExpensesService extends ChangeNotifier {
     Period period, {
     String? categoryId,
     required String key,
+    void Function(List<Expense>)? onRevalidated,
   }) async {
     try {
-      await _refreshPeriod(accountId, period, categoryId: categoryId, key: key);
+      final merged = await _refreshPeriod(
+        accountId,
+        period,
+        categoryId: categoryId,
+        key: key,
+      );
+      onRevalidated?.call(merged);
     } catch (e) {
       AppLogger.debug('Background expense refresh unavailable: $e');
     }
@@ -162,13 +184,14 @@ class ExpensesService extends ChangeNotifier {
     Period period, {
     String? categoryId,
     required String key,
+    Source source = Source.server,
   }) async {
     try {
       final expenses = await _expenseFirestore.listByAccountAndPeriod(
         accountId,
         period,
         categoryId: categoryId,
-        source: Source.server,
+        source: source,
       );
       // A server snapshot can still be stale while an optimistic create is
       // being persisted (offline replay or slow network). Never let it drop
@@ -177,19 +200,16 @@ class ExpensesService extends ChangeNotifier {
       final merged = _periodData.mergeServer(key, expenses);
       // The server has now returned these expenses, so they are acknowledged:
       // release their optimistic shield so a later server-side deletion still
-      // propagates.
-      _periodData.releaseConfirmed(expenses);
+      // propagates. Only a genuine server answer proves an acknowledgement: a
+      // cache-served result also contains our own pending local writes.
+      if (source == Source.server) _periodData.releaseConfirmed(expenses);
       _periodData.put(key, merged);
       // Keep the store in sync with everything locally known about the
       // account so optimistic fallbacks and repeat lookups (e.g. after a
       // recurring occurrence delete) see these expenses too.
-      _store.upsertExpensesForAccount(accountId, merged);
-      notifyListeners();
       return List.unmodifiable(merged);
     } catch (e) {
-      AnalyticsService.instance.track('expense_load_failed', {
-        'error': e.toString(),
-      });
+      _analytics.track('expense_load_failed', {'error': e.toString()});
       rethrow;
     }
   }
@@ -212,7 +232,6 @@ class ExpensesService extends ChangeNotifier {
           includeRecurring: includeRecurring,
         )
         .timeout(AppConstants.networkTimeout);
-    _store.upsertExpensesForAccount(accountId, page.expenses);
     return page;
   }
 
@@ -233,25 +252,17 @@ class ExpensesService extends ChangeNotifier {
     cachedPeriod.sort((a, b) => b.debitDate.compareTo(a.debitDate));
     _periodData.addOptimistic(optimistic.id!);
     _periodData.markPending(optimistic.id!, optimistic);
-    _store.addExpense(optimistic);
-    _creationRevision++;
-    notifyListeners();
-    unawaited(_persistCreatedExpense(optimistic));
-    AnalyticsService.instance.track('expense_created', {
-      'recurring': optimistic.isRecurring,
-    });
+    _syncHandler.create(optimistic);
+    _analytics.track('expense_created', {'recurring': optimistic.isRecurring});
     return optimistic;
   }
-
-  Future<void> _persistCreatedExpense(Expense expense) =>
-      _syncHandler.persistCreate(expense);
 
   Future<Expense> updateRecurringExpenseFromOccurrence({
     required Expense original,
     required Expense updated,
     required DateTime effectiveDate,
   }) async {
-    AnalyticsService.instance.track('recurring_expense_version_changed');
+    _analytics.track('recurring_expense_version_changed');
     if (!original.isRecurring || original.id == null) {
       return updateExpense(updated);
     }
@@ -272,10 +283,6 @@ class ExpensesService extends ChangeNotifier {
     );
 
     _periodData.removeAccount(resolved.accountId);
-    _store.replaceExpenseWithVersions(
-      previous: version.previous,
-      next: resolved,
-    );
     return resolved;
   }
 
@@ -285,26 +292,17 @@ class ExpensesService extends ChangeNotifier {
     } else {
       _periodData.removeAccount(expense.accountId);
     }
-    _store.updateExpense(expense);
     _periodData.markPending(expense.id!, expense);
-    // The store may not hold the expense yet (e.g. it was only loaded into the
+    // The period cache may not hold the expense yet (e.g. it was only loaded into the
     // period cache), in which case _store.updateExpense is a silent no-op.
-    // Notify unconditionally so every listener re-derives the mutation.
-    notifyListeners();
-    unawaited(_persistExpenseUpdate(expense));
-    AnalyticsService.instance.track('expense_updated', {
-      'recurring': expense.isRecurring,
-    });
+    _syncHandler.update(expense);
+    _analytics.track('expense_updated', {'recurring': expense.isRecurring});
     return expense;
   }
 
-  Future<void> _persistExpenseUpdate(Expense expense) =>
-      _syncHandler.persistUpdate(expense);
-
   Future<bool> deleteExpense(String expenseId, String accountId) async {
-    final deletedExpense = _store.getExpenseById(expenseId);
+    final deletedExpense = _periodData.findById(expenseId);
     _periodData.removeAccount(accountId);
-    _store.removeExpense(expenseId, accountId);
     _periodData.markPendingDelete(expenseId);
     if (deletedExpense != null) {
       _periodData.ensure(
@@ -315,12 +313,11 @@ class ExpensesService extends ChangeNotifier {
         ),
       );
     }
-    // Notify even when the account was not in the store yet so listeners still
-    // re-derive the deletion from the cleared period cache.
-    notifyListeners();
-    AnalyticsService.instance.track('expense_deleted');
+    _analytics.track('expense_deleted');
 
-    final result = await _syncHandler.delete(expenseId);
+    // Not awaited: offline, the Firestore delete only completes once the
+    // server acknowledges it. The write is durable in Firestore's own queue.
+    _syncHandler.delete(expenseId, accountId: accountId);
     if (deletedExpense != null) {
       _periodData.ensure(
         _periodData.key(
@@ -330,7 +327,7 @@ class ExpensesService extends ChangeNotifier {
         ),
       );
     }
-    return result;
+    return true;
   }
 
   Future<Expense> modifySingleOccurrence({
@@ -366,7 +363,7 @@ class ExpensesService extends ChangeNotifier {
     ];
     final updated = original.copyWith(occurrenceExceptions: exceptions);
     await updateExpense(updated, previous: original);
-    AnalyticsService.instance.track('recurring_expense_occurrence_modified');
+    _analytics.track('recurring_expense_occurrence_modified');
     return updated;
   }
 
@@ -409,7 +406,7 @@ class ExpensesService extends ChangeNotifier {
       ],
     );
     await updateExpense(updated, previous: expense);
-    AnalyticsService.instance.track('expense_single_occurrence_deleted');
+    _analytics.track('expense_single_occurrence_deleted');
     return true;
   }
 
@@ -444,25 +441,28 @@ class ExpensesService extends ChangeNotifier {
       occurrenceExceptions: [
         for (final exception in expense.occurrenceExceptions)
           if (_exceptionSourceDate(exception).isBefore(targetDay) &&
-              (exception.debitDate == null || exception.debitDate!.isBefore(targetDay)))
+              (exception.debitDate == null ||
+                  exception.debitDate!.isBefore(targetDay)))
             exception,
       ],
     );
     await updateExpense(updated, previous: expense);
-    AnalyticsService.instance.track('expense_future_occurrences_deleted');
+    _analytics.track('expense_future_occurrences_deleted');
     return true;
   }
 
   DateTime _exceptionSourceDate(ExpenseOccurrenceException exception) =>
-      DateTime.parse(exception.key.substring(exception.key.lastIndexOf('@') + 1));
+      DateTime.parse(
+        exception.key.substring(exception.key.lastIndexOf('@') + 1),
+      );
 
   Future<void> _handlePendingSync(PendingSync operation) =>
       _syncHandler.handlePendingSync(operation);
 
-  Expense? getExpenseById(String expenseId) => _store.getExpenseById(expenseId);
+  Expense? getExpenseById(String expenseId) => _periodData.findById(expenseId);
 
   List<Expense> getExpensesForAccount(String accountId) =>
-      _store.getExpensesForAccount(accountId);
+      _periodData.allCachedForAccount(accountId);
 
   /// Returns every locally cached expense for the account. Offline-first: the
   /// store is populated from Firestore's native cache, so callers never wait
@@ -476,6 +476,42 @@ class ExpensesService extends ChangeNotifier {
   /// The forced read is deliberately non-mutating: it must not clobber the
   /// shared store or notify listeners, otherwise a concurrent optimistic
   /// mutation could be reverted by the server snapshot.
+  Future<List<Expense>> listExpensesForAccountBefore(
+    String accountId,
+    DateTime endExclusive, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh) {
+      return getExpensesForAccount(accountId)
+          .where((expense) => expense.debitDate.isBefore(endExclusive))
+          .toList(growable: false);
+    }
+    try {
+      final serverExpenses = await _expenseFirestore.listByAccountBefore(
+        accountId,
+        endExclusive,
+      );
+      final serverIds = <String>{
+        for (final expense in serverExpenses)
+          if (expense.id != null) expense.id!,
+      };
+      final merged = <Expense>[
+        for (final expense in serverExpenses)
+          if (!_periodData.isPendingDelete(expense.id)) expense,
+        for (final pending in _periodData.pendingForAccount(accountId))
+          if (!serverIds.contains(pending.id) &&
+              pending.debitDate.isBefore(endExclusive))
+            pending,
+      ]..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+      return List.unmodifiable(merged);
+    } catch (e) {
+      _analytics.track('expense_load_failed', {'error': e.toString()});
+      return getExpensesForAccount(accountId)
+          .where((expense) => expense.debitDate.isBefore(endExclusive))
+          .toList(growable: false);
+    }
+  }
+
   Future<List<Expense>> listExpensesForAccount(
     String accountId, {
     bool forceRefresh = false,
@@ -497,23 +533,42 @@ class ExpensesService extends ChangeNotifier {
       ]..sort((a, b) => b.debitDate.compareTo(a.debitDate));
       return List.unmodifiable(merged);
     } catch (e) {
-      AnalyticsService.instance.track('expense_load_failed', {
-        'error': e.toString(),
-      });
-      // Offline fallback: the local store remains the source of truth.
+      _analytics.track('expense_load_failed', {'error': e.toString()});
+      // Offline fallback: the period cache remains the source of truth.
       return getExpensesForAccount(accountId);
     }
   }
 
+  /// Immediate, local best-effort removal (what the cache knows about). It
+  /// hands the batch to Firestore's own durable queue and never waits for the
+  /// server, so it cannot freeze an offline caller. Documents this device never
+  /// cached are removed by the durable [purgeByAccountId] cleanup.
   Future<void> deleteByAccountId(String accountId) async {
-    await _expenseFirestore.deleteByAccountId(accountId);
-    _store.clearAccountCache(accountId);
+    try {
+      await _expenseFirestore.deleteByAccountId(accountId, awaitAck: false);
+    } catch (e) {
+      AppLogger.debug('Local expense removal unavailable: $e');
+    }
   }
 
+  /// See [deleteByAccountId].
   Future<void> deleteByCategoryId(String categoryId) async {
-    await _expenseFirestore.deleteByCategoryId(categoryId);
-    _store.clearCategoryCache(categoryId);
+    try {
+      await _expenseFirestore.deleteByCategoryId(categoryId, awaitAck: false);
+    } catch (e) {
+      AppLogger.debug('Local expense removal unavailable: $e');
+    }
   }
+
+  /// Server-side removal used by the durable cleanup: it queries the server
+  /// (so uncached documents are found) and throws when it cannot, so the
+  /// caller retries instead of silently leaving orphans.
+  Future<void> purgeByAccountId(String accountId) =>
+      _expenseFirestore.deleteByAccountId(accountId, source: Source.server);
+
+  /// See [purgeByAccountId].
+  Future<void> purgeByCategoryId(String categoryId) =>
+      _expenseFirestore.deleteByCategoryId(categoryId, source: Source.server);
 
   Future<Expense> moveOccurrenceToDate(
     Expense expense,
@@ -602,7 +657,7 @@ class ExpensesService extends ChangeNotifier {
     final result = expense.isDebitedAt(date)
         ? await unmarkOccurrenceDebited(expense, date)
         : await markOccurrenceDebited(expense, date);
-    AnalyticsService.instance.track('expense_toggled_debited');
+    _analytics.track('expense_toggled_debited');
     return result;
   }
 }

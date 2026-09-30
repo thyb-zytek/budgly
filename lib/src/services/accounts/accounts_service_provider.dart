@@ -1,18 +1,15 @@
 import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service_provider.dart';
+import 'package:budgly/src/services/offline/local_cache_provider.dart';
+import 'package:budgly/src/services/offline/sync_manager_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'accounts_service_provider.g.dart';
 
-/// Riverpod-facing exposure of [AccountsService] (issue M3).
-///
-/// Not rewritten: 8 call sites across `lib/` still read
-/// `AccountsService.instance` directly (mostly not-yet-migrated ViewModels —
-/// issue M4). Same reasoning as `profileService` (issue M1b): a future
-/// migrated `Notifier` depends on this provider instead of `.instance`, and
-/// tests override it directly instead of subclassing the service.
-///
-/// `AccountsService` holds no state of its own beyond `AccountsStore`
-/// (already mirrored by `accountsSessionProvider`, issue M2) — no listener
-/// wiring needed here, this is a plain pass-through.
 @Riverpod(keepAlive: true)
-AccountsService accountsService(Ref ref) => AccountsService.instance;
+AccountsService accountsService(Ref ref) => AccountsService(
+  analytics: ref.watch(analyticsServiceProvider),
+  syncManager: ref.watch(syncManagerProvider),
+  syncQueue: ref.watch(syncQueueProvider),
+  localCache: ref.watch(localCacheProvider),
+);

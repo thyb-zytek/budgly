@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:budgly/src/core/logging/logger.dart';
@@ -7,17 +8,76 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Last-known server state, persisted per user/account for cache-first reads.
+///
+/// A single instance must be shared by every service (see
+/// `localCacheProvider`): mutations use [updateAccounts] / [updateCategories],
+/// which serialize their read-modify-write cycle with cache writes coming from
+/// background revalidation. Without this, two overlapping cycles could each
+/// read the same snapshot and the last writer would silently discard the
+/// other's change.
+///
+/// A payload that cannot be decoded is quarantined under a `.corrupt.` key and
+/// reported as *absent* (`null`), so callers fall back to the server instead of
+/// presenting a corrupted cache as "the user has no data".
 class LocalCache {
-  static const _accountsPrefix = 'offline.accounts.';
-  static const _categoriesPrefix = 'offline.categories.';
-  static const _profilePrefix = 'offline.profile.';
-  static const _undebitedBannerPrefix = 'undebited.banner.dismissedAt.';
+  /// Bump when a cached model's JSON shape changes in a way `fromJson` can't
+  /// safely absorb (a new required field, a renamed/retyped field, ...).
+  /// Every cache key embeds this version, so a bump makes every entry written
+  /// under the previous version invisible (`load...` returns `null`, exactly
+  /// like a first run) instead of risking a silent bad decode of stale data —
+  /// this is a *stronger* guarantee than the per-read corruption handling
+  /// below, which only catches a decode that outright throws.
+  /// [purgeObsoleteCacheEntries] can be called once at startup to reclaim the
+  /// storage of entries left behind by a previous version.
+  static const _schemaVersion = 1;
+  static const _namespace = 'offline.v$_schemaVersion.';
+
+  static const _accountsPrefix = '${_namespace}accounts.';
+  static const _categoriesPrefix = '${_namespace}categories.';
+  static const _profilePrefix = '${_namespace}profile.';
+  static const _undebitedBannerPrefix = '${_namespace}undebited_banner.';
+
+  /// Prefixes used before schema versioning existed (the real case on every
+  /// device today, since `_schemaVersion` starts at 1). Kept as an explicit
+  /// list rather than "anything starting with `offline.`" so this can never
+  /// reach into an unrelated namespace, such as `SyncQueue`'s
+  /// `offline.pending_sync.v2` key. The next time `_schemaVersion` is bumped,
+  /// add that version's four prefixes here too.
+  static const _obsoletePrefixes = <String>[
+    'offline.accounts.',
+    'offline.categories.',
+    'offline.profile.',
+    'undebited.banner.dismissedAt.',
+  ];
 
   // Resolve lazily so Flutter test bootstrap can install the in-memory
   // SharedPreferences implementation before the first platform call.
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
-  Future<void> saveAccounts(String userId, List<Account> accounts) async {
+  Future<void> _lock = Future<void>.value();
+
+  Future<T> _serialized<T>(Future<T> Function() action) {
+    final previous = _lock;
+    final release = Completer<void>();
+    _lock = previous.then((_) => release.future);
+    return previous.then((_) => action()).whenComplete(release.complete);
+  }
+
+  Future<void> _quarantine(String key, String raw) async {
+    try {
+      final prefs = await _prefs;
+      await prefs.setString('$key.corrupt', raw);
+      await prefs.remove(key);
+    } catch (e, st) {
+      AppLogger.error('Failed to quarantine cached data ($key)', e, st);
+    }
+  }
+
+  Future<void> saveAccounts(String userId, List<Account> accounts) =>
+      _serialized(() => _saveAccounts(userId, accounts));
+
+  Future<void> _saveAccounts(String userId, List<Account> accounts) async {
     final prefs = await _prefs;
     await prefs.setString(
       '$_accountsPrefix$userId',
@@ -25,24 +85,51 @@ class LocalCache {
     );
   }
 
+  /// Atomically replaces the cached accounts with `transform(current)`.
+  ///
+  /// [transform] may be asynchronous (for example to merge pending queue
+  /// operations); it runs while the cache lock is held, so no other cache
+  /// write can interleave. It must not call other [LocalCache] write methods
+  /// and should avoid slow work such as network calls. Returning `null` leaves
+  /// the cache untouched (used when there is no cache to patch yet).
+  Future<List<Account>?> updateAccounts(
+    String userId,
+    FutureOr<List<Account>?> Function(List<Account>? current) transform,
+  ) => _serialized(() async {
+    final current = await _loadAccounts(userId);
+    final next = await transform(current);
+    if (next == null) return current;
+    await _saveAccounts(userId, next);
+    return next;
+  });
 
-  Future<List<Account>?> loadAccounts(String userId) async {
+  Future<List<Account>?> loadAccounts(String userId) =>
+      _serialized(() => _loadAccounts(userId));
+
+  Future<List<Account>?> _loadAccounts(String userId) async {
     final prefs = await _prefs;
-    final raw = prefs.getString('$_accountsPrefix$userId');
+    final key = '$_accountsPrefix$userId';
+    final raw = prefs.getString(key);
     if (raw == null) return null;
 
     try {
       final decoded = jsonDecode(raw) as List;
       return decoded
-          .map((item) => Account.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) => Account.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList();
     } catch (e, st) {
       AppLogger.error('Failed to load cached accounts', e, st);
-      return const [];
+      await _quarantine(key, raw);
+      return null;
     }
   }
 
-  Future<void> saveCategories(
+  Future<void> saveCategories(String accountId, List<Category> categories) =>
+      _serialized(() => _saveCategories(accountId, categories));
+
+  Future<void> _saveCategories(
     String accountId,
     List<Category> categories,
   ) async {
@@ -53,20 +140,39 @@ class LocalCache {
     );
   }
 
+  /// Atomically replaces the cached categories of [accountId]; same contract
+  /// as [updateAccounts].
+  Future<List<Category>?> updateCategories(
+    String accountId,
+    FutureOr<List<Category>?> Function(List<Category>? current) transform,
+  ) => _serialized(() async {
+    final current = await _loadCategories(accountId);
+    final next = await transform(current);
+    if (next == null) return current;
+    await _saveCategories(accountId, next);
+    return next;
+  });
 
-  Future<List<Category>?> loadCategories(String accountId) async {
+  Future<List<Category>?> loadCategories(String accountId) =>
+      _serialized(() => _loadCategories(accountId));
+
+  Future<List<Category>?> _loadCategories(String accountId) async {
     final prefs = await _prefs;
-    final raw = prefs.getString('$_categoriesPrefix$accountId');
+    final key = '$_categoriesPrefix$accountId';
+    final raw = prefs.getString(key);
     if (raw == null) return null;
 
     try {
       final decoded = jsonDecode(raw) as List;
       return decoded
-          .map((item) => Category.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) => Category.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList();
     } catch (e, st) {
       AppLogger.error('Failed to load cached categories', e, st);
-      return const [];
+      await _quarantine(key, raw);
+      return null;
     }
   }
 
@@ -80,7 +186,8 @@ class LocalCache {
 
   Future<UserProfile?> loadProfile(String userId) async {
     final prefs = await _prefs;
-    final raw = prefs.getString('$_profilePrefix$userId');
+    final key = '$_profilePrefix$userId';
+    final raw = prefs.getString(key);
     if (raw == null) return null;
 
     try {
@@ -89,10 +196,10 @@ class LocalCache {
       );
     } catch (e, st) {
       AppLogger.error('Failed to load cached profile', e, st);
+      await _quarantine(key, raw);
       return null;
     }
   }
-
 
   Future<void> saveUndebitedBannerDismissedAt(
     String accountId, {
@@ -135,16 +242,35 @@ class LocalCache {
     await prefs.remove('$_undebitedBannerPrefix$accountId');
   }
 
-  Future<void> clearUser(String userId) async {
+  /// Removes every cache entry (including quarantined blobs) left behind by a
+  /// previous [_schemaVersion]. Safe to call repeatedly; a no-op once the
+  /// device has nothing older than the current version. Meant to be called
+  /// once, best-effort, at startup (see `syncBootstrapProvider`) — never
+  /// awaited by anything the user is waiting on.
+  Future<void> purgeObsoleteCacheEntries() async {
+    try {
+      final prefs = await _prefs;
+      final obsolete = prefs.getKeys().where(
+        (key) => _obsoletePrefixes.any(key.startsWith),
+      );
+      for (final key in obsolete) {
+        await prefs.remove(key);
+      }
+    } catch (e, st) {
+      AppLogger.error('Failed to purge obsolete local cache entries', e, st);
+    }
+  }
+
+  Future<void> clearUser(String userId) => _serialized(() async {
     final prefs = await _prefs;
     await Future.wait([
       prefs.remove('$_accountsPrefix$userId'),
       prefs.remove('$_profilePrefix$userId'),
     ]);
-  }
+  });
 
-  Future<void> clearAccount(String accountId) async {
+  Future<void> clearAccount(String accountId) => _serialized(() async {
     final prefs = await _prefs;
     await prefs.remove('$_categoriesPrefix$accountId');
-  }
+  });
 }

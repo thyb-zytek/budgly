@@ -46,9 +46,7 @@ class ExpenseSummaryCalculator {
     for (final entry in grouped.entries) {
       final category = resolveCategory(entry.key);
       if (category == null) continue;
-      summaries.add(
-        summarize(category: category, occurrences: entry.value),
-      );
+      summaries.add(summarize(category: category, occurrences: entry.value));
     }
 
     summaries.sort((a, b) => b.total.compareTo(a.total));
