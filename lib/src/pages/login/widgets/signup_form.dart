@@ -51,7 +51,8 @@ class SignUpForm extends StatelessWidget {
                   labelText: tr.email,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  hotValidating: (v) => AuthValidators.translateEmailError(tr, validateEmail(v)),
+                  hotValidating: (v) =>
+                      AuthValidators.translateEmailError(tr, validateEmail(v)),
                 ),
                 TextInput(
                   controller: passwordController,
@@ -59,7 +60,10 @@ class SignUpForm extends StatelessWidget {
                   type: InputType.password,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  hotValidating: (v) => AuthValidators.translatePasswordError(tr, validatePassword(v)),
+                  hotValidating: (v) => AuthValidators.translatePasswordError(
+                    tr,
+                    validatePassword(v),
+                  ),
                 ),
                 TextInput(
                   controller: password2Controller,
@@ -67,7 +71,11 @@ class SignUpForm extends StatelessWidget {
                   type: InputType.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) => AuthValidators.translateConfirmPasswordError(tr, validateConfirmPassword(v)),
+                  hotValidating: (v) =>
+                      AuthValidators.translateConfirmPasswordError(
+                        tr,
+                        validateConfirmPassword(v),
+                      ),
                 ),
               ],
             ),
@@ -91,13 +99,12 @@ class SignUpForm extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).viewInsets.bottom > 0 ? BudglySpacing.xl : BudglySpacing.sm),
-          child: FilledButton(
-                        onPressed: onSubmitForm,
-            child: Text(
-              tr.signUp,
-            ),
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).viewInsets.bottom > 0
+                ? BudglySpacing.xl
+                : BudglySpacing.sm,
           ),
+          child: FilledButton(onPressed: onSubmitForm, child: Text(tr.signUp)),
         ),
       ],
     );

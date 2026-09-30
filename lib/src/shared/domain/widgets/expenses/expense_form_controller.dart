@@ -22,7 +22,8 @@ class ExpenseFormController extends ChangeNotifier {
     data.amountController.clear();
     data.account = account;
     data.category = category;
-    data.debitDate = DateTime.now();
+    final today = DateTime.now();
+    data.debitDate = DateTime(today.year, today.month, today.day);
     data.endDate = null;
     data.recurrence = RecurrenceType.none;
     data.showAdvancedOptions = false;
@@ -58,15 +59,23 @@ class ExpenseFormController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearCategory() {
+    if (data.category == null) return;
+    data.category = null;
+    notifyListeners();
+  }
+
   void setDebitDate(DateTime date) {
-    if (data.debitDate == date) return;
-    data.debitDate = date;
+    final normalized = DateTime(date.year, date.month, date.day);
+    if (data.debitDate == normalized) return;
+    data.debitDate = normalized;
     notifyListeners();
   }
 
   void setEndDate(DateTime date) {
-    if (data.endDate == date) return;
-    data.endDate = date;
+    final normalized = DateTime(date.year, date.month, date.day);
+    if (data.endDate == normalized) return;
+    data.endDate = normalized;
     notifyListeners();
   }
 
@@ -90,7 +99,7 @@ class ExpenseFormController extends ChangeNotifier {
       );
       final todayDay = DateTime(now.year, now.month, now.day);
       if (debitDay.isBefore(todayDay)) {
-        data.debitDate = now;
+        data.debitDate = todayDay;
         changed = true;
       }
     }
@@ -137,4 +146,3 @@ class ExpenseFormController extends ChangeNotifier {
     super.dispose();
   }
 }
-

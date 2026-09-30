@@ -43,11 +43,13 @@ class CurrencyInput extends StatelessWidget {
       ),
       textInputAction: textInputAction,
       onFieldSubmitted: onSubmitted != null ? (_) => onSubmitted!() : null,
-      hotValidating: hotValidating ?? (v) {
-        final amount = double.tryParse((v ?? '').replaceAll(',', '.'));
-        if (amount == null || amount <= 0) return tr.amountInvalid;
-        return null;
-      },
+      hotValidating:
+          hotValidating ??
+          (v) {
+            final amount = double.tryParse((v ?? '').replaceAll(',', '.'));
+            if (amount == null || amount <= 0) return tr.amountInvalid;
+            return null;
+          },
     );
   }
 }

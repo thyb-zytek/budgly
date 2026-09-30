@@ -1,19 +1,23 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/extensions/amount.dart';
-import 'package:budgly/src/pages/overview/view_model.dart';
+import 'package:budgly/src/pages/overview/revenue_provider.dart';
 import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/currency_input.dart';
 import 'package:flutter/material.dart';
 
 class RevenueForm extends StatefulWidget {
-  final OverviewViewModel viewModel;
+  final RevenueState state;
+  final String currencyCode;
   final VoidCallback onClose;
+  final Future<void> Function(double value) onSave;
 
   const RevenueForm({
     super.key,
-    required this.viewModel,
+    required this.state,
+    required this.currencyCode,
     required this.onClose,
+    required this.onSave,
   });
 
   @override
@@ -25,10 +29,10 @@ class _RevenueFormState extends State<RevenueForm> {
   bool _prefilledFromEstimate = false;
 
   String _initialText() {
-    if (widget.viewModel.revenue > 0) {
-      return widget.viewModel.revenue.toStringAsFixed(0);
+    if (widget.state.revenue > 0) {
+      return widget.state.revenue.toStringAsFixed(0);
     }
-    final inherited = widget.viewModel.inheritedRevenue;
+    final inherited = widget.state.inheritedRevenue;
     if (inherited != null && inherited > 0) {
       _prefilledFromEstimate = true;
       return inherited.toStringAsFixed(0);
@@ -46,10 +50,13 @@ class _RevenueFormState extends State<RevenueForm> {
   void didUpdateWidget(covariant RevenueForm oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final stillUntouched = _controller.text.isEmpty ||
-        (_prefilledFromEstimate && _controller.text == oldWidget.viewModel.inheritedRevenue?.toStringAsFixed(0));
-    if (stillUntouched && widget.viewModel.revenue <= 0) {
-      final inherited = widget.viewModel.inheritedRevenue;
+    final stillUntouched =
+        _controller.text.isEmpty ||
+        (_prefilledFromEstimate &&
+            _controller.text ==
+                oldWidget.state.inheritedRevenue?.toStringAsFixed(0));
+    if (stillUntouched && widget.state.revenue <= 0) {
+      final inherited = widget.state.inheritedRevenue;
       if (inherited != null && inherited > 0) {
         _prefilledFromEstimate = true;
         _controller.text = inherited.toStringAsFixed(0);
@@ -65,7 +72,7 @@ class _RevenueFormState extends State<RevenueForm> {
 
   Future<void> _save() async {
     final value = parseAmount(_controller.text) ?? 0;
-    await widget.viewModel.setRevenue(value);
+    await widget.onSave(value);
     widget.onClose();
   }
 
@@ -75,7 +82,12 @@ class _RevenueFormState extends State<RevenueForm> {
     final tr = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.md, BudglySpacing.lg, 0),
+      padding: EdgeInsets.fromLTRB(
+        BudglySpacing.lg,
+        BudglySpacing.md,
+        BudglySpacing.lg,
+        0,
+      ),
       child: Container(
         padding: EdgeInsets.all(BudglySpacing.lg),
         decoration: BoxDecoration(
@@ -88,7 +100,7 @@ class _RevenueFormState extends State<RevenueForm> {
           children: [
             CurrencyInput(
               controller: _controller,
-              currencyCode: widget.viewModel.currencyCode,
+              currencyCode: widget.currencyCode,
               labelText: tr.revenue,
             ),
             if (_prefilledFromEstimate)

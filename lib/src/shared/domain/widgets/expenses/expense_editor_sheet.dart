@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 
 /// Shared presentation for creating and editing an expense.
 ///
-/// Business operations remain owned by the caller's ViewModel. This widget
+/// Business operations remain owned by the caller's presentation/controller layer. This widget
 /// owns only the common form presentation, validation and submit lifecycle.
 class ExpenseEditorSheet extends StatefulWidget {
   final Listenable listenable;
@@ -20,7 +20,6 @@ class ExpenseEditorSheet extends StatefulWidget {
   final Future<bool> Function()? onBeforeSubmit;
   final VoidCallback? onSubmitSuccess;
   final String? submitFailureMessage;
-  final bool Function() isSaving;
   final bool destructiveCancel;
   final ValueChanged<DateTime> onDateChanged;
   final ValueChanged<RecurrenceType> onRecurrenceChanged;
@@ -51,7 +50,6 @@ class ExpenseEditorSheet extends StatefulWidget {
     required this.onToggleAdvanced,
     this.onSubmitSuccess,
     this.submitFailureMessage,
-    required this.isSaving,
     this.destructiveCancel = true,
     this.headerBuilder,
     this.preFieldsBuilder,
@@ -68,6 +66,7 @@ class ExpenseEditorSheet extends StatefulWidget {
 class _ExpenseEditorSheetState extends State<ExpenseEditorSheet> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String? _errorMessage;
+  bool _isSaving = false;
 
   Future<void> _submit() async {
     final tr = AppLocalizations.of(context)!;
@@ -84,7 +83,13 @@ class _ExpenseEditorSheetState extends State<ExpenseEditorSheet> {
       final canSubmit = await widget.onBeforeSubmit!();
       if (!mounted || !canSubmit) return;
     }
-    final success = await widget.onSubmit();
+    setState(() => _isSaving = true);
+    bool success = false;
+    try {
+      success = await widget.onSubmit();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
     if (!mounted) return;
 
     if (success) {
@@ -164,7 +169,7 @@ class _ExpenseEditorSheetState extends State<ExpenseEditorSheet> {
                     onCancel: () => Navigator.pop(context),
                     onSubmit: _submit,
                     destructiveCancel: widget.destructiveCancel,
-                    isLoading: widget.isSaving(),
+                    isLoading: _isSaving,
                     isSubmitEnabled: widget.isSubmitEnabled?.call() ?? true,
                   ),
                 ],

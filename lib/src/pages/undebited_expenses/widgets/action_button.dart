@@ -34,16 +34,18 @@ class UndebitedActionButton extends StatelessWidget {
     final colors = type.colors(theme);
     return FilledButton.icon(
       onPressed: busy ? null : onPressed,
-      style: type.filledStyle(theme, dense: true).copyWith(
-        minimumSize: minHeight == null
-            ? null
-            : WidgetStatePropertyAll(Size.fromHeight(minHeight!)),
-        backgroundColor: WidgetStatePropertyAll(
-          type == ButtonType.primary
-              ? colors.background
-              : colors.background.withAlpha(144),
-        ),
-      ),
+      style: type
+          .filledStyle(theme, dense: true)
+          .copyWith(
+            minimumSize: minHeight == null
+                ? null
+                : WidgetStatePropertyAll(Size.fromHeight(minHeight!)),
+            backgroundColor: WidgetStatePropertyAll(
+              type == ButtonType.primary
+                  ? colors.background
+                  : colors.background.withAlpha(144),
+            ),
+          ),
       icon: busy
           ? SizedBox(
               width: 20,

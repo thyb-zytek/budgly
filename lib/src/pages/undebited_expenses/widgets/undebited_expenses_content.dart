@@ -2,7 +2,7 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/account/account.dart';
-import 'package:budgly/src/pages/undebited_expenses/view_model.dart';
+import 'package:budgly/src/pages/undebited_expenses/undebited_expenses_provider.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/bulk_action_bar.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/expense_occurrence_card.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/selection_banner.dart';
@@ -12,7 +12,8 @@ import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:flutter/material.dart';
 
 class UndebitedExpensesContent extends StatelessWidget {
-  final UndebitedExpensesViewModel viewModel;
+  final UndebitedExpensesState state;
+  final UndebitedExpenses notifier;
 
   /// Tracks the transient swipe-hint animation shown on the first card so it
   /// can be stopped as soon as the user interacts with any card. Owned by
@@ -21,7 +22,8 @@ class UndebitedExpensesContent extends StatelessWidget {
 
   const UndebitedExpensesContent({
     super.key,
-    required this.viewModel,
+    required this.state,
+    required this.notifier,
     required this.swipeHintKey,
   });
 
@@ -29,7 +31,7 @@ class UndebitedExpensesContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final accounts = viewModel.accounts;
+    final accounts = state.accounts;
 
     return Column(
       children: [
@@ -48,11 +50,11 @@ class UndebitedExpensesContent extends StatelessWidget {
           curve: Curves.easeInOut,
           alignment: Alignment.topCenter,
           clipBehavior: Clip.hardEdge,
-          child: viewModel.isSelectionMode
+          child: state.selectionMode
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    UndebitedSelectionBanner(viewModel: viewModel),
+                    UndebitedSelectionBanner(state: state, notifier: notifier),
                     _buildSelectionModeHint(context, tr, theme),
                   ],
                 )
@@ -64,9 +66,8 @@ class UndebitedExpensesContent extends StatelessWidget {
           curve: Curves.easeInOut,
           alignment: Alignment.bottomCenter,
           clipBehavior: Clip.hardEdge,
-          child: viewModel.isSelectionMode &&
-                  viewModel.selectedCount > 0
-              ? UndebitedBulkActionBar(viewModel: viewModel)
+          child: state.selectionMode && state.selectedCount > 0
+              ? UndebitedBulkActionBar(state: state, notifier: notifier)
               : const SizedBox.shrink(),
         ),
       ],
@@ -81,7 +82,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     if (accounts.isEmpty) return const SizedBox.shrink();
     Account? selected;
     for (final account in accounts) {
-      if (account.id == viewModel.selectedAccountId) {
+      if (account.id == state.selectedAccountId) {
         selected = account;
         break;
       }
@@ -89,11 +90,11 @@ class UndebitedExpensesContent extends StatelessWidget {
     return AccountSelector(
       accounts: accounts,
       selectedAccount: selected,
-      onSelect: (account) => viewModel.selectAccount(account.id),
+      onSelect: (account) => notifier.selectAccount(account.id),
       showAllOption: true,
-      isAllSelected: viewModel.selectedAccountId == null,
+      isAllSelected: state.selectedAccountId == null,
       allAccountsLabel: tr.allAccounts,
-      onSelectAll: () => viewModel.selectAccount(null),
+      onSelectAll: () => notifier.selectAccount(null),
     );
   }
 
@@ -113,21 +114,23 @@ class UndebitedExpensesContent extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              tr.undebitedPendingCount(viewModel.totalCount),
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              tr.undebitedPendingCount(state.totalCount),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             formatCurrency(
-              amount: viewModel.totalAmount,
-              currencyCode: viewModel.currencyCode,
-              localeName: viewModel.localeName,
-              decimalPlaces: viewModel.amountDecimalPlaces,
+              amount: state.totalAmount,
+              currencyCode: state.currencyCode,
+              localeName: state.localeName,
+              decimalPlaces: state.amountDecimalPlaces,
               forceDecimal: true,
             ),
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -211,7 +214,7 @@ class UndebitedExpensesContent extends StatelessWidget {
     AppLocalizations tr,
     ThemeData theme,
   ) {
-    final occurrences = viewModel.occurrences;
+    final occurrences = state.displayed;
     if (occurrences.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(bottom: BudglySpacing.xxl),
@@ -223,12 +226,12 @@ class UndebitedExpensesContent extends StatelessWidget {
     }
     var isFirstCard = true;
     final children = <Widget>[];
-    for (final group in viewModel.grouped) {
+    for (final group in state.grouped) {
       children.add(
         Padding(
           padding: EdgeInsets.symmetric(vertical: BudglySpacing.xs),
           child: Text(
-            group.period.label(viewModel.localeName),
+            group.period.label(state.localeName),
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.w700,
@@ -238,7 +241,8 @@ class UndebitedExpensesContent extends StatelessWidget {
       );
       for (final occurrence in group.occurrences) {
         final card = UndebitedExpenseCard(
-          viewModel: viewModel,
+          state: state,
+          notifier: notifier,
           occurrence: occurrence,
           onUserInteracted: () => swipeHintKey.currentState?.stop(),
         );

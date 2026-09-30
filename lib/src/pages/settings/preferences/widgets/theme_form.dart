@@ -47,7 +47,10 @@ class ThemeForm extends StatelessWidget {
           tabs: ThemeMode.values
               .map(
                 (e) => Padding(
-                  padding: EdgeInsets.symmetric(vertical: BudglySpacing.sm, horizontal: BudglySpacing.xs),
+                  padding: EdgeInsets.symmetric(
+                    vertical: BudglySpacing.sm,
+                    horizontal: BudglySpacing.xs,
+                  ),
                   child: Row(
                     spacing: 4,
                     children: [

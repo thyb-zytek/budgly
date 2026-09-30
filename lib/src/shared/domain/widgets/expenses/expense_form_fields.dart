@@ -45,9 +45,8 @@ class ExpenseFormFields extends StatelessWidget {
               child: TextInput(
                 controller: editingData.nameController,
                 labelText: tr.activity,
-                hotValidating: (v) => v == null || v.trim().isEmpty
-                    ? tr.nameRequired
-                    : null,
+                hotValidating: (v) =>
+                    v == null || v.trim().isEmpty ? tr.nameRequired : null,
               ),
             ),
             Expanded(

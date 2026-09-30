@@ -30,9 +30,7 @@ class CategoryExpenseList extends StatelessWidget {
             currencyCode: currencyCode,
             localeName: localeName,
             decimalPlaces: decimalPlaces,
-            onTap: onTapCategory == null
-                ? null
-                : () => onTapCategory!(summary),
+            onTap: onTapCategory == null ? null : () => onTapCategory!(summary),
           ),
       ],
     );

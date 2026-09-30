@@ -33,12 +33,12 @@ class SummaryStatValue extends StatelessWidget {
             value,
             maxLines: 1,
             style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: isEmphasized ? FontWeight.w800 : FontWeight.w700,
-                  height: 1.2,
-                  color: isEmphasized
-                      ? color ?? theme.colorScheme.primary
-                      : theme.colorScheme.onSurface,
-                ),
+              fontWeight: isEmphasized ? FontWeight.w800 : FontWeight.w700,
+              height: 1.2,
+              color: isEmphasized
+                  ? color ?? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
+            ),
           ),
           if (detail != null)
             Text(

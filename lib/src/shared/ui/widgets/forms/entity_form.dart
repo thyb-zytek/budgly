@@ -57,7 +57,11 @@ class EntityForm extends StatelessWidget {
                   controller: nameController,
                   labelText: labelText,
                   onChange: onTextChange,
-                  hotValidating: validator ?? (v) => v == null || v.trim().isEmpty ? tr.nameRequired : null,
+                  hotValidating:
+                      validator ??
+                      (v) => v == null || v.trim().isEmpty
+                          ? tr.nameRequired
+                          : null,
                   textInputAction: TextInputAction.done,
                 ),
               ),

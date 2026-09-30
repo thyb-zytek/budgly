@@ -28,8 +28,11 @@ class CategoryThresholdBar extends StatelessWidget {
       // clobbered the green channel of an already red-dominant color,
       // producing an unpredictable muddy tone instead of a distinct
       // warning color).
-      CategoryThresholdState.warning =>
-        Color.lerp(scheme.tertiary, scheme.error, 0.6)!,
+      CategoryThresholdState.warning => Color.lerp(
+        scheme.tertiary,
+        scheme.error,
+        0.6,
+      )!,
       CategoryThresholdState.exceeded => scheme.error,
       _ => scheme.tertiary,
     };

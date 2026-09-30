@@ -27,9 +27,7 @@ class WelcomeStep extends StatelessWidget {
         width: double.infinity,
         child: FilledButton(
           onPressed: onNext,
-          child: Text(
-            tr.tutorialGetStarted,
-          ),
+          child: Text(tr.tutorialGetStarted),
         ),
       ),
     );

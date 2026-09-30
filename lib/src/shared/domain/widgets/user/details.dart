@@ -49,7 +49,9 @@ class _UserDetailsState extends State<UserDetails> {
       elevation: 0,
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: EdgeInsets.all(BudglySpacing.lg).copyWith(top: BudglySpacing.xl),
+        padding: EdgeInsets.all(
+          BudglySpacing.lg,
+        ).copyWith(top: BudglySpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,68 +76,69 @@ class _UserDetailsState extends State<UserDetails> {
                     ),
                     _isEditingName
                         ? Padding(
-                          padding: const EdgeInsets.only(right: 96),
-                          child: TextInput(
-                            controller: _nameController,
-                            labelText: "",
-                            hotValidating:
-                                (v) =>
-                                    v == null || v.isEmpty
-                                        ? tr.nameRequired
-                                        : null,
-                            textInputAction: TextInputAction.done,
-                          ),
-                        )
+                            padding: const EdgeInsets.only(right: 96),
+                            child: TextInput(
+                              controller: _nameController,
+                              labelText: "",
+                              hotValidating: (v) => v == null || v.isEmpty
+                                  ? tr.nameRequired
+                                  : null,
+                              textInputAction: TextInputAction.done,
+                            ),
+                          )
                         : Padding(
-                          padding: EdgeInsets.only(left: BudglySpacing.sm),
-                          child: Text(
-                            widget.user.profile?.fullName ?? tr.notAvailable,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.normal,
+                            padding: EdgeInsets.only(left: BudglySpacing.sm),
+                            child: Text(
+                              widget.user.profile?.fullName ?? tr.notAvailable,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.normal,
+                              ),
                             ),
                           ),
-                        ),
                   ],
                 ),
                 _isEditingName
                     ? Positioned(
-                      right: 0,
-                      bottom: 16,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        spacing: 4,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.check_circle_rounded, size: 32),
-                            onPressed: () {
-                              widget.onChangeName(_nameController.text);
-                              setState(() {
+                        right: 0,
+                        bottom: 16,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          spacing: 4,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.check_circle_rounded,
+                                size: 32,
+                              ),
+                              onPressed: () {
+                                widget.onChangeName(_nameController.text);
+                                setState(() {
+                                  _isEditingName = false;
+                                });
+                              },
+                              color: theme.colorScheme.primary,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.cancel_rounded, size: 32),
+                              onPressed: () => setState(() {
                                 _isEditingName = false;
-                              });
-                            },
-                            color: theme.colorScheme.primary,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.cancel_rounded, size: 32),
-                            onPressed: () => setState(() {
-                              _isEditingName = false;
-                              _nameController.text =
-                                  widget.user.profile?.fullName ?? '';
-                            }),
-                            color: theme.colorScheme.error,
-                          ),
-                        ],
-                      ),
-                    )
+                                _nameController.text =
+                                    widget.user.profile?.fullName ?? '';
+                              }),
+                              color: theme.colorScheme.error,
+                            ),
+                          ],
+                        ),
+                      )
                     : Positioned(
-                      right: 0,
-                      top: 16,
-                      child: IconButton(
-                        onPressed: _displayEditName,
-                        icon: const Icon(Icons.edit, size: 32),
-                        color: theme.colorScheme.primary,
+                        right: 0,
+                        top: 16,
+                        child: IconButton(
+                          onPressed: _displayEditName,
+                          icon: const Icon(Icons.edit, size: 32),
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
-                    ),
               ],
             ),
             Column(
@@ -180,8 +183,8 @@ class _UserDetailsState extends State<UserDetails> {
                   child: Text(
                     widget.user.profile?.createdAt != null
                         ? DateFormat(
-                          'dd/MM/yyyy',
-                        ).format(widget.user.profile!.createdAt)
+                            'dd/MM/yyyy',
+                          ).format(widget.user.profile!.createdAt)
                         : tr.notAvailable,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.normal,

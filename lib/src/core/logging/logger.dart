@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
-
 class AppLogger {
   static void debug(String message) {
     if (kDebugMode) {
@@ -46,22 +45,15 @@ class AppLogger {
     try {
       unawaited(
         FirebaseCrashlytics.instance
-            .recordError(
-              error,
-              stackTrace,
-              reason: reason,
-              fatal: false,
-            )
+            .recordError(error, stackTrace, reason: reason, fatal: false)
             .catchError((_) {}),
       );
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 
   static void _log(String message) {
     try {
       FirebaseCrashlytics.instance.log(message);
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 }

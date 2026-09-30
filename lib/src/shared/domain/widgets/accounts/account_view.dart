@@ -39,7 +39,8 @@ class AccountView extends StatelessWidget {
                   picture: account.pictureUrl?.isNotEmpty == true
                       ? account.pictureUrl
                       : null,
-                  isLocalPicture: account.pictureUrl == null ||
+                  isLocalPicture:
+                      account.pictureUrl == null ||
                       account.pictureUrl!.startsWith('/') ||
                       account.pictureUrl!.startsWith('file://'),
                   backgroundColor: account.color,

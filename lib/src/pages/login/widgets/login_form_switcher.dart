@@ -1,6 +1,5 @@
-import 'package:budgly/src/core/auth/auth_event.dart';
 import 'package:budgly/src/core/auth/auth_state.dart';
-import 'package:budgly/src/pages/login/view_model.dart';
+import 'package:budgly/src/pages/login/login_provider.dart';
 import 'package:budgly/src/pages/login/widgets/google_sign_in_button.dart';
 import 'package:budgly/src/pages/login/widgets/login_form.dart';
 import 'package:budgly/src/pages/login/widgets/reset_password_form.dart';
@@ -10,20 +9,40 @@ import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
 class LoginFormSwitcher extends StatelessWidget {
-  final LoginViewModel viewModel;
-  final void Function(AuthEventParams) onEvent;
+  final AuthState state;
   final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final TextEditingController password2Controller;
+  final void Function(AuthForm) onChangeFormType;
+  final Future<void> Function() onSubmitSignIn;
+  final Future<void> Function() onSubmitSignUp;
+  final Future<void> Function() onResetPassword;
+  final Future<void> Function() onGoogleSignIn;
+  final Future<void> Function() onResendVerification;
+  final Future<void> Function() onReload;
+  final Future<void> Function() onSignOut;
 
   const LoginFormSwitcher({
     super.key,
-    required this.viewModel,
-    required this.onEvent,
+    required this.state,
     required this.formKey,
+    required this.emailController,
+    required this.passwordController,
+    required this.password2Controller,
+    required this.onChangeFormType,
+    required this.onSubmitSignIn,
+    required this.onSubmitSignUp,
+    required this.onResetPassword,
+    required this.onGoogleSignIn,
+    required this.onResendVerification,
+    required this.onReload,
+    required this.onSignOut,
   });
 
   @override
   Widget build(BuildContext context) {
-    final formType = viewModel.state.formType;
+    final formType = state.formType;
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Column(
@@ -32,76 +51,60 @@ class LoginFormSwitcher extends StatelessWidget {
       children: [
         switch (formType) {
           AuthForm.signUp => SignUpForm(
-              formKey: formKey,
-              emailController: viewModel.emailController,
-              passwordController: viewModel.passwordController,
-              password2Controller: viewModel.password2Controller,
-              validateEmail: viewModel.validateEmail,
-              validatePassword: viewModel.validatePassword,
-              validateConfirmPassword: viewModel.validateConfirmPassword,
-              onSignInPressed: () => onEvent(
-                AuthEventParams(type: AuthEvent.changeFormType, formType: AuthForm.signIn),
-              ),
-              onSubmitForm: () {
-                final isValid = formKey.currentState?.validate() ?? false;
-                if (!isValid) return;
-                onEvent(AuthEventParams(type: AuthEvent.signUp));
-              },
-            ),
+            formKey: formKey,
+            emailController: emailController,
+            passwordController: passwordController,
+            password2Controller: password2Controller,
+            validateEmail: validateLoginEmail,
+            validatePassword: validateLoginPassword,
+            validateConfirmPassword: (value) =>
+                validateLoginConfirmPassword(value, passwordController.text),
+            onSignInPressed: () => onChangeFormType(AuthForm.signIn),
+            onSubmitForm: () async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              await onSubmitSignUp();
+            },
+          ),
           AuthForm.signIn => LoginForm(
-              formKey: formKey,
-              emailController: viewModel.emailController,
-              passwordController: viewModel.passwordController,
-              validateEmail: viewModel.validateEmail,
-              validatePassword: viewModel.validatePassword,
-              onSignUpPressed: () => onEvent(
-                AuthEventParams(type: AuthEvent.changeFormType, formType: AuthForm.signUp),
-              ),
-              onSubmitForm: () {
-                final isValid = formKey.currentState?.validate() ?? false;
-                if (!isValid) return;
-                onEvent(AuthEventParams(type: AuthEvent.signIn));
-              },
-              onResetPassword: () => onEvent(
-                AuthEventParams(
-                  type: AuthEvent.changeFormType,
-                  formType: AuthForm.resetPassword,
-                  keepEmail: true,
-                ),
-              ),
-            ),
+            formKey: formKey,
+            emailController: emailController,
+            passwordController: passwordController,
+            validateEmail: validateLoginEmail,
+            validatePassword: validateLoginPassword,
+            onSignUpPressed: () => onChangeFormType(AuthForm.signUp),
+            onSubmitForm: () async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              await onSubmitSignIn();
+            },
+            onResetPassword: () => onChangeFormType(AuthForm.resetPassword),
+          ),
           AuthForm.resetPassword => ResetPasswordForm(
-              formKey: formKey,
-              emailController: viewModel.emailController,
-              validateEmail: viewModel.validateEmail,
-              onSubmitForm: () {
-                final isValid = formKey.currentState?.validate() ?? false;
-                if (!isValid) return;
-                onEvent(AuthEventParams(type: AuthEvent.resetPassword));
-              },
-              onSignInPressed: () => onEvent(
-                AuthEventParams(type: AuthEvent.changeFormType, formType: AuthForm.signIn),
-              ),
-            ),
+            formKey: formKey,
+            emailController: emailController,
+            validateEmail: validateLoginEmail,
+            onSubmitForm: () async {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              await onResetPassword();
+            },
+            onSignInPressed: () => onChangeFormType(AuthForm.signIn),
+          ),
           AuthForm.verifyEmail => VerifyEmail(
-              email: viewModel.state.currentUser?.email ?? viewModel.emailController.text,
-              onResendPressed: () => onEvent(
-                AuthEventParams(type: AuthEvent.resendEmailVerification),
-              ),
-              onSignInPressed: () => onEvent(AuthEventParams(type: AuthEvent.signOut)),
-              onReload: () => onEvent(AuthEventParams(type: AuthEvent.reloadUser)),
-            ),
+            email: state.currentUser?.email ?? emailController.text,
+            onResendPressed: onResendVerification,
+            onSignInPressed: onSignOut,
+            onReload: onReload,
+          ),
         },
-        if ([AuthForm.signUp, AuthForm.signIn, AuthForm.resetPassword].contains(formType))
+        if ([
+          AuthForm.signUp,
+          AuthForm.signIn,
+          AuthForm.resetPassword,
+        ].contains(formType))
           Padding(
-            padding: EdgeInsets.all(BudglySpacing.xl).add(
-              EdgeInsets.only(bottom: isKeyboardOpen ? 8 : 0),
-            ),
-            child: GoogleSignInButton(
-              onPressed: () => onEvent(
-                AuthEventParams(type: AuthEvent.googleSignIn),
-              ),
-            ),
+            padding: EdgeInsets.all(
+              BudglySpacing.xl,
+            ).add(EdgeInsets.only(bottom: isKeyboardOpen ? 8 : 0)),
+            child: GoogleSignInButton(onPressed: onGoogleSignIn),
           ),
       ],
     );

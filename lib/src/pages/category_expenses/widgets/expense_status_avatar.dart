@@ -18,7 +18,8 @@ class ExpenseStatusAvatar extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(
         color: isDebited
-            ? color?.withValues(alpha: 0.2) ?? success.background.withValues(alpha: 0.15)
+            ? color?.withValues(alpha: 0.2) ??
+                  success.background.withValues(alpha: 0.15)
             : theme.colorScheme.primaryContainer,
         shape: BoxShape.circle,
       ),

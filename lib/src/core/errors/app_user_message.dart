@@ -31,7 +31,8 @@ class AppUserMessage {
   final SnackBarType type;
 
   const AppUserMessage.error(AppMessageKey key) : this(key, SnackBarType.error);
-  const AppUserMessage.success(AppMessageKey key) : this(key, SnackBarType.success);
+  const AppUserMessage.success(AppMessageKey key)
+    : this(key, SnackBarType.success);
 
   String resolve(BuildContext context) {
     final tr = AppLocalizations.of(context)!;

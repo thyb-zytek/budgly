@@ -22,7 +22,10 @@ class TutorialCategoryTile extends StatelessWidget {
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 2,
+          ),
           leading: category.icon == null
               ? null
               : CategoryIconView(
@@ -30,10 +33,7 @@ class TutorialCategoryTile extends StatelessWidget {
                   color: category.color ?? theme.colorScheme.primary,
                   size: 36,
                 ),
-          title: Text(
-            category.name ?? '',
-            style: theme.textTheme.titleMedium,
-          ),
+          title: Text(category.name ?? '', style: theme.textTheme.titleMedium),
           trailing: IconButton(
             tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
             icon: const Icon(Icons.delete_rounded, size: 20),

@@ -109,7 +109,12 @@ class MaterialTheme {
   static const Color _darkCanvas = BudglyPalette.darkCanvas;
   static const Color _darkSurface = BudglyPalette.darkSurface;
 
-  static Color _tonalSurface(Color surface, Color tint, Color recede, double strength) {
+  static Color _tonalSurface(
+    Color surface,
+    Color tint,
+    Color recede,
+    double strength,
+  ) {
     final blendColor = strength >= 0 ? tint : recede;
     final alpha = (strength.abs() * 255).round().clamp(0, 255);
     return Color.alphaBlend(blendColor.withAlpha(alpha), surface);
@@ -265,9 +270,7 @@ class MaterialTheme {
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w600,
         ),
-        shape: Border(
-          bottom: BorderSide(color: border, width: 1),
-        ),
+        shape: Border(bottom: BorderSide(color: border, width: 1)),
       ),
 
       cardTheme: CardThemeData(
@@ -334,10 +337,7 @@ class MaterialTheme {
           borderRadius: BudglyRadius.large,
           side: BorderSide(color: border, width: 1),
         ),
-        sizeConstraints: const BoxConstraints.tightFor(
-          width: 56,
-          height: 56,
-        ),
+        sizeConstraints: const BoxConstraints.tightFor(width: 56, height: 56),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
@@ -345,7 +345,10 @@ class MaterialTheme {
         errorMaxLines: 3,
         filled: true,
         fillColor: surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: borderStrong, width: 1),
@@ -366,7 +369,10 @@ class MaterialTheme {
           borderRadius: BudglyRadius.medium,
           borderSide: BorderSide(color: colorScheme.error, width: 2),
         ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 48,
+          minHeight: 48,
+        ),
       ),
 
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -374,10 +380,7 @@ class MaterialTheme {
         backgroundColor: surface,
         elevation: 0,
         selectedItemColor: colorScheme.primary,
-        selectedIconTheme: IconThemeData(
-          size: 24,
-          color: colorScheme.primary,
-        ),
+        selectedIconTheme: IconThemeData(size: 24, color: colorScheme.primary),
         unselectedIconTheme: IconThemeData(
           size: 24,
           color: colorScheme.onSurfaceVariant,
@@ -407,15 +410,9 @@ class MaterialTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(
-              color: colorScheme.primary,
-              size: 24,
-            );
+            return IconThemeData(color: colorScheme.primary, size: 24);
           }
-          return IconThemeData(
-            color: colorScheme.onSurfaceVariant,
-            size: 24,
-          );
+          return IconThemeData(color: colorScheme.onSurfaceVariant, size: 24);
         }),
       ),
 
@@ -455,8 +452,17 @@ class MaterialTheme {
     );
   }
 
-  ThemeData light() => theme(lightScheme());
-  ThemeData dark() => theme(darkScheme());
+  // `theme()` builds a large ThemeData graph (AppBarTheme, CardThemeData,
+  // BottomSheetThemeData, etc.) and `lightScheme()`/`darkScheme()` take no
+  // arguments, so light()/dark() are pure and always return an equivalent
+  // result. Memoize them so this graph is only ever built once per app run
+  // instead of on every rebuild of the widget that reads it (e.g. whenever
+  // the profile/session state changes during startup).
+  static final ThemeData _light = const MaterialTheme().theme(lightScheme());
+  static final ThemeData _dark = const MaterialTheme().theme(darkScheme());
+
+  ThemeData light() => _light;
+  ThemeData dark() => _dark;
 
   static const success = ExtendedColor(
     seed: BudglyPalette.success,

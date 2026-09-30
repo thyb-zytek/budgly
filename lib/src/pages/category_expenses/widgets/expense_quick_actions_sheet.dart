@@ -12,10 +12,8 @@ Future<void> showExpenseQuickActionsSheet(
   return showAppBottomSheet(
     context,
     useRootNavigator: true,
-    builder: (context) => ExpenseQuickActionsSheet(
-      onEdit: onEdit,
-      onDelete: onDelete,
-    ),
+    builder: (context) =>
+        ExpenseQuickActionsSheet(onEdit: onEdit, onDelete: onDelete),
   );
 }
 
@@ -37,7 +35,12 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
 
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.lg),
+        padding: EdgeInsets.fromLTRB(
+          BudglySpacing.lg,
+          BudglySpacing.xs,
+          BudglySpacing.lg,
+          BudglySpacing.lg,
+        ),
         child: Row(
           spacing: 12,
           children: [

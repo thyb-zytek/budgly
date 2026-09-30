@@ -13,8 +13,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/app.dart';
 import 'src/core/auth/google_sign_in.dart';
 import 'src/services/analytics/analytics_service.dart';
-import 'src/services/offline/sync_manager.dart';
-import 'src/services/profile/profile_service.dart';
+import 'src/services/analytics/analytics_service_provider.dart';
+import 'src/services/offline/sync_bootstrap_provider.dart';
+import 'src/services/offline/sync_manager_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,45 +35,65 @@ Future<void> main() async {
     throw Exception('Missing Supabase environment variables');
   }
 
-  await Future.wait([
-    _initializeCrashlytics(),
-    ProfileService.instance.init(),
-    Supabase.initialize(
-      url: supabaseUrl,
-      publishableKey: supabaseKey,
-      authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
-      accessToken: () async {
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) return null;
-        return user.getIdToken();
-      },
+  await Supabase.initialize(
+    url: supabaseUrl,
+    publishableKey: supabaseKey,
+    authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
+    accessToken: () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      return user.getIdToken();
+    },
+  );
+
+  final container = ProviderContainer();
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const BudglyStartup(),
     ),
-  ]);
-
-  // ProviderScope posé ici en préparation de la migration Riverpod
-  // (issue M0). Aucun provider n'est encore migré à ce stade : l'app
-  // continue de fonctionner sur l'infra MVVM existante à l'identique.
-  runApp(const ProviderScope(child: BudglyApp()));
-
-  SyncManager.instance.start();
-  unawaited(ProfileService.instance.refreshUserProfileInBackground());
-  unawaited(GoogleSignInInitializer.ensureInitialized());
-  unawaited(_initializeAnalytics());
+  );
 }
 
-Future<void> _initializeAnalytics() async {
+class BudglyStartup extends StatefulWidget {
+  const BudglyStartup({super.key});
+
+  @override
+  State<BudglyStartup> createState() => _BudglyStartupState();
+}
+
+class _BudglyStartupState extends State<BudglyStartup> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final container = ProviderScope.containerOf(context, listen: false);
+      container.read(syncBootstrapProvider);
+      container.read(syncManagerProvider).start();
+      unawaited(_initializeCrashlytics());
+      unawaited(_initializeAnalytics(container.read(analyticsServiceProvider)));
+      unawaited(GoogleSignInInitializer.ensureInitialized());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const BudglyApp();
+}
+
+Future<void> _initializeAnalytics(AnalyticsService analytics) async {
   final posthogKey = dotenv.env['POSTHOG_API_KEY'];
   if (posthogKey != null && posthogKey.trim().isNotEmpty) {
-    await AnalyticsService.instance.initialize(
+    await analytics.initialize(
       projectToken: posthogKey,
       host: dotenv.env['POSTHOG_HOST'] ?? 'https://eu.i.posthog.com',
     );
   }
-  AnalyticsService.instance.track('app_started');
+  analytics.track('app_started');
 
   final user = FirebaseAuth.instance.currentUser;
   if (user != null) {
-    await AnalyticsService.instance.identify(user.uid);
+    await analytics.identify(user.uid);
   }
 }
 

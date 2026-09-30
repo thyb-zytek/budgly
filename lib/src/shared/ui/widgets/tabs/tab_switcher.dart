@@ -47,25 +47,20 @@ class TabSwitcher extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(50.0),
-                    color:
-                        selectedIndex == index
-                            ? theme.colorScheme.surfaceContainerHigh
-                            : Colors.transparent,
+                    color: selectedIndex == index
+                        ? theme.colorScheme.surfaceContainerHigh
+                        : Colors.transparent,
                   ),
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: BudglySpacing.xs,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: BudglySpacing.xs),
                     child: DefaultTextStyle(
                       style: TextStyle(
-                        color:
-                            selectedIndex == index
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
-                        fontWeight:
-                            selectedIndex == index
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                        color: selectedIndex == index
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                        fontWeight: selectedIndex == index
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                       child: tabs[index],
                     ),

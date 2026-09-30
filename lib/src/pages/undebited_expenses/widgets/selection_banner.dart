@@ -1,6 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
-import 'package:budgly/src/pages/undebited_expenses/view_model.dart';
+import 'package:budgly/src/pages/undebited_expenses/undebited_expenses_provider.dart';
 import 'package:flutter/material.dart';
 
 /// Flat selection strip pinned right above the expense list while the user is
@@ -11,32 +11,33 @@ import 'package:flutter/material.dart';
 /// expenses above stays untouched. The bottom action bar keeps the three
 /// actions shared with the normal per-card mode.
 class UndebitedSelectionBanner extends StatelessWidget {
-  final UndebitedExpensesViewModel viewModel;
+  final UndebitedExpensesState state;
+  final UndebitedExpenses notifier;
 
-  const UndebitedSelectionBanner({super.key, required this.viewModel});
+  const UndebitedSelectionBanner({
+    super.key,
+    required this.state,
+    required this.notifier,
+  });
 
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final selectionEnabled = !viewModel.isProcessing;
-    final count = viewModel.selectedCount;
+    final selectionEnabled = !state.processing;
+    final count = state.selectedCount;
 
     Widget scopeAction(VoidCallback? onPressed, String label) => Flexible(
-          fit: FlexFit.loose,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: TextButton(
-              onPressed: onPressed,
-              style: _pillButtonStyle(theme),
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        );
+      fit: FlexFit.loose,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: TextButton(
+          onPressed: onPressed,
+          style: _pillButtonStyle(theme),
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ),
+    );
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -78,17 +79,18 @@ class UndebitedSelectionBanner extends StatelessWidget {
                 tr.selected,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             SizedBox(width: BudglySpacing.xs),
             scopeAction(
-              selectionEnabled ? viewModel.selectAll : null,
+              selectionEnabled ? notifier.selectAll : null,
               tr.selectAll,
             ),
             scopeAction(
-              selectionEnabled ? viewModel.clearSelection : null,
+              selectionEnabled ? notifier.clearSelection : null,
               tr.deselectAll,
             ),
           ],
@@ -98,13 +100,13 @@ class UndebitedSelectionBanner extends StatelessWidget {
   }
 
   ButtonStyle _pillButtonStyle(ThemeData theme) => TextButton.styleFrom(
-        foregroundColor: theme.colorScheme.primary,
-        padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
-        minimumSize: const Size(0, 32),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        textStyle: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      );
+    foregroundColor: theme.colorScheme.primary,
+    padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
+    minimumSize: const Size(0, 32),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    visualDensity: VisualDensity.compact,
+    textStyle: theme.textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+    ),
+  );
 }

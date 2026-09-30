@@ -31,7 +31,6 @@ class CategoryDonutChart extends StatefulWidget {
 }
 
 class _CategoryDonutChartState extends State<CategoryDonutChart> {
-
   Key _animationKey = UniqueKey();
 
   @override
@@ -68,41 +67,43 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
           if (summary != null) widget.onCategoryTap?.call(summary);
         },
         child: SizedBox(
-        width: widget.size,
-        height: widget.size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            TweenAnimationBuilder<double>(
-              key: _animationKey,
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              builder: (context, progress, _) {
-                return CustomPaint(
-                  size: Size(widget.size, widget.size),
-                  painter: _DonutPainter(
-                    summaries: widget.summaries,
-                    referenceTotal: widget.referenceTotal,
-                    emptyColor: widget.emptyColor ?? theme.colorScheme.outline,
-                    progress: progress,
-                    strokeWidthFactor: widget.strokeWidthFactor,
-                  ),
-                );
-              },
-            ),
-            if (widget.centerChild != null)
-              Padding(
-                padding: const EdgeInsets.all(28),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: widget.centerChild,
-                ),
+          width: widget.size,
+          height: widget.size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              TweenAnimationBuilder<double>(
+                key: _animationKey,
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOutCubic,
+                builder: (context, progress, _) {
+                  return CustomPaint(
+                    size: Size(widget.size, widget.size),
+                    painter: _DonutPainter(
+                      summaries: widget.summaries,
+                      referenceTotal: widget.referenceTotal,
+                      emptyColor:
+                          widget.emptyColor ?? theme.colorScheme.outline,
+                      progress: progress,
+                      strokeWidthFactor: widget.strokeWidthFactor,
+                    ),
+                  );
+                },
               ),
-          ],
+              if (widget.centerChild != null)
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: widget.centerChild,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 
   CategoryExpenseSummary? _hitTest(Offset position) {

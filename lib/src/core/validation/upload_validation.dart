@@ -9,7 +9,6 @@ class UploadValidationException implements Exception {
   String toString() => 'UploadValidationException: $message';
 }
 
-
 void validateUploadConstraints({
   required int sizeBytes,
   required String fileExtension,
@@ -28,10 +27,8 @@ void validateUploadConstraints({
   }
 
   if (sizeBytes > AppConstants.maxUploadSizeBytes) {
-    final maxMb =
-        (AppConstants.maxUploadSizeBytes / (1024 * 1024)).toStringAsFixed(0);
-    throw UploadValidationException(
-      'File is too large (max ${maxMb}MB).',
-    );
+    final maxMb = (AppConstants.maxUploadSizeBytes / (1024 * 1024))
+        .toStringAsFixed(0);
+    throw UploadValidationException('File is too large (max ${maxMb}MB).');
   }
 }

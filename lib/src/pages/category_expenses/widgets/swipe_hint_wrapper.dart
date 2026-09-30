@@ -64,18 +64,18 @@ class SwipeHintWrapperState extends State<SwipeHintWrapper>
     return Stack(
       children: [
         widget.child,
-          if (!_stopped)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: ListenableBuilder(
-                  listenable: _controller,
-                  builder: (context, _) => SwipeHintContent(
-                    progress: _controller.value,
-                    isDebited: widget.isDebited,
-                  ),
+        if (!_stopped)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ListenableBuilder(
+                listenable: _controller,
+                builder: (context, _) => SwipeHintContent(
+                  progress: _controller.value,
+                  isDebited: widget.isDebited,
                 ),
               ),
             ),
+          ),
       ],
     );
   }

@@ -48,8 +48,8 @@ class StepIndicator extends StatelessWidget {
                   color: isActive
                       ? theme.colorScheme.primary
                       : isPast
-                          ? theme.colorScheme.primary.withAlpha(120)
-                          : theme.colorScheme.outlineVariant,
+                      ? theme.colorScheme.primary.withAlpha(120)
+                      : theme.colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(4),
                 ),
               );

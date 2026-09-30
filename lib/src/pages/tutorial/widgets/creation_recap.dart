@@ -1,19 +1,24 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
-import 'package:budgly/src/pages/tutorial/view_model.dart';
+import 'package:budgly/src/pages/tutorial/tutorial_provider.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
 import 'package:flutter/material.dart';
 
 class CreationRecap extends StatelessWidget {
-  final TutorialViewModel viewModel;
-
-  const CreationRecap({super.key, required this.viewModel});
+  final TutorialState state;
+  final String accountName;
+  const CreationRecap({
+    super.key,
+    required this.state,
+    required this.accountName,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
-
+    final picture = state.accountPicture;
+    final initial = accountName.isNotEmpty ? accountName[0].toUpperCase() : 'C';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -25,10 +30,11 @@ class CreationRecap extends StatelessWidget {
               spacing: 16,
               children: [
                 Avatar(
-                  initial: viewModel.accountInitial,
-                  backgroundColor: viewModel.accountColor,
-                  picture: viewModel.accountPicture,
-                  isLocalPicture: viewModel.isLocalPicture,
+                  initial: initial,
+                  backgroundColor: state.accountColor,
+                  picture: picture,
+                  isLocalPicture:
+                      picture != null && !picture.startsWith('http'),
                   size: 48,
                 ),
                 Expanded(
@@ -36,7 +42,7 @@ class CreationRecap extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        viewModel.accountNameController.text,
+                        accountName,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -45,7 +51,7 @@ class CreationRecap extends StatelessWidget {
                       ),
                       Text(
                         tr.tutorialCategoryCount(
-                          viewModel.createdCategories.length,
+                          state.createdCategories.length,
                         ),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -58,14 +64,16 @@ class CreationRecap extends StatelessWidget {
             ),
           ),
         ),
-
-        if (viewModel.createdCategories.isNotEmpty)
+        if (state.createdCategories.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(left: BudglySpacing.xxl, top: BudglySpacing.md),
+            padding: EdgeInsets.only(
+              left: BudglySpacing.xxl,
+              top: BudglySpacing.md,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 12,
-              children: viewModel.createdCategories.map((category) {
+              children: state.createdCategories.map((category) {
                 final color = category.color ?? theme.colorScheme.primary;
                 return Row(
                   spacing: 12,
@@ -78,8 +86,16 @@ class CreationRecap extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: category.icon != null
-                          ? Icon(category.icon!.toIconData(), size: 16, color: color)
-                          : Icon(Icons.category_rounded, size: 16, color: color),
+                          ? Icon(
+                              category.icon!.toIconData(),
+                              size: 16,
+                              color: color,
+                            )
+                          : Icon(
+                              Icons.category_rounded,
+                              size: 16,
+                              color: color,
+                            ),
                     ),
                     Expanded(
                       child: Text(
