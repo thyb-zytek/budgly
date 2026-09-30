@@ -79,13 +79,17 @@ class ExpensePeriodCache {
     for (final serverExpense in serverExpenses) {
       final id = serverExpense.id;
       if (id != null && _pendingDeletes.contains(id)) continue;
-      final resolved = id == null ? serverExpense : (_pending[id] ?? serverExpense);
+      final resolved = id == null
+          ? serverExpense
+          : (_pending[id] ?? serverExpense);
       if (resolved.id == null || seen.add(resolved.id!)) merged.add(resolved);
     }
 
     for (final local in existing) {
       final id = local.id;
-      if (id == null || seen.contains(id) || _pendingDeletes.contains(id)) continue;
+      if (id == null || seen.contains(id) || _pendingDeletes.contains(id)) {
+        continue;
+      }
       if (_pending.containsKey(id) || _optimisticIds.contains(id)) {
         merged.add(_pending[id] ?? local);
         seen.add(id);
@@ -100,9 +104,9 @@ class ExpensePeriodCache {
   /// the server has not acknowledged yet. Used by the account-wide refresh so
   /// a stale server snapshot never drops an unconfirmed mutation.
   List<Expense> pendingForAccount(String accountId) => [
-        for (final expense in _pending.values)
-          if (expense.accountId == accountId) expense,
-      ];
+    for (final expense in _pending.values)
+      if (expense.accountId == accountId) expense,
+  ];
 
   bool isPendingDelete(String? expenseId) =>
       _pendingDeletes.contains(expenseId);
@@ -184,6 +188,28 @@ class ExpensePeriodCache {
       }
     }
     // Unloaded caches remain absent and will be populated on the next load.
+  }
+
+  List<Expense> allCachedForAccount(String accountId) {
+    final byId = <String, Expense>{};
+    for (final entry in _cache.entries) {
+      if (!entry.key.startsWith('$accountId|')) continue;
+      for (final expense in entry.value) {
+        if (expense.id != null) byId[expense.id!] = expense;
+      }
+    }
+    final result = byId.values.toList()
+      ..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    return result;
+  }
+
+  Expense? findById(String expenseId) {
+    for (final list in _cache.values) {
+      for (final expense in list) {
+        if (expense.id == expenseId) return expense;
+      }
+    }
+    return _pending[expenseId];
   }
 
   void clear() {

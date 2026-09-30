@@ -1,245 +1,182 @@
 import 'dart:async';
 
+import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
-import 'package:budgly/src/core/auth/auth_exception.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/auth/auth_service.dart';
-import 'package:budgly/src/stores/profile.dart';
-import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:budgly/src/services/offline/local_cache.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
-import 'package:budgly/src/services/accounts/accounts_service.dart';
-import 'package:budgly/src/services/categories/categories_service.dart';
-import 'package:budgly/src/services/expenses/expenses_service.dart';
-import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
-import 'package:budgly/src/services/analytics/analytics_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProfileService implements Listenable {
-  static ProfileService? _instance;
-
-  static ProfileService get instance {
-    _instance ??= ProfileService._();
-    return _instance!;
-  }
-
-  final ProfileStore _store;
+/// Owns the user's profile document and preferences (theme/locale/currency),
+/// and orchestrates sign-out for *auth and sync* concerns only.
+///
+/// Deliberately does not know about accounts/categories/expenses/budgets:
+/// invalidating their caches on logout is the composition root's job
+/// (`ProfileSession.signOut`, which already has `ref` to reach every service
+/// and every session notifier), not this service's. A previous version built
+/// four other services here purely to call their `invalidateCache()` on
+/// logout — a services-layer class orchestrating unrelated services is itself
+/// a design smell, independent of the DI-fallback risk it also carried.
+class ProfileService {
   final AuthService _authService;
   final UserProfileSupabase _profileSupabase;
-  final LocalCache _localCache = LocalCache();
-  final SyncQueue _syncQueue = SyncQueue.instance;
+  final LocalCache _localCache;
+  final SyncQueue _syncQueue;
+  final AnalyticsService _analytics;
+  final SyncManager _syncManager;
 
   SharedPreferences? _prefs;
-  Future<void>? _loadProfileFuture;
-
-  static const String _themeKey = AppConstants.themeKey;
-  static const String _localeKey = AppConstants.localeKey;
-  static const String _currencyKey = AppConstants.currencyKey;
-  static const String _amountDecimalPlacesKey = 'amount_decimal_places';
+  Future<User?>? _loadProfileFuture;
 
   ProfileService({
-    ProfileStore? store,
     AuthService? authService,
     UserProfileSupabase? profileSupabase,
-  })  : _store = store ?? ProfileStore.instance,
-        _authService = authService ?? AuthService.instance,
-        _profileSupabase = profileSupabase ?? UserProfileSupabase() {
-    SyncManager.instance.registerHandler('user_profiles', _handlePendingSync);
+    required AnalyticsService analytics,
+    required this._syncManager,
+    required this._syncQueue,
+    LocalCache? localCache,
+  }) : _localCache = localCache ?? LocalCache(),
+       // Production wires every dependency through Riverpod. The fallbacks
+       // below only exist for tests that build the service directly.
+       _authService = authService ?? AuthService(analytics: analytics),
+       _profileSupabase = profileSupabase ?? UserProfileSupabase(),
+       _analytics = analytics;
+
+  void registerSyncHandler(SyncManager manager) {
+    manager.registerHandler('user_profiles', _handlePendingSync);
   }
-
-  ProfileService._() : this();
-
-  User? get currentUser => _store.currentUser;
-  ThemeMode get themeMode => _store.themeMode;
-  Locale get locale => _store.locale;
-  String get currency => _store.currency;
-  int get amountDecimalPlaces => _store.amountDecimalPlaces;
-  bool get onboardingCompleted => _store.currentUser?.profile?.onboardingCompleted ?? false;
-
-  @override
-  void addListener(VoidCallback listener) => _store.addListener(listener);
-  @override
-  void removeListener(VoidCallback listener) => _store.removeListener(listener);
 
   Future<void> init() async {
     _prefs ??= await SharedPreferences.getInstance();
+  }
+
+  /// RL-01 §1.3 — fast local mirror of `UserProfile`'s preference fields,
+  /// scoped to [uid] so a device shared by several accounts never paints one
+  /// user's theme/locale/currency for another.
+  ///
+  /// [uid] is the Firebase uid of the locally signed-in user, or `null` when
+  /// nobody is signed in (e.g. app restarted after sign-out): in that case
+  /// system defaults are returned rather than whichever account's settings
+  /// happened to be cached last, since there is no current owner for that
+  /// cached data.
+  Future<
+    ({
+      ThemeMode themeMode,
+      Locale locale,
+      String currency,
+      int amountDecimalPlaces,
+    })
+  >
+  loadLocalPreferences({required String? uid}) async {
+    if (uid == null) {
+      return (
+        themeMode: ThemeMode.system,
+        locale: const Locale(AppConstants.defaultLocale),
+        currency: AppConstants.defaultCurrency,
+        amountDecimalPlaces: 2,
+      );
+    }
+    _prefs ??= await SharedPreferences.getInstance();
+    final themeIndex = _prefs!.getInt(AppConstants.themeKey(uid));
+    return (
+      themeMode: themeIndex == null
+          ? ThemeMode.system
+          : ThemeMode.values[themeIndex.clamp(0, ThemeMode.values.length - 1)],
+      locale: Locale(
+        _prefs!.getString(AppConstants.localeKey(uid)) ??
+            AppConstants.defaultLocale,
+      ),
+      currency:
+          _prefs!.getString(AppConstants.currencyKey(uid)) ??
+          AppConstants.defaultCurrency,
+      amountDecimalPlaces:
+          (_prefs!.getInt(AppConstants.amountDecimalPlacesKey(uid)) ?? 2).clamp(
+            0,
+            2,
+          ),
+    );
+  }
+
+  /// Write-through mirror of the profile-derived preferences into the local,
+  /// per-[uid] cache used by [loadLocalPreferences] for the next cold start.
+  /// Called whenever `ProfileSession` applies a fresh/cached `UserProfile`
+  /// (not only from the explicit Preferences screen), so the local snapshot
+  /// never lags behind what was last known about this user.
+  Future<void> cacheLocalPreferences(
+    String uid, {
+    required ThemeMode themeMode,
+    required Locale locale,
+    required String currency,
+    required int amountDecimalPlaces,
+  }) async {
+    _prefs ??= await SharedPreferences.getInstance();
     await Future.wait([
-      _loadLocalPreferences(),
-      _hydrateCachedProfile(),
+      _prefs!.setInt(AppConstants.themeKey(uid), themeMode.index),
+      _prefs!.setString(AppConstants.localeKey(uid), locale.languageCode),
+      _prefs!.setString(AppConstants.currencyKey(uid), currency),
+      _prefs!.setInt(
+        AppConstants.amountDecimalPlacesKey(uid),
+        amountDecimalPlaces.clamp(0, 2),
+      ),
     ]);
   }
 
-  Future<void> _hydrateCachedProfile() async {
-    final firebaseUser = _authService.firebaseUser;
-    if (firebaseUser == null) return;
-
-    final cachedProfile = await _localCache.loadProfile(firebaseUser.uid);
-    if (cachedProfile != null) {
-      _store.setUser(
-        User.fromFirebaseUser(firebaseUser, profile: cachedProfile),
-      );
-      _applyProfilePreferences(cachedProfile);
-    }
-  }
-
-  /// Refreshes the profile from the backend without making startup/navigation
-  /// wait for the network. Cached state remains visible if the refresh fails.
-  Future<void> refreshUserProfileInBackground() async {
-    final userId = _authService.firebaseUser?.uid;
-    if (userId == null) return;
-    await _refreshProfileFromRemote(userId);
-  }
-
-  Future<void> _loadLocalPreferences() async {
-    if (_prefs == null) return;
-
-    // The user's profile is authoritative for preferences once it is loaded
-    // (cached or from the server). Without this guard, preferences persisted
-    // for a previous user — or a fresh device default — could clobber the
-    // connected profile's values on startup.
-    if (_store.currentUser != null) return;
-
-    final themeIndex = _prefs!.getInt(_themeKey);
-    final theme = themeIndex != null
-        ? ThemeMode.values[themeIndex.clamp(0, ThemeMode.values.length - 1)]
-        : ThemeMode.system;
-
-    final languageCode = _prefs!.getString(_localeKey) ?? AppConstants.defaultLocale;
-    final currency = _prefs!.getString(_currencyKey) ?? AppConstants.defaultCurrency;
-    final amountDecimalPlaces = _prefs!.getInt(_amountDecimalPlacesKey) ?? 2;
-
-    _store.setPreferences(
-      themeMode: theme,
-      locale: Locale(languageCode),
-      currency: currency,
-      amountDecimalPlaces: amountDecimalPlaces,
-    );
-  }
-
-  Future<void> syncPreferencesWithServer(User user) async {
-    final profile = user.profile;
-    if (profile == null) return;
-    try {
-      _applyProfilePreferences(profile);
-
-      await _prefs?.setInt(_themeKey, _store.themeMode.index);
-      await _prefs?.setString(_localeKey, profile.language);
-      await _prefs?.setString(_currencyKey, profile.currency);
-      await _prefs?.setInt(_amountDecimalPlacesKey, profile.amountDecimalPlaces);
-    } catch (e) {
-      AppLogger.error('Error syncing preferences with server: $e', e);
-    }
-  }
-
-  /// Mirrors a profile's preferences into the store so the UI reflects the
-  /// connected user's configuration immediately, without waiting for a remote
-  /// round-trip (or a background refresh that may be skipped while pending
-  /// profile mutations exist).
-  void _applyProfilePreferences(UserProfile profile) {
-    _store.setPreferences(
-      themeMode: _getThemeModeFromString(profile.themeMode),
-      locale: Locale(profile.language),
-      currency: profile.currency,
-      amountDecimalPlaces: profile.amountDecimalPlaces,
-    );
-  }
-
-  ThemeMode _getThemeModeFromString(String modeString) {
-    return switch (modeString) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
-  }
-
-  Future<void> loadUserProfile({bool forceRefresh = false}) async {
-    if (_store.hasLoaded && !forceRefresh && _store.currentUser != null) return;
+  Future<User?> loadUserProfile({bool forceRefresh = false}) async {
     if (_loadProfileFuture != null) return _loadProfileFuture!;
-
-    final future = _loadUserProfile();
+    final user = _authService.firebaseUser;
+    if (user == null) return null;
+    final cached = await _localCache.loadProfile(user.uid);
+    if (cached != null && !forceRefresh) {
+      final localUser = User.fromFirebaseUser(user, profile: cached);
+      unawaited(_refreshProfileFromRemote(user.uid));
+      return localUser;
+    }
+    final future = _loadProfile(user.uid, cached);
     _loadProfileFuture = future;
     try {
-      await future;
+      return await future;
     } finally {
       if (identical(_loadProfileFuture, future)) _loadProfileFuture = null;
     }
   }
 
-  Future<void> _loadUserProfile() async {
-    final firebaseUser = _authService.firebaseUser;
-    if (firebaseUser == null) return;
-
-    final cachedProfile = await _localCache.loadProfile(firebaseUser.uid);
-    if (cachedProfile != null) {
-      final localUser = User.fromFirebaseUser(
-        firebaseUser,
-        profile: cachedProfile,
-      );
-      _store.setUser(localUser);
-      _applyProfilePreferences(cachedProfile);
-
-      // A cached profile is sufficient for routing and UI. A forced refresh
-      // still happens, but never blocks the caller when local data exists.
-      unawaited(_refreshProfileFromRemote(firebaseUser.uid));
-      return;
-    }
-
-    await _refreshProfileFromRemote(firebaseUser.uid);
+  Future<User?> _loadProfile(String userId, UserProfile? cached) async {
+    return _refreshProfileFromRemote(userId);
   }
 
-  /// Forces a fresh fetch of the current user's profile from the backend.
-  ///
-  /// Unlike [loadUserProfile], this always performs a network round-trip (it is
-  /// not short-circuited by a local cache or a pending sync operation) and it
-  /// propagates failures to the caller so the UI can surface an offline or
-  /// network error instead of silently keeping stale data.
-  Future<void> refreshFromServer() async {
-    final firebaseUser = _authService.firebaseUser;
-    if (firebaseUser == null) return;
-
-    final user = await _authService
-        .reloadCurrentUser()
-        .timeout(AppConstants.networkTimeout);
-    if (user == null) return;
-
-    _store.setUser(user);
+  Future<User?> refreshFromServer() async {
+    final user = await _authService.reloadCurrentUser().timeout(
+      AppConstants.networkTimeout,
+    );
+    if (user == null) return null;
     if (user.profile != null) {
       await _localCache.saveProfile(user.id, user.profile!);
     }
-    await syncPreferencesWithServer(user);
+    return user;
   }
 
-  /// Replays every pending local mutation (accounts, profile, categories).
-  ///
-  /// Returns `true` when the whole queue was flushed (i.e. the device is
-  /// online and all local mutations reached the server), `false` when at least
-  /// one operation is still pending (offline / server unreachable).
-  static Future<bool> flushPendingMutations() async {
-    await SyncManager.instance.flush(forceRetry: true);
-    await SyncManager.instance.waitForIdle();
-    return (await SyncQueue.instance.all()).isEmpty;
-  }
-
-  Future<void> _refreshProfileFromRemote(String userId) async {
+  Future<User?> _refreshProfileFromRemote(String userId) async {
     if (_authService.firebaseUser?.uid != userId ||
         await _syncQueue.hasPending(type: 'user_profiles', entityId: userId)) {
-      return;
+      return null;
     }
     try {
-      final user = await _authService
-          .reloadCurrentUser()
-          .timeout(AppConstants.networkTimeout);
-      if (user != null && _authService.firebaseUser?.uid == userId) {
-        _store.setUser(user);
-        if (user.profile != null) {
-          await _localCache.saveProfile(user.id, user.profile!);
-        }
-        await syncPreferencesWithServer(user);
+      final user = await _authService.reloadCurrentUser().timeout(
+        AppConstants.networkTimeout,
+      );
+      if (user != null &&
+          _authService.firebaseUser?.uid == userId &&
+          user.profile != null) {
+        await _localCache.saveProfile(user.id, user.profile!);
       }
+      return user;
     } on AuthenticationException catch (e) {
       const invalidatingCodes = {
         'user-disabled',
@@ -247,98 +184,100 @@ class ProfileService implements Listenable {
         'user-token-expired',
         'invalid-user-token',
       };
-      if (invalidatingCodes.contains(e.code)) {
-        await signOut();
-        return;
-      }
-      AppLogger.debug('Remote profile refresh unavailable: $e');
+      if (invalidatingCodes.contains(e.code)) await _authService.signOut();
+      return null;
     } catch (e) {
       AppLogger.debug('Remote profile refresh unavailable: $e');
+      return null;
     }
   }
 
-  Future<void> updateUserName(String name) async {
-    final user = _store.currentUser;
-    if (user == null || user.profile == null) return;
-
-    final updatedProfile = user.profile!.copyWith(fullName: name);
-    _store.setUser(user.copyWith(profile: updatedProfile));
-    await _localCache.saveProfile(user.id, updatedProfile);
-    AnalyticsService.instance.track('profile_updated');
-
-    await _enqueueProfileUpdate({'full_name': name});
+  Future<User> updateUserName(User user, String name) async {
+    final profile = user.profile;
+    if (profile == null) return user;
+    final updatedProfile = profile.copyWith(fullName: name);
+    final updated = user.copyWith(profile: updatedProfile);
+    await _enqueueProfileUpdate(user.id, {'full_name': name});
+    await _mirrorProfile(user.id, updatedProfile);
+    _analytics.track('profile_updated');
+    return updated;
   }
 
-  Future<void> changePassword(String oldPassword, String newPassword) async {
-    final user = await _authService.changePassword(oldPassword, newPassword);
-    _store.setUser(user);
-  }
+  Future<User> changePassword(String oldPassword, String newPassword) =>
+      _authService.changePassword(oldPassword, newPassword);
 
-  Future<void> setThemeMode(ThemeMode mode) async {
-    if (_store.themeMode == mode) return;
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs!.setInt(_themeKey, mode.index);
-    _store.setPreferences(themeMode: mode);
-    await _queueProfilePreferences();
-  }
-
-  Future<void> setLocale(Locale newLocale) async {
-    if (_store.locale.languageCode == newLocale.languageCode) return;
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs!.setString(_localeKey, newLocale.languageCode);
-    _store.setPreferences(locale: newLocale);
-    await _queueProfilePreferences();
-  }
-
-  Future<void> setCurrency(String newCurrency) async {
-    if (_store.currency == newCurrency) return;
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs!.setString(_currencyKey, newCurrency);
-    _store.setPreferences(currency: newCurrency);
-    await _queueProfilePreferences();
-  }
-
-  Future<void> setAmountDecimalPlaces(int decimalPlaces) async {
-    final value = decimalPlaces.clamp(0, 2);
-    if (_store.amountDecimalPlaces == value) return;
-    _prefs ??= await SharedPreferences.getInstance();
-    await _prefs!.setInt(_amountDecimalPlacesKey, value);
-    _store.setPreferences(amountDecimalPlaces: value);
-    await _queueProfilePreferences();
-  }
-
-  Future<void> _queueProfilePreferences() async {
-    final user = _store.currentUser;
-    if (user == null || user.profile == null) return;
-
-    final updatedProfile = user.profile!.copyWith(
-      themeMode: _store.themeMode.name,
-      language: _store.locale.languageCode,
-      currency: _store.currency,
-      amountDecimalPlaces: _store.amountDecimalPlaces,
+  Future<User> savePreferences(
+    User user, {
+    required ThemeMode themeMode,
+    required Locale locale,
+    required String currency,
+    required int amountDecimalPlaces,
+  }) async {
+    final value = amountDecimalPlaces.clamp(0, 2);
+    await cacheLocalPreferences(
+      user.id,
+      themeMode: themeMode,
+      locale: locale,
+      currency: currency,
+      amountDecimalPlaces: value,
     );
-    _store.setUser(user.copyWith(profile: updatedProfile));
-    await _localCache.saveProfile(user.id, updatedProfile);
-    AnalyticsService.instance.track('profile_updated');
-
-    await _enqueueProfileUpdate({
-      'theme_mode': _store.themeMode.name,
-      'language': _store.locale.languageCode,
-      'currency': _store.currency,
-      'amount_decimal_places': _store.amountDecimalPlaces,
+    final profile = user.profile;
+    if (profile == null) return user;
+    final updatedProfile = profile.copyWith(
+      themeMode: themeMode.name,
+      language: locale.languageCode,
+      currency: currency,
+      amountDecimalPlaces: value,
+    );
+    final updated = user.copyWith(profile: updatedProfile);
+    await _enqueueProfileUpdate(user.id, {
+      'theme_mode': themeMode.name,
+      'language': locale.languageCode,
+      'currency': currency,
+      'amount_decimal_places': value,
     });
+    await _mirrorProfile(user.id, updatedProfile);
+    _analytics.track('profile_updated');
+    return updated;
   }
 
-  Future<void> _enqueueProfileUpdate(Map<String, dynamic> updates) async {
-    final user = _store.currentUser;
-    if (user == null) return;
+  Future<User> completeOnboarding(User user) async {
+    final profile = user.profile;
+    if (profile == null || profile.onboardingCompleted) return user;
+    final updatedProfile = profile.copyWith(onboardingCompleted: true);
+    final updated = user.copyWith(profile: updatedProfile);
+    await _enqueueProfileUpdate(user.id, {'onboarding_completed': true});
+    await _mirrorProfile(user.id, updatedProfile);
+    _analytics.track('onboarding_completed');
+    return updated;
+  }
+
+  /// Persists the patch in the durable queue (failures propagate: the caller
+  /// must not present a change that was not persisted) and requests a replay.
+  ///
+  /// Successive patches for the same user are merged by [SyncQueue.enqueue],
+  /// so `onboarding_completed` and a later preference change both reach the
+  /// server.
+  Future<void> _enqueueProfileUpdate(
+    String userId,
+    Map<String, dynamic> updates,
+  ) async {
     await _syncQueue.enqueue(
-      id: 'profile:update:${user.id}',
+      id: 'profile:update:$userId',
       type: 'user_profiles',
       operation: 'update',
-      payload: {'id': user.id, ...updates},
+      payload: {'id': userId, ...updates},
     );
-    unawaited(SyncManager.instance.flush());
+    unawaited(_syncManager.flush());
+  }
+
+  /// Best-effort cache mirror written *after* the durable queue entry.
+  Future<void> _mirrorProfile(String userId, UserProfile profile) async {
+    try {
+      await _localCache.saveProfile(userId, profile);
+    } catch (e, st) {
+      AppLogger.error('Failed to mirror profile change to local cache', e, st);
+    }
   }
 
   Future<void> _handlePendingSync(PendingSync operation) async {
@@ -347,45 +286,44 @@ class ProfileService implements Listenable {
         'Unknown profile sync operation: ${operation.operation}',
       );
     }
-    final payload = Map<String, dynamic>.from(operation.payload)
-      ..remove('id');
-    await _profileSupabase.updateProfile(
-      operation.payload['id'] as String,
-      payload,
-    ).timeout(AppConstants.networkTimeout);
+    final payload = Map<String, dynamic>.from(operation.payload)..remove('id');
+    await _profileSupabase
+        .updateProfile(operation.payload['id'] as String, payload)
+        .timeout(AppConstants.networkTimeout);
   }
 
-  Future<void> completeOnboarding() async {
-    final user = _store.currentUser;
-    if (user == null || user.profile?.onboardingCompleted == true) return;
+  /// Bounded wait used before sign-out so the last local changes get a chance
+  /// to reach the server while the session is still valid.
+  static const _logoutFlushTimeout = Duration(seconds: 15);
 
-    final updatedProfile = user.profile!.copyWith(onboardingCompleted: true);
-    _store.setUser(user.copyWith(profile: updatedProfile));
-    await _localCache.saveProfile(user.id, updatedProfile);
-    AnalyticsService.instance.track('onboarding_completed');
-
-    await _enqueueProfileUpdate({'onboarding_completed': true});
+  /// Replays the queue (ignoring backoff) and reports whether the current
+  /// user has nothing left pending. Never throws on a slow or offline network.
+  Future<bool> flushPendingMutations() async {
+    try {
+      await _syncManager.flush(forceRetry: true).timeout(_logoutFlushTimeout);
+      await _syncManager.waitForIdle().timeout(_logoutFlushTimeout);
+    } on TimeoutException {
+      AppLogger.debug('Pending sync flush timed out before sign-out');
+    }
+    return await _pendingCountForCurrentUser() == 0;
   }
 
+  Future<int> _pendingCountForCurrentUser() async =>
+      (await _syncQueue.allForCurrentOwner()).length;
+
+  /// Signs out **without** requiring an empty queue.
+  ///
+  /// A slow/offline network or an operation rejected by the server must not
+  /// trap the user in the app. Nothing is lost: every queue entry carries the
+  /// uid that created it, is only replayed for that user, and stays durable on
+  /// the device until that user signs in again.
   Future<void> signOut() async {
-    // Re-register all replay handlers before waiting. This matters after an
-    // app restart where a persisted queue can exist before the corresponding
-    // screen/service has been constructed in memory.
-    AccountsService.instance;
-    CategoriesService.instance;
-    ExpensesService.instance;
-    AccountBudgetsService.instance;
-
     final synced = await flushPendingMutations();
     if (!synced) {
-      throw StateError('Pending offline changes must be synchronized before logout');
+      final pending = await _pendingCountForCurrentUser();
+      AppLogger.debug('Signing out with $pending pending sync operation(s)');
+      _analytics.track('logout_with_pending_sync', {'count': pending});
     }
-
     await _authService.signOut();
-    AccountsService.instance.clearLocalAccounts();
-    CategoriesService.instance.invalidateCache();
-    ExpensesService.instance.invalidateCache();
-    AccountBudgetsService.instance.invalidateCache();
-    _store.clear();
   }
 }

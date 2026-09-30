@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/expense/expense.dart';
@@ -8,13 +10,14 @@ import 'package:budgly/src/models/budget/period.dart';
 
 class ExpenseFirestore {
   ExpenseFirestore({FirebaseFirestore? firestore, FirebaseAuth? auth})
-      : _firestoreInput = firestore,
-        _authInput = auth;
+    : _firestoreInput = firestore,
+      _authInput = auth;
 
   final FirebaseFirestore? _firestoreInput;
   final FirebaseAuth? _authInput;
 
-  FirebaseFirestore get _firestore => _firestoreInput ?? FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore =>
+      _firestoreInput ?? FirebaseFirestore.instance;
   FirebaseAuth get _auth => _authInput ?? FirebaseAuth.instance;
 
   String get _currentUserId {
@@ -37,14 +40,14 @@ class ExpenseFirestore {
     bool includeRecurring = true,
   }) async {
     final start = Timestamp.fromDate(period.startOfMonth);
-    final end = Timestamp.fromDate(period.endOfMonth);
+    final endExclusive = Timestamp.fromDate(period.startOfNextMonth);
 
     Query<Map<String, dynamic>> oneOffQuery = _collection
         .where('accountId', isEqualTo: accountId)
         .where('categoryId', isEqualTo: categoryId)
         .where('recurrence', isEqualTo: 'none')
         .where('debitDate', isGreaterThanOrEqualTo: start)
-        .where('debitDate', isLessThanOrEqualTo: end)
+        .where('debitDate', isLessThan: endExclusive)
         .orderBy('debitDate', descending: true);
     if (startAfter != null) {
       oneOffQuery = oneOffQuery.startAfterDocument(startAfter);
@@ -57,8 +60,7 @@ class ExpenseFirestore {
               .where('accountId', isEqualTo: accountId)
               .where('categoryId', isEqualTo: categoryId)
               .where('recurrence', isNotEqualTo: 'none')
-              .orderBy('recurrence')
-              .orderBy('debitDate', descending: true)
+              .where('debitDate', isLessThan: endExclusive)
               .get()
         : Future.value(null);
 
@@ -78,9 +80,10 @@ class ExpenseFirestore {
         recurringSnapshot.docs
             .map((doc) => Expense.fromMap(doc.id, doc.data()))
             .where((expense) {
-              final endDate = expense.endOfEndDate;
-              return !expense.debitDate.isAfter(period.endOfMonth) &&
-                  (endDate == null || !endDate.isBefore(period.startOfMonth));
+              final endExclusive = expense.endDateExclusive;
+              return expense.debitDate.isBefore(period.startOfNextMonth) &&
+                  (endExclusive == null ||
+                      endExclusive.isAfter(period.startOfMonth));
             }),
       );
     }
@@ -102,13 +105,13 @@ class ExpenseFirestore {
     Source source = Source.server,
   }) async {
     final start = Timestamp.fromDate(period.startOfMonth);
-    final end = Timestamp.fromDate(period.endOfMonth);
+    final endExclusive = Timestamp.fromDate(period.startOfNextMonth);
 
     Query<Map<String, dynamic>> oneOffQuery = _collection
         .where('accountId', isEqualTo: accountId)
         .where('recurrence', isEqualTo: 'none')
         .where('debitDate', isGreaterThanOrEqualTo: start)
-        .where('debitDate', isLessThanOrEqualTo: end)
+        .where('debitDate', isLessThan: endExclusive)
         .orderBy('debitDate', descending: true);
     if (categoryId != null) {
       oneOffQuery = oneOffQuery.where('categoryId', isEqualTo: categoryId);
@@ -117,8 +120,7 @@ class ExpenseFirestore {
     Query<Map<String, dynamic>> recurringQuery = _collection
         .where('accountId', isEqualTo: accountId)
         .where('recurrence', isNotEqualTo: 'none')
-        .orderBy('recurrence')
-        .orderBy('debitDate', descending: true);
+        .where('debitDate', isLessThan: endExclusive);
     // Recurring occurrences can carry a persisted category exception. The
     // base document may therefore belong to another category even though an
     // occurrence is displayed in this one. Keep the recurring query broad and
@@ -140,9 +142,9 @@ class ExpenseFirestore {
 
     return expenses.where((expense) {
       if (!expense.isRecurring) return true;
-      final endDate = expense.endOfEndDate;
-      return !expense.debitDate.isAfter(period.endOfMonth) &&
-          (endDate == null || !endDate.isBefore(period.startOfMonth));
+      final endExclusive = expense.endDateExclusive;
+      return expense.debitDate.isBefore(period.startOfNextMonth) &&
+          (endExclusive == null || endExclusive.isAfter(period.startOfMonth));
     }).toList();
   }
 
@@ -152,6 +154,22 @@ class ExpenseFirestore {
   }) async {
     final snapshot = await _collection
         .where('accountId', isEqualTo: accountId)
+        .orderBy('debitDate', descending: true)
+        .get(GetOptions(source: source))
+        .timeout(AppConstants.networkTimeout);
+    return snapshot.docs
+        .map((doc) => Expense.fromMap(doc.id, doc.data()))
+        .toList();
+  }
+
+  Future<List<Expense>> listByAccountBefore(
+    String accountId,
+    DateTime endExclusive, {
+    Source source = Source.server,
+  }) async {
+    final snapshot = await _collection
+        .where('accountId', isEqualTo: accountId)
+        .where('debitDate', isLessThan: Timestamp.fromDate(endExclusive))
         .orderBy('debitDate', descending: true)
         .get(GetOptions(source: source))
         .timeout(AppConstants.networkTimeout);
@@ -179,7 +197,13 @@ class ExpenseFirestore {
     if (previous.id == null) return null;
 
     try {
-      final nextRef = _collection.doc();
+      // The next version must have a deterministic identity before the batch
+      // is sent. If Firestore accepts the batch but the response is lost, the
+      // sync queue can replay the exact same create without producing a second
+      // occurrence.
+      final nextRef = next.id == null
+          ? _collection.doc()
+          : _collection.doc(next.id);
       final batch = _firestore.batch();
       batch.update(_collection.doc(previous.id), previous.toUpdateMap());
       batch.set(nextRef, next.toCreateMap());
@@ -212,35 +236,65 @@ class ExpenseFirestore {
     }
   }
 
-  Future<void> deleteByAccountId(String accountId) async {
-    try {
-      final snapshot = await _collection
-          .where('accountId', isEqualTo: accountId)
-          .get(const GetOptions(source: Source.cache));
-      if (snapshot.docs.isEmpty) return;
-      final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-    } catch (e) {
-      AppLogger.debug('Cached expense deletion unavailable: $e');
-    }
-  }
+  /// Firestore caps a batch at 500 writes.
+  static const _batchLimit = 400;
 
-  Future<void> deleteByCategoryId(String categoryId) async {
-    try {
-      final snapshot = await _collection
-          .where('categoryId', isEqualTo: categoryId)
-          .get(const GetOptions(source: Source.cache));
-      if (snapshot.docs.isEmpty) return;
+  /// Deletes every expense of [accountId].
+  ///
+  /// [source] decides which documents are found: `serverAndCache` (default)
+  /// answers from the local cache when offline, `server` also finds documents
+  /// this device never cached. With [awaitAck] `false` the batch is handed to
+  /// Firestore's durable queue and the call returns without waiting for the
+  /// server (which never answers while offline).
+  Future<void> deleteByAccountId(
+    String accountId, {
+    Source source = Source.serverAndCache,
+    bool awaitAck = true,
+  }) =>
+      _deleteWhere('accountId', accountId, source: source, awaitAck: awaitAck);
+
+  /// Deletes every expense of [categoryId]; see [deleteByAccountId].
+  Future<void> deleteByCategoryId(
+    String categoryId, {
+    Source source = Source.serverAndCache,
+    bool awaitAck = true,
+  }) => _deleteWhere(
+    'categoryId',
+    categoryId,
+    source: source,
+    awaitAck: awaitAck,
+  );
+
+  Future<void> _deleteWhere(
+    String field,
+    String value, {
+    required Source source,
+    required bool awaitAck,
+  }) async {
+    final snapshot = await _collection
+        .where(field, isEqualTo: value)
+        .get(GetOptions(source: source))
+        .timeout(AppConstants.networkTimeout);
+    final docs = snapshot.docs;
+    for (var start = 0; start < docs.length; start += _batchLimit) {
       final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
+      for (final doc in docs.skip(start).take(_batchLimit)) {
         batch.delete(doc.reference);
       }
-      await batch.commit();
-    } catch (e) {
-      AppLogger.debug('Cached category expense deletion unavailable: $e');
+      final commit = batch.commit();
+      if (awaitAck) {
+        try {
+          await commit.timeout(AppConstants.networkTimeout);
+        } on TimeoutException {
+          // Accepted by Firestore's local queue; delivered natively later.
+        }
+      } else {
+        unawaited(
+          commit.catchError((Object e) {
+            AppLogger.debug('Expense batch deletion rejected: $e');
+          }),
+        );
+      }
     }
   }
 }

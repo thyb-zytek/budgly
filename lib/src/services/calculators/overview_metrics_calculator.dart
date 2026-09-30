@@ -7,10 +7,9 @@ class OverviewMetricsCalculator {
   double totalExpenses(List<ExpenseOccurrence> occurrences) =>
       occurrences.fold(0.0, (sum, occurrence) => sum + occurrence.amount);
 
-  double pendingExpenses(List<ExpenseOccurrence> occurrences) =>
-      occurrences
-          .where((occurrence) => !occurrence.isDebited)
-          .fold(0.0, (sum, occurrence) => sum + occurrence.amount);
+  double pendingExpenses(List<ExpenseOccurrence> occurrences) => occurrences
+      .where((occurrence) => !occurrence.isDebited)
+      .fold(0.0, (sum, occurrence) => sum + occurrence.amount);
 
   int? remainingWeekends(Period period) {
     if (period.isBefore(Period.current())) return null;

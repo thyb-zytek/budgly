@@ -9,11 +9,10 @@ class CategorySupabase {
 
   CategorySupabase({sb.SupabaseClient? client}) : _injected = client;
   Future<List<Category>> listByAccountId(String accountId) async {
-    final response =
-        await _client
-            .from('categories')
-            .select()
-            .eq('account_id', accountId);
+    final response = await _client
+        .from('categories')
+        .select()
+        .eq('account_id', accountId);
 
     return (response as List<dynamic>)
         .map((json) => Category.fromJson(json as Map<String, dynamic>))
@@ -21,12 +20,11 @@ class CategorySupabase {
   }
 
   Future<Category?> create(Category category) async {
-    final response =
-        await _client
-            .from('categories')
-            .insert(category.toJson())
-            .select()
-            .single();
+    final response = await _client
+        .from('categories')
+        .upsert(category.toJson(), onConflict: 'id')
+        .select()
+        .single();
     return Category.fromJson(response);
   }
 

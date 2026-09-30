@@ -11,14 +11,18 @@ class RecurringExpenseVersioning {
     required DateTime effectiveDate,
   }) {
     if (!original.isRecurring || original.id == null) {
-      throw ArgumentError('The original expense must be a persisted recurring expense');
+      throw ArgumentError(
+        'The original expense must be a persisted recurring expense',
+      );
     }
 
     final effectiveDay = _calendarDay(effectiveDate);
     final originalDay = _calendarDay(original.debitDate);
 
     if (effectiveDay.isBefore(originalDay)) {
-      throw ArgumentError('The effective date cannot precede the original date');
+      throw ArgumentError(
+        'The effective date cannot precede the original date',
+      );
     }
 
     if (effectiveDay.isAtSameMomentAs(originalDay)) {
@@ -73,7 +77,6 @@ class RecurringExpenseVersioning {
   DateTime _calendarDay(DateTime value) =>
       DateTime(value.year, value.month, value.day);
 }
-
 
 DateTime _exceptionDate(ExpenseOccurrenceException exception) =>
     DateTime.parse(exception.key.substring(exception.key.lastIndexOf('@') + 1));

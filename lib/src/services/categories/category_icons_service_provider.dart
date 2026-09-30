@@ -3,11 +3,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'category_icons_service_provider.g.dart';
 
-/// Riverpod-facing exposure of [CategoryIconsService] (issue M3).
+/// Application-scoped category icon catalogue service.
 ///
-/// Only one call site on `.instance` today — a good future candidate to be
-/// migrated to a plain `FutureProvider` instead of kept as a bridge once its
-/// single consumer moves to Riverpod (issue M4), rather than genuinely
-/// needing the bridge pattern long-term.
+/// The service itself is stateless; Riverpod owns its application lifetime so
+/// consumers share one instance and tests can override it directly.
 @Riverpod(keepAlive: true)
-CategoryIconsService categoryIconsService(Ref ref) => CategoryIconsService.instance;
+CategoryIconsService categoryIconsService(Ref ref) => CategoryIconsService();

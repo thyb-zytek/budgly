@@ -1,20 +1,42 @@
+import 'package:budgly/src/services/offline/sync_error_classifier.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
+import 'package:budgly/src/services/offline/sync_queue.dart';
+import 'package:budgly/src/services/analytics/analytics_service_provider.dart';
+import 'package:budgly/src/services/auth/auth_service_provider.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sync_manager_provider.g.dart';
 
-/// Riverpod-facing exposure of [SyncManager] (issue M3).
+/// Riverpod-owned access to the process-wide synchronization coordinator.
 ///
-/// Not rewritten: 8 call sites still on `.instance` (mostly other services
-/// registering handlers in their constructor, e.g. `ProfileService`,
-/// `ExpensesService`). [SyncManager] also mixes in `WidgetsBindingObserver`
-/// to trigger a flush on app resume — untouched here.
-@Riverpod(keepAlive: true)
-Raw<SyncManager> syncManager(Ref ref) => SyncManager.instance;
+/// The coordinator is process-wide because it owns the application lifecycle
+/// observer and the single replay loop. Domain services receive this same
+/// instance through DI; they never reach into the singleton themselves.
+final syncQueueProvider = Provider<SyncQueue>(
+  (ref) => SyncQueue(
+    ownerUserIdProvider: () => ref.read(authServiceProvider).firebaseUser?.uid,
+  ),
+);
 
-/// Immutable snapshot of the sync status, for a future "syncing.../stuck"
-/// indicator widget to watch reactively instead of adding its own
-/// `addListener`/`removeListener` pair on the singleton.
+@Riverpod(keepAlive: true)
+Raw<SyncManager> syncManager(Ref ref) {
+  final manager = SyncManager(
+    queue: ref.watch(syncQueueProvider),
+    analytics: ref.watch(analyticsServiceProvider),
+    ownerUserIdProvider: () => ref.read(authServiceProvider).firebaseUser?.uid,
+    isPermanentError: isPermanentSyncError,
+  );
+  // Stops the lifecycle observer and both timers, and prevents an in-flight
+  // pass from notifying a disposed ChangeNotifier.
+  ref.onDispose(manager.dispose);
+  return manager;
+}
+
+/// Immutable snapshot of the sync status, watched reactively by
+/// `SyncIssueBanner` instead of adding its own `addListener`/`removeListener`
+/// pair on the singleton.
 class SyncStatus {
   const SyncStatus({
     required this.isSyncing,
@@ -34,7 +56,8 @@ class SyncStatus {
       other.stuckOperationsCount == stuckOperationsCount;
 
   @override
-  int get hashCode => Object.hash(isSyncing, hasStuckOperations, stuckOperationsCount);
+  int get hashCode =>
+      Object.hash(isSyncing, hasStuckOperations, stuckOperationsCount);
 }
 
 @Riverpod(keepAlive: true)
@@ -50,10 +73,10 @@ class SyncStatusNotifier extends _$SyncStatusNotifier {
   }
 
   SyncStatus _readState(SyncManager manager) => SyncStatus(
-        isSyncing: manager.isSyncing,
-        hasStuckOperations: manager.hasStuckOperations,
-        stuckOperationsCount: manager.stuckOperationsCount,
-      );
+    isSyncing: manager.isSyncing,
+    hasStuckOperations: manager.hasStuckOperations,
+    stuckOperationsCount: manager.stuckOperationsCount,
+  );
 
   void _onChanged() {
     state = _readState(_manager);

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/budget/account_budget.dart';
 import 'package:budgly/src/models/budget/period.dart';
@@ -9,10 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// [before].
 ///
 /// A period only inherits revenue from strictly earlier months.
-AccountBudget? firstRevenueBefore(
-  List<AccountBudget> budgets,
-  Period before,
-) {
+AccountBudget? firstRevenueBefore(List<AccountBudget> budgets, Period before) {
   final ordered = List<AccountBudget>.from(budgets)
     ..sort((a, b) {
       if (a.year != b.year) return b.year.compareTo(a.year);
@@ -26,9 +26,17 @@ AccountBudget? firstRevenueBefore(
 }
 
 class AccountBudgetFirestore {
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  AccountBudgetFirestore({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestoreInput = firestore,
+      _authInput = auth;
+
+  final FirebaseFirestore? _firestoreInput;
+  final FirebaseAuth? _authInput;
+
+  FirebaseFirestore get _firestore =>
+      _firestoreInput ?? FirebaseFirestore.instance;
   String get _uid {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = (_authInput ?? FirebaseAuth.instance).currentUser;
     if (user == null) throw StateError('No authenticated user');
     return user.uid;
   }
@@ -36,7 +44,8 @@ class AccountBudgetFirestore {
   CollectionReference<Map<String, dynamic>> get _collection =>
       _firestore.collection('users').doc(_uid).collection('account_budgets');
 
-  String _docId(String accountId, int year, int month) => '${accountId}_${year}_$month';
+  String _docId(String accountId, int year, int month) =>
+      '${accountId}_${year}_$month';
 
   Future<AccountBudget?> get(
     String accountId,
@@ -72,26 +81,52 @@ class AccountBudgetFirestore {
     return firstRevenueBefore(budgets, before);
   }
 
-  Future<AccountBudget> setRevenue(String accountId, int year, int month, double revenue) async {
+  Future<AccountBudget> setRevenue(
+    String accountId,
+    int year,
+    int month,
+    double revenue,
+  ) async {
     final id = _docId(accountId, year, month);
-    final budget = AccountBudget(accountId: accountId, year: year, month: month, revenue: revenue);
+    final budget = AccountBudget(
+      accountId: accountId,
+      year: year,
+      month: month,
+      revenue: revenue,
+    );
     await _collection.doc(id).set(budget.toMap(), SetOptions(merge: true));
     return budget.copyWith(id: id);
   }
 
-  Future<void> deleteByAccountId(String accountId) async {
-    try {
-      final snapshot = await _collection
-          .where('accountId', isEqualTo: accountId)
-          .get(const GetOptions(source: Source.cache));
-      if (snapshot.docs.isEmpty) return;
-      final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
+  /// Deletes every budget document of [accountId]; see
+  /// `ExpenseFirestore.deleteByAccountId` for [source] and [awaitAck].
+  Future<void> deleteByAccountId(
+    String accountId, {
+    Source source = Source.serverAndCache,
+    bool awaitAck = true,
+  }) async {
+    final snapshot = await _collection
+        .where('accountId', isEqualTo: accountId)
+        .get(GetOptions(source: source))
+        .timeout(AppConstants.networkTimeout);
+    if (snapshot.docs.isEmpty) return;
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    final commit = batch.commit();
+    if (awaitAck) {
+      try {
+        await commit.timeout(AppConstants.networkTimeout);
+      } on TimeoutException {
+        // Accepted by Firestore's local queue; delivered natively later.
       }
-      await batch.commit();
-    } catch (e) {
-      AppLogger.debug('Cached budget deletion unavailable: $e');
+    } else {
+      unawaited(
+        commit.catchError((Object e) {
+          AppLogger.debug('Budget batch deletion rejected: $e');
+        }),
+      );
     }
   }
 }

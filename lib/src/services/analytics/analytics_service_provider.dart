@@ -3,13 +3,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'analytics_service_provider.g.dart';
 
-/// Riverpod-facing exposure of [AnalyticsService] (issue M3).
+/// Process-wide analytics client owned by Riverpod.
 ///
-/// Not rewritten: 14 call sites still on `.instance` — by far the most
-/// widely used service in the app (events fired from almost every page).
-/// Full removal of `.instance` is unrealistic before those pages migrate
-/// (issues M4/M5); this provider only gives migrated `Notifier`s a way to
-/// fire analytics events without reaching for the static singleton
-/// directly. No `ChangeNotifier` state — plain pass-through.
+/// The provider owns the single application instance; domain services receive
+/// it explicitly instead of reaching into a global singleton.
 @Riverpod(keepAlive: true)
-AnalyticsService analyticsService(Ref ref) => AnalyticsService.instance;
+AnalyticsService analyticsService(Ref ref) => AnalyticsService();

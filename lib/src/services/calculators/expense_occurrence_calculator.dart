@@ -1,4 +1,5 @@
 import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/models/budget/calendar_date_range.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 
@@ -8,10 +9,7 @@ import 'package:budgly/src/models/expense/expense_occurrence.dart';
 class ExpenseOccurrenceCalculator {
   const ExpenseOccurrenceCalculator();
 
-  List<ExpenseOccurrence> forPeriod(
-    Iterable<Expense> expenses,
-    Period period,
-  ) {
+  List<ExpenseOccurrence> forPeriod(Iterable<Expense> expenses, Period period) {
     final result = <ExpenseOccurrence>[];
     for (final expense in expenses) {
       result.addAll(expandExpenseOccurrences(expense, period));
@@ -22,12 +20,11 @@ class ExpenseOccurrenceCalculator {
 
   List<ExpenseOccurrence> between(
     Iterable<Expense> expenses,
-    DateTime start,
-    DateTime end,
+    CalendarDateRange range,
   ) {
     final result = <ExpenseOccurrence>[];
     for (final expense in expenses) {
-      result.addAll(expandExpenseOccurrencesBetween(expense, start, end));
+      result.addAll(expandExpenseOccurrencesBetween(expense, range));
     }
     _sort(result);
     return result;

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import 'package:budgly/src/core/async/in_flight_registry.dart';
 import 'package:budgly/src/core/logging/logger.dart';
@@ -9,39 +8,22 @@ import 'package:budgly/src/models/budget/account_budget.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/providers/firestore/accounts_budget.dart';
-import 'package:budgly/src/stores/accounts_budget.dart';
 
 class AccountBudgetsService {
-  static AccountBudgetsService? _instance;
-
-  static AccountBudgetsService get instance {
-    _instance ??= AccountBudgetsService._();
-    return _instance!;
-  }
-
   final AccountBudgetFirestore _provider;
-  final AccountBudgetsStore _store;
   final _inFlight = InFlightRegistry<String>();
+  final AnalyticsService _analytics;
 
   AccountBudgetsService({
     AccountBudgetFirestore? provider,
-    AccountBudgetsStore? store,
-  })  : _provider = provider ?? AccountBudgetFirestore(),
-        _store = store ?? AccountBudgetsStore.instance;
-
-  AccountBudgetsService._() : this();
-
-  void addListener(VoidCallback listener) => _store.addListener(listener);
-  void removeListener(VoidCallback listener) => _store.removeListener(listener);
+    required this._analytics,
+  }) : _provider = provider ?? AccountBudgetFirestore();
 
   String _key(String accountId, int year, int month) =>
       '${accountId}_${year}_$month';
 
-  String _docId(String accountId, int year, int month) => _key(accountId, year, month);
-
-  double getRevenue(String accountId, int year, int month) {
-    return _store.get(_key(accountId, year, month))?.revenue ?? 0;
-  }
+  String _docId(String accountId, int year, int month) =>
+      _key(accountId, year, month);
 
   final Map<String, double?> _mostRecentRevenueCache = {};
 
@@ -56,67 +38,23 @@ class AccountBudgetsService {
     if (_mostRecentRevenueCache.containsKey(cacheKey)) {
       return _mostRecentRevenueCache[cacheKey];
     }
-
-    // Offline-first: try the local store first so a period change while
-    // offline can still inherit revenue from a previously loaded month.
-    final storeBudgets = _store.getBudgetsForAccount(accountId);
-    final fromStore = firstRevenueBefore(storeBudgets, before);
-    if (fromStore != null) {
-      _mostRecentRevenueCache[cacheKey] = fromStore.revenue;
-      return fromStore.revenue;
-    }
-
-    // Try Firestore cache query before hitting the network.
     try {
-      final cached =
-          await _provider.getMostRecentWithRevenue(accountId, before: before, source: Source.cache);
+      final cached = await _provider.getMostRecentWithRevenue(
+        accountId,
+        before: before,
+        source: Source.cache,
+      );
       if (cached != null) {
         _mostRecentRevenueCache[cacheKey] = cached.revenue;
         return cached.revenue;
       }
-    } catch (_) {
-      // Cache query unavailable (e.g. missing index) — fall through to per-doc fallback.
-    }
-
-    // Fallback: walk backwards month-by-month using direct doc gets
-    // (Source.cache). This is more reliable offline than a range query
-    // and can find Nov 2026 for Feb 2027 even when the 60-doc query
-    // is not cached.
-    for (int offset = 1; offset <= 60; offset++) {
-      final candidate = before.addMonths(-offset);
-      final key = _key(accountId, candidate.year, candidate.month);
-      if (_store.hasLoaded(key)) {
-        final budget = _store.get(key);
-        if (budget != null && budget.revenue > 0) {
-          _mostRecentRevenueCache[cacheKey] = budget.revenue;
-          return budget.revenue;
-        }
-        continue;
-      }
-      try {
-        final budget = await _provider.get(
-          accountId,
-          candidate.year,
-          candidate.month,
-          source: Source.cache,
-        );
-        if (budget != null) {
-          _store.set(key, budget);
-          if (budget.revenue > 0) {
-            _mostRecentRevenueCache[cacheKey] = budget.revenue;
-            return budget.revenue;
-          }
-        } else {
-          _store.set(key, null);
-        }
-      } catch (_) {
-        continue;
-      }
-    }
-
+    } catch (_) {}
     try {
-      final budget =
-          await _provider.getMostRecentWithRevenue(accountId, before: before, source: Source.server);
+      final budget = await _provider.getMostRecentWithRevenue(
+        accountId,
+        before: before,
+        source: Source.server,
+      );
       final value = budget?.revenue;
       _mostRecentRevenueCache[cacheKey] = value;
       return value;
@@ -126,20 +64,19 @@ class AccountBudgetsService {
     }
   }
 
-  bool hasLoaded(String accountId, int year, int month) =>
-      _store.hasLoaded(_key(accountId, year, month));
-
-  Future<void> loadRevenue(
+  /// Cache-first load (RL-01 §3.2); see `AccountsService.loadAccounts` for
+  /// the [onRevalidated] contract this mirrors.
+  Future<AccountBudget?> loadRevenue(
     String accountId,
     int year,
     int month, {
     bool forceRefresh = false,
+    void Function(AccountBudget?)? onRevalidated,
   }) async {
     final key = _key(accountId, year, month);
-    final existing = _inFlight.peek<void>(key);
+    final existing = _inFlight.peek<AccountBudget?>(key);
     if (existing != null) {
-      if (forceRefresh) await existing;
-      return;
+      return forceRefresh ? await existing : await existing;
     }
 
     if (!forceRefresh) {
@@ -150,9 +87,16 @@ class AccountBudgetsService {
           month,
           source: Source.cache,
         );
-        _store.set(key, cached);
-        unawaited(_refreshRevenueInBackground(key, accountId, year, month));
-        return;
+        unawaited(
+          _refreshRevenueInBackground(
+            key,
+            accountId,
+            year,
+            month,
+            onRevalidated: onRevalidated,
+          ),
+        );
+        return cached;
       } on FirebaseException catch (e) {
         if (e.code != 'failed-precondition' && e.code != 'unavailable') {
           rethrow;
@@ -160,47 +104,48 @@ class AccountBudgetsService {
       }
     }
 
-    await _refreshRevenue(key, accountId, year, month);
+    return await _refreshRevenue(key, accountId, year, month);
   }
 
   Future<void> _refreshRevenueInBackground(
     String key,
     String accountId,
     int year,
-    int month,
-  ) async {
+    int month, {
+    void Function(AccountBudget?)? onRevalidated,
+  }) async {
     try {
-      await _refreshRevenue(key, accountId, year, month);
+      final result = await _refreshRevenue(key, accountId, year, month);
+      onRevalidated?.call(result);
     } catch (e) {
       AppLogger.debug('Background revenue refresh unavailable: $e');
     }
   }
 
-  Future<void> _refreshRevenue(
+  Future<AccountBudget?> _refreshRevenue(
     String key,
     String accountId,
     int year,
     int month,
   ) {
-    final existing = _inFlight.peek<void>(key);
+    final existing = _inFlight.peek<AccountBudget?>(key);
     if (existing != null) return existing;
 
-    final future = _fetchAndStoreRevenue(key, accountId, year, month);
+    final future = _fetchRevenue(key, accountId, year, month);
     _inFlight.register(key, future);
     return future.whenComplete(() => _inFlight.release(key, future));
   }
 
-  Future<void> _fetchAndStoreRevenue(
+  Future<AccountBudget?> _fetchRevenue(
     String key,
     String accountId,
     int year,
     int month,
   ) async {
     try {
-      final budget = await _provider.get(accountId, year, month);
-      _store.set(key, budget);
+      return await _provider.get(accountId, year, month);
     } catch (e, stackTrace) {
-      AnalyticsService.instance.track('revenue_load_failed', {'error': e.toString()});
+      _analytics.track('revenue_load_failed', {'error': e.toString()});
       AppLogger.error('Failed to load revenue', e, stackTrace);
       rethrow;
     }
@@ -214,11 +159,10 @@ class AccountBudgetsService {
 
   void invalidateCache() {
     _inFlight.clear();
-    _store.clearAll();
     _mostRecentRevenueCache.clear();
   }
 
-  Future<void> setRevenue(
+  Future<AccountBudget> setRevenue(
     String accountId,
     int year,
     int month,
@@ -233,15 +177,16 @@ class AccountBudgetsService {
       revenue: revenue,
     );
 
-    _store.set(key, optimistic);
-    _mostRecentRevenueCache
-        .removeWhere((key, _) => key.startsWith('$accountId|'));
-    AnalyticsService.instance.track('budget_updated');
-    AnalyticsService.instance.track('revenue_set');
+    _mostRecentRevenueCache.removeWhere(
+      (key, _) => key.startsWith('$accountId|'),
+    );
+    _analytics.track('budget_updated');
+    _analytics.track('revenue_set');
 
     // Firestore persists writes locally and synchronizes them when possible.
     // The UI only needs the optimistic/store state above.
     unawaited(_persistRevenue(key, accountId, year, month, revenue));
+    return optimistic;
   }
 
   Future<void> _persistRevenue(
@@ -252,27 +197,32 @@ class AccountBudgetsService {
     double revenue,
   ) async {
     try {
-      final updated = await _provider.setRevenue(
-        accountId,
-        year,
-        month,
-        revenue,
+      await _provider.setRevenue(accountId, year, month, revenue);
+      _mostRecentRevenueCache.removeWhere(
+        (key, _) => key.startsWith('$accountId|'),
       );
-      _store.set(key, updated);
     } catch (e, stackTrace) {
-      AnalyticsService.instance.track(
-        'revenue_set_failed',
-        {'error': e.toString()},
-      );
+      _analytics.track('revenue_set_failed', {'error': e.toString()});
       AppLogger.error('Failed to persist revenue', e, stackTrace);
     }
   }
 
+  /// Immediate, local best-effort removal that never waits for the server (see
+  /// `ExpensesService.deleteByAccountId`).
   Future<void> deleteByAccountId(String accountId) async {
-    await _provider.deleteByAccountId(accountId);
-    _store.clearByAccountId(accountId);
+    try {
+      await _provider.deleteByAccountId(accountId, awaitAck: false);
+    } catch (e) {
+      AppLogger.debug('Local budget removal unavailable: $e');
+    }
     _inFlight.clear();
-    _mostRecentRevenueCache
-        .removeWhere((key, _) => key.startsWith('$accountId|'));
+    _mostRecentRevenueCache.removeWhere(
+      (key, _) => key.startsWith('$accountId|'),
+    );
   }
+
+  /// Server-side removal used by the durable cleanup; throws when the server
+  /// cannot be reached so the caller retries.
+  Future<void> purgeByAccountId(String accountId) =>
+      _provider.deleteByAccountId(accountId, source: Source.server);
 }
