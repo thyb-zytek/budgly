@@ -1,37 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/pages/overview/revenue_provider.dart';
 import 'package:budgly/src/models/budget/period.dart';
-import 'package:budgly/src/pages/overview/view_model.dart';
 import 'package:flutter/material.dart';
-
-class OverviewUiState {
-  final Account? account;
-  final Period selectedPeriod;
-  final bool showRevenueEditor;
-  final bool isSaving;
-
-  const OverviewUiState({
-    this.account,
-    required this.selectedPeriod,
-    this.showRevenueEditor = false,
-    this.isSaving = false,
-  });
-
-  OverviewUiState copyWith({
-    Account? account,
-    bool clearAccount = false,
-    Period? selectedPeriod,
-    bool? showRevenueEditor,
-    bool? isSaving,
-  }) {
-    return OverviewUiState(
-      account: clearAccount ? null : (account ?? this.account),
-      selectedPeriod: selectedPeriod ?? this.selectedPeriod,
-      showRevenueEditor: showRevenueEditor ?? this.showRevenueEditor,
-      isSaving: isSaving ?? this.isSaving,
-    );
-  }
-}
 
 class OverviewStatItem {
   final IconData icon;
@@ -73,26 +43,32 @@ class OverviewSummaryStats {
   });
 
   factory OverviewSummaryStats.from(
-    BuildContext context,
-    OverviewViewModel viewModel,
-    String Function(double) formatAmount, {
+    BuildContext context, {
+    required RevenueState revenue,
+    required double totalExpenses,
+    required double pendingExpenses,
+    required int? remainingWeekends,
+    required String Function(double) formatAmount,
     VoidCallback? onEditRevenue,
   }) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
-    final hasRevenue = viewModel.hasRevenue;
-    final isEstimated = viewModel.isRevenueEstimated;
-    final isOverBudget = viewModel.remaining < 0;
-    final hasPending = viewModel.pendingExpenses > 0;
+    final hasRevenue = revenue.hasRevenue;
+    final isEstimated = revenue.isEstimated;
+    final remaining = revenue.effectiveRevenue - totalExpenses;
+    final weekly = remainingWeekends == null
+        ? null
+        : remaining / (remainingWeekends > 0 ? remainingWeekends : 1);
+    final hasPending = pendingExpenses > 0;
 
     return OverviewSummaryStats(
       revenue: OverviewStatItem(
         icon: Icons.account_balance_wallet_rounded,
         label: tr.revenue,
         value: hasRevenue
-            ? formatAmount(viewModel.revenue)
+            ? formatAmount(revenue.revenue)
             : isEstimated
-            ? '≈ ${formatAmount(viewModel.effectiveRevenue)}'
+            ? '≈ ${formatAmount(revenue.effectiveRevenue)}'
             : '—',
         color: theme.colorScheme.secondary,
         tooltip: isEstimated ? tr.revenueEstimatedHint : null,
@@ -101,24 +77,22 @@ class OverviewSummaryStats {
       ),
       expenses: OverviewStatItem(
         icon: Icons.trending_down_rounded,
-
         label: hasPending
             ? '${tr.expenses} (${tr.pendingExpenses.toLowerCase()})'
             : tr.expenses,
-        value: formatAmount(viewModel.totalExpenses),
-        detail: hasPending ? formatAmount(viewModel.pendingExpenses) : null,
+        value: formatAmount(totalExpenses),
+        detail: hasPending ? formatAmount(pendingExpenses) : null,
         color: theme.colorScheme.tertiary,
-
         detailColor: theme.colorScheme.error,
         tooltip: hasPending
-            ? tr.expensesUpcomingHint(formatAmount(viewModel.pendingExpenses))
+            ? tr.expensesUpcomingHint(formatAmount(pendingExpenses))
             : null,
       ),
       remaining: OverviewStatItem(
         icon: Icons.savings_rounded,
         label: tr.remaining,
-        value: formatAmount(viewModel.remaining),
-        color: isOverBudget
+        value: formatAmount(remaining),
+        color: remaining < 0
             ? theme.colorScheme.error
             : theme.colorScheme.primary,
         isEmphasized: true,
@@ -128,14 +102,20 @@ class OverviewSummaryStats {
             ? tr.revenueEstimatedHint
             : null,
       ),
-      weekly: viewModel.weeklyBudget != null
-          ? OverviewStatItem(
+      weekly: weekly == null
+          ? null
+          : OverviewStatItem(
               icon: Icons.calendar_view_week_rounded,
               label: tr.remainingWeekend,
-              value: formatAmount(viewModel.weeklyBudget!),
+              value: formatAmount(weekly),
               color: theme.colorScheme.primary,
-            )
-          : null,
+            ),
     );
   }
+}
+
+int? overviewRemainingWeekends(Period period) {
+  if (period.isBefore(Period.current())) return null;
+  if (period == Period.current()) return period.remainingWeekends();
+  return period.totalWeekends();
 }
