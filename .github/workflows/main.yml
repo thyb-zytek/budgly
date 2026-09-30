@@ -76,7 +76,13 @@ jobs:
         run: flutter pub get
 
       - name: Generate code (build_runner)
-        run: dart run build_runner build
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Verify generated code is up to date
+        run: git diff --exit-code -- lib
+
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed lib test integration_test tool
 
       - name: Create .env file
         run: |
@@ -91,12 +97,79 @@ jobs:
       - name: Run tests
         run: flutter test
 
-  build:
-    name: Build APK
+  integration:
+    name: Integration tests (Android emulator)
     needs: [test, check-schedule]
     if: |
       always() &&
+      (
+        github.event_name != 'schedule' ||
+        needs.check-schedule.outputs.should_run == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # `flutter test` only walks `test/`. `integration_test/` needs a real
+      # device, so without this job those files would never run in CI.
+      # api-level 36 matches compileSdk (flutter.compileSdkVersion).
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The emulator runner needs `assets/.env` (main.dart throws without
+      # SUPABASE_URL/SUPABASE_KEY) and `google-services.json` before Gradle can
+      # assemble the test APK. Building the debug APK once up-front also warms
+      # the Gradle daemon, which otherwise races the test run and fails
+      # `assembleDebug` intermittently.
+      - name: Create .env file
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > assets/.env
+          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
+          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
+          echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
+
+      - name: Create google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
+
+      - name: Warm the Gradle build
+        run: flutter build apk --debug
+
+      - name: Run integration tests on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: flutter test integration_test
+
+  build:
+    name: Build APK
+    needs: [test, integration, check-schedule]
+    if: |
+      always() &&
       needs.test.result == 'success' &&
+      needs.integration.result == 'success' &&
       github.event_name != 'pull_request' &&
       (
         github.event_name != 'schedule' ||
@@ -119,7 +192,13 @@ jobs:
         run: flutter pub get
 
       - name: Generate code (build_runner)
-        run: dart run build_runner build
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Verify generated code is up to date
+        run: git diff --exit-code -- lib
+
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed lib test integration_test tool
 
       - name: Create .env file
         run: |
