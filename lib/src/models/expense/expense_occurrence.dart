@@ -1,4 +1,5 @@
 import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/models/budget/calendar_date_range.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
@@ -22,21 +23,38 @@ class ExpenseOccurrence {
   double get amount => expense.amount;
   RecurrenceType get recurrence => expense.recurrence;
 
-  String get key =>
-      '$id@${Expense.isoDate(sourceDate ?? date)}';
+  String get key => '$id@${Expense.isoDate(sourceDate ?? date)}';
 
   bool get isException => sourceDate != null;
+
+  // Pure value object (no server id of its own): identity follows every
+  // field, same convention as Period/CategoryIcon. `expense ==` itself
+  // compares by Expense.id (see Expense), so this stays cheap.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ExpenseOccurrence &&
+        other.expense == expense &&
+        other.date == date &&
+        other.isDebited == isDebited &&
+        other.sourceDate == sourceDate;
+  }
+
+  @override
+  int get hashCode => Object.hash(expense, date, isDebited, sourceDate);
 }
 
 extension on Expense {
   bool recurrenceOccursOn(DateTime target) {
+    // A recurrence starts at debitDate. Moving the calendar cursor backwards
+    // must never manufacture an occurrence before that first occurrence.
     final first = recurrence.firstOccurrenceOnOrAfter(
       debitDate,
       target,
       anchorDay: recurrenceAnchorDay,
     );
     return Expense.isoDate(first) == Expense.isoDate(target) &&
-        (endOfEndDate == null || !target.isAfter(endOfEndDate!));
+        (endDateExclusive == null || target.isBefore(endDateExclusive!));
   }
 }
 
@@ -44,22 +62,17 @@ List<ExpenseOccurrence> expandExpenseOccurrences(
   Expense expense,
   Period period,
 ) {
-  return expandExpenseOccurrencesBetween(
-    expense,
-    period.startOfMonth,
-    period.endOfMonth,
-  );
+  return expandExpenseOccurrencesBetween(expense, period.range);
 }
 
 List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
   Expense expense,
-  DateTime from,
-  DateTime to,
+  CalendarDateRange range,
 ) {
   final result = <ExpenseOccurrence>[];
 
   if (!expense.isRecurring) {
-    if (!expense.debitDate.isBefore(from) && !expense.debitDate.isAfter(to)) {
+    if (range.contains(expense.debitDate)) {
       result.add(
         ExpenseOccurrence(
           expense: expense,
@@ -71,28 +84,27 @@ List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
     return result;
   }
 
-  final endOfEndDate = expense.endOfEndDate;
-  if (endOfEndDate != null && endOfEndDate.isBefore(from)) {
-    // An exception can move an otherwise historical occurrence into the
-    // requested window, so do not return before applying exceptions.
+  final endExclusive = expense.endDateExclusive;
+  if (endExclusive != null && !endExclusive.isAfter(range.start)) {
+    // A date exception may move an otherwise historical occurrence into the
+    // requested range, so continue and apply exceptions below.
   }
-  final effectiveTo = endOfEndDate != null && endOfEndDate.isBefore(to)
-      ? endOfEndDate
-      : to;
+  final effectiveEndExclusive =
+      endExclusive == null || endExclusive.isAfter(range.endExclusive)
+      ? range.endExclusive
+      : endExclusive;
 
   final anchorDay = expense.recurrenceAnchorDay;
   var date = expense.recurrence.firstOccurrenceOnOrAfter(
     expense.debitDate,
-    from,
-    anchorDay: expense.recurrenceAnchorDay,
+    range.start,
+    anchorDay: anchorDay,
   );
   final projectedSourceKeys = <String>{};
-  while (!date.isAfter(effectiveTo)) {
+  while (date.isBefore(effectiveEndExclusive)) {
     final exception = expense.exceptionAt(date);
     final effectiveDate = exception?.debitDate ?? date;
-    if (exception?.deleted != true &&
-        !effectiveDate.isBefore(from) &&
-        !effectiveDate.isAfter(to)) {
+    if (exception?.deleted != true && range.contains(effectiveDate)) {
       final effectiveExpense = _applyException(expense, exception);
       result.add(
         ExpenseOccurrence(
@@ -113,14 +125,12 @@ List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
   }
 
   // Date overrides may move an occurrence outside its original month. Those
-  // exceptions must still be projected into the destination period.
+  // exceptions must still be projected into the destination range.
   for (final exception in expense.occurrenceExceptions) {
     if (exception.deleted || exception.debitDate == null) continue;
     if (projectedSourceKeys.contains(_exceptionSourceDate(exception))) continue;
-    if (exception.debitDate!.isBefore(from) || exception.debitDate!.isAfter(to)) {
-      continue;
-    }
-    final sourceDate = _parseExceptionSourceDate(exception);
+    if (!range.contains(exception.debitDate!)) continue;
+    final sourceDate = exception.sourceDate;
     if (sourceDate == null || !expense.recurrenceOccursOn(sourceDate)) continue;
     result.add(
       ExpenseOccurrence(
@@ -135,9 +145,10 @@ List<ExpenseOccurrence> expandExpenseOccurrencesBetween(
   return result;
 }
 
-
-
-Expense _applyException(Expense expense, ExpenseOccurrenceException? exception) {
+Expense _applyException(
+  Expense expense,
+  ExpenseOccurrenceException? exception,
+) {
   if (exception == null) return expense;
   return expense.copyWith(
     amount: exception.amount,
@@ -148,10 +159,3 @@ Expense _applyException(Expense expense, ExpenseOccurrenceException? exception) 
 
 String _exceptionSourceDate(ExpenseOccurrenceException exception) =>
     exception.key.substring(exception.key.lastIndexOf('@') + 1);
-
-DateTime? _parseExceptionSourceDate(ExpenseOccurrenceException exception) {
-  final raw = _exceptionSourceDate(exception);
-  final parts = raw.split('-');
-  if (parts.length != 3) return null;
-  return DateTime.tryParse(raw);
-}

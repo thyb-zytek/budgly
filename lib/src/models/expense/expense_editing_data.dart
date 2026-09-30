@@ -3,6 +3,9 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:flutter/material.dart';
 
+DateTime _calendarDate(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
 class ExpenseEditingData {
   final TextEditingController nameController;
   final TextEditingController amountController;
@@ -22,7 +25,7 @@ class ExpenseEditingData {
     this.endDate,
     this.recurrence = RecurrenceType.none,
     this.showAdvancedOptions = false,
-  }) : debitDate = debitDate ?? DateTime.now();
+  }) : debitDate = _calendarDate(debitDate ?? DateTime.now());
 
   DateTime? get effectiveEndDate => recurrence.isRecurring ? endDate : null;
 

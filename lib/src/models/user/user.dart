@@ -1,9 +1,12 @@
+import 'package:budgly/src/core/auth/account_verification.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:flutter/foundation.dart';
 
 import 'user_profile.dart';
 
 enum AuthProvider { google, email }
 
+@immutable
 class User {
   final String id;
   final String? email;
@@ -12,7 +15,7 @@ class User {
   final AuthProvider provider;
   final UserProfile? profile;
 
-  User({
+  const User({
     required this.id,
     this.email,
     this.emailVerified = false,
@@ -34,16 +37,18 @@ class User {
     return User(
       id: firebaseUser.uid,
       email: firebaseUser.email,
-      emailVerified: firebaseUser.emailVerified,
-      avatarUrl:
-          firebaseUser.photoURL != null
-              ? Uri.parse(firebaseUser.photoURL!)
-              : null,
+      emailVerified: isAccountVerified(
+        emailVerified: firebaseUser.emailVerified,
+        providerIds: firebaseUser.providerData.map((info) => info.providerId),
+      ),
+      avatarUrl: firebaseUser.photoURL != null
+          ? Uri.parse(firebaseUser.photoURL!)
+          : null,
       provider:
           firebaseUser.providerData.isNotEmpty &&
-                  firebaseUser.providerData.first.providerId == 'google.com'
-              ? AuthProvider.google
-              : AuthProvider.email,
+              firebaseUser.providerData.first.providerId == googleProviderId
+          ? AuthProvider.google
+          : AuthProvider.email,
       profile: profile,
     );
   }
@@ -53,14 +58,12 @@ class User {
       id: json['id'] as String,
       email: json['email'] as String?,
       emailVerified: json['email_verified'] as bool? ?? false,
-      avatarUrl:
-          json['avatar_url'] != null
-              ? Uri.parse(json['avatar_url'] as String)
-              : null,
-      profile:
-          json['profile'] != null
-              ? UserProfile.fromJson(json['profile'] as Map<String, dynamic>)
-              : null,
+      avatarUrl: json['avatar_url'] != null
+          ? Uri.parse(json['avatar_url'] as String)
+          : null,
+      profile: json['profile'] != null
+          ? UserProfile.fromJson(json['profile'] as Map<String, dynamic>)
+          : null,
     );
   }
 

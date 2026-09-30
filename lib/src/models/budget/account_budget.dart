@@ -51,4 +51,20 @@ class AccountBudget {
       updatedAt: updatedAt,
     );
   }
+
+  // `id` can be null before the first save, so identity is based on the
+  // (accountId, year, month) composite key instead — the same key
+  // AccountBudgetsSession already uses to index budgets, and always unique
+  // and present, unlike `id`.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AccountBudget &&
+        other.accountId == accountId &&
+        other.year == year &&
+        other.month == month;
+  }
+
+  @override
+  int get hashCode => Object.hash(accountId, year, month);
 }

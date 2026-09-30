@@ -45,6 +45,11 @@ enum RecurrenceType {
     return addMonthsClamped(date, -months, anchorDay: anchorDay ?? date.day);
   }
 
+  /// Returns the first occurrence on or after [target], never before [anchor].
+  ///
+  /// [anchor] is the first valid occurrence of the recurring expense. Seeking
+  /// a previous calendar period must therefore not invent historical
+  /// occurrences before the expense was created.
   DateTime firstOccurrenceOnOrAfter(
     DateTime anchor,
     DateTime target, {
@@ -55,7 +60,6 @@ enum RecurrenceType {
       final days = _days;
       final months = _months;
       if (days != null) {
-
         final dateUtc = DateTime.utc(date.year, date.month, date.day);
         final targetUtc = DateTime.utc(target.year, target.month, target.day);
         final steps = targetUtc.difference(dateUtc).inDays ~/ days;
@@ -96,8 +100,8 @@ enum RecurrenceType {
 
 DateTime addMonthsClamped(DateTime date, int months, {int? anchorDay}) {
   final day = anchorDay ?? date.day;
-  final monthIndex = date.month - 1 + months;
-  final year = date.year + monthIndex ~/ 12;
+  final monthIndex = date.year * 12 + (date.month - 1) + months;
+  final year = monthIndex ~/ 12;
   final month = monthIndex % 12 + 1;
   final lastDay = DateTime(year, month + 1, 0).day;
   return DateTime(year, month, math.min(day, lastDay));

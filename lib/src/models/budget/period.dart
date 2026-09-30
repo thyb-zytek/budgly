@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:budgly/src/models/budget/calendar_date_range.dart';
 
 class Period {
   final int year;
@@ -6,13 +7,24 @@ class Period {
 
   const Period({required this.year, required this.month});
 
-  factory Period.fromDate(DateTime date) => Period(year: date.year, month: date.month);
+  factory Period.fromDate(DateTime date) =>
+      Period(year: date.year, month: date.month);
   factory Period.current() => Period.fromDate(DateTime.now());
 
   DateTime get startOfMonth => DateTime(year, month, 1);
-  DateTime get endOfMonth => DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
+  DateTime get startOfNextMonth => DateTime(year, month + 1, 1);
 
-  bool contains(DateTime date) => !date.isBefore(startOfMonth) && !date.isAfter(endOfMonth);
+  CalendarDateRange get range =>
+      CalendarDateRange(start: startOfMonth, endExclusive: startOfNextMonth);
+
+  /// Kept only for calendar iteration/display code. Never use it as a range
+  /// upper bound; use [startOfNextMonth] instead.
+  DateTime get lastDay => startOfNextMonth.subtract(const Duration(days: 1));
+
+  bool contains(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    return range.contains(day);
+  }
 
   Period addMonths(int delta) {
     final total = year * 12 + (month - 1) + delta;
@@ -45,7 +57,7 @@ class Period {
     }
 
     DateTime current = today;
-    while (!current.isAfter(endOfMonth)) {
+    while (current.isBefore(startOfNextMonth)) {
       if (current.weekday == DateTime.saturday) {
         count++;
       }
@@ -58,7 +70,7 @@ class Period {
   int totalWeekends() {
     int count = 0;
     DateTime current = startOfMonth;
-    while (!current.isAfter(endOfMonth)) {
+    while (current.isBefore(startOfNextMonth)) {
       if (current.weekday == DateTime.saturday) {
         count++;
       }
@@ -68,7 +80,8 @@ class Period {
   }
 
   @override
-  bool operator ==(Object other) => other is Period && other.year == year && other.month == month;
+  bool operator ==(Object other) =>
+      other is Period && other.year == year && other.month == month;
 
   @override
   int get hashCode => Object.hash(year, month);

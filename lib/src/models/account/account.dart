@@ -52,8 +52,9 @@ class Account {
       userId: userId ?? this.userId,
       name: name ?? this.name,
       picture: picture == _sentinel ? this.picture : picture as String?,
-      pictureUrl:
-          pictureUrl == _sentinel ? this.pictureUrl : pictureUrl as String?,
+      pictureUrl: pictureUrl == _sentinel
+          ? this.pictureUrl
+          : pictureUrl as String?,
       color: color ?? this.color,
     );
   }
@@ -61,11 +62,11 @@ class Account {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Account && other.id == id;
+    if (other is! Account) return false;
+    if (id == null || other.id == null) return false;
+    return other.id == id;
   }
 
   @override
-  int get hashCode {
-    return id.hashCode;
-  }
+  int get hashCode => id == null ? identityHashCode(this) : id.hashCode;
 }
