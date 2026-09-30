@@ -13,6 +13,15 @@ class ExpenseOccurrenceException {
   final bool deleted;
   final bool? isDebited;
 
+  DateTime? get sourceDate {
+    final separator = key.lastIndexOf('@');
+    if (separator < 0 || separator == key.length - 1) return null;
+    final raw = key.substring(separator + 1);
+    final match = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(raw);
+    if (!match) return null;
+    return DateTime.tryParse(raw);
+  }
+
   const ExpenseOccurrenceException({
     required this.key,
     this.amount,
@@ -43,14 +52,14 @@ class ExpenseOccurrenceException {
   }
 
   Map<String, dynamic> toJson() => {
-        'key': key,
-        'amount': amount,
-        'name': name,
-        'categoryId': categoryId,
-        'debitDate': debitDate?.toIso8601String(),
-        'deleted': deleted,
-        'isDebited': isDebited,
-      };
+    'key': key,
+    'amount': amount,
+    'name': name,
+    'categoryId': categoryId,
+    'debitDate': debitDate?.toIso8601String(),
+    'deleted': deleted,
+    'isDebited': isDebited,
+  };
 
   factory ExpenseOccurrenceException.fromJson(Map<String, dynamic> json) {
     return ExpenseOccurrenceException(
@@ -65,4 +74,16 @@ class ExpenseOccurrenceException {
       isDebited: json['isDebited'] as bool?,
     );
   }
+
+  // `key` ('<expenseId>@<isoDate>') is this model's natural, always-present,
+  // unique identity — the same role `id` plays for Account/Category/Expense
+  // — so identity follows it, same convention as those.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ExpenseOccurrenceException && other.key == key;
+  }
+
+  @override
+  int get hashCode => key.hashCode;
 }

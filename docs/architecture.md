@@ -1,198 +1,124 @@
-# Architecture Budgly
+# Budgly — architecture
 
-## Principes
+## Goal
 
-Budgly utilise une architecture MVVM légère avec des services et quelques abstractions ciblées.
+Budgly uses a pragmatic Flutter/Riverpod architecture. The objective is clear ownership and reliable offline behaviour, not a full Clean Architecture stack.
 
-L'objectif n'est pas d'appliquer une Clean Architecture complète, mais de garder chaque couche responsable d'un problème identifiable.
+## Ownership
 
-## Couches
+```text
+UI / pages
+    ↓
+Riverpod Notifier (feature state / ViewModel)
+    ↓
+Service (business orchestration)
+    ├── LocalCache / technical cache
+    ├── Firestore / Supabase
+    └── SyncQueue / SyncManager where required
+```
 
-### Pages / Views
+### UI
 
-Responsables de :
+Widgets render provider state and own transient Flutter objects such as `TextEditingController`, `FocusNode` and `PageController`. Widgets do not access Firestore or Supabase directly.
 
-- composition des widgets ;
-- navigation ;
-- interaction utilisateur ;
-- présentation des feedbacks.
+### Riverpod Notifiers
 
-Elles ne portent pas les opérations Firestore/Supabase.
+Notifiers own reactive in-memory state consumed by the UI. Shared application state lives in `lib/src/state/` (`AccountsSession`, `CategoriesSession`, `ExpensesSession`, `AccountBudgetsSession`, `ProfileSession`). Page-specific Notifiers live next to their page.
 
-### ViewModels
-
-Responsables de :
-
-- état propre à l'écran ;
-- orchestration des actions utilisateur ;
-- déclenchement des services ;
-- préparation des données directement nécessaires à l'affichage.
-
-Ils ne doivent pas devenir des services génériques.
-
-### Repositories ciblés
-
-`OverviewRepository` existe parce que l'écran Overview doit coordonner plusieurs services pour une même opération de chargement.
-
-Il ne remplace pas les services métier et ne doit pas devenir un repository générique pour toute l'application.
+A Notifier is the ViewModel for its feature. Do not add another Controller/ViewModel layer around it.
 
 ### Services
 
-Les services portent les opérations métier/data :
+Services own business operations, persistence, remote calls and synchronization. Dependencies are constructor-injected through Riverpod providers. Services may keep narrowly scoped technical caches for request deduplication, throttling, optimistic reconciliation or signed URL lifetime; these caches must not become a second reactive source of truth.
 
-- comptes ;
-- catégories ;
-- dépenses ;
-- budgets ;
-- profil ;
-- authentification ;
-- analytics ;
-- offline/synchronisation.
+### Persistence
 
-### Calculators
+- `LocalCache`: durable SharedPreferences-backed state for Supabase-owned entities.
+- Firestore persistence: native offline persistence for expenses and budgets.
+- `SyncQueue`: durable pending Supabase mutations.
+- `SyncManager`: lifecycle-bound coordinator that replays the queue. It is exposed through Riverpod and has no production singleton compatibility API.
 
-Les calculators portent des transformations déterministes sans état UI :
+## Dependency injection
 
-- `ExpenseSummaryCalculator` ;
-- `ExpenseOccurrenceCalculator` ;
-- `RecurringExpenseVersioning`.
+Riverpod is the composition boundary. Providers construct services and pass their dependencies explicitly.
 
-### Stores
+Rules:
 
-Les stores maintiennent l'état local partagé nécessaire à l'application.
+- no `SomeService.instance` access in production domain code;
+- process-wide resources are allowed only when their lifecycle is genuinely process-scoped (for example the analytics client or auth lifecycle bridge), and they remain exposed through Riverpod;
+- tests instantiate explicit services/coordinators instead of relying on production singletons;
+- constructors must not silently reach into unrelated global state.
 
-## Expense flow
+## Shared state
 
-```text
-Overview / CategoryExpenses
-        │
-        ▼
-ExpenseEditorSheet
-        │
-        ▼
-ExpenseFormController
-        │
-        ▼
-ViewModel
-        │
-        ▼
-ExpensesService
-        ├── ExpenseFirestore
-        └── ExpensesStore
-```
+The shared reactive source of truth is Riverpod state:
 
-La création et l'édition utilisent le même éditeur visuel sans fusionner leur logique métier.
+| Domain | Reactive state | Durable/remote ownership |
+|---|---|---|
+| Profile | `ProfileSession` | `LocalCache` + Supabase |
+| Accounts | `AccountsSession` | `LocalCache` + Supabase |
+| Categories | `CategoriesSession` | `LocalCache` + Supabase |
+| Expenses | `ExpensesSession` | Firestore + technical service cache |
+| Budgets | `AccountBudgetsSession` | Firestore + technical service cache |
 
-## Occurrences
+A widget rebuild must not trigger a duplicate request. Services use in-flight registries/throttling and sessions retain already-loaded application state.
+
+## Dates and periods
+
+Business dates are calendar dates; time-of-day has no business meaning.
+
+`CalendarDateRange` defines the shared range contract as:
 
 ```text
-Expenses
-   │
-   ▼
-ExpenseOccurrenceCalculator
-   │
-   ├── Overview
-   └── CategoryExpenses
+[start, endExclusive)
 ```
 
-La règle d'expansion et de tri est ainsi unique.
+The start is included and the end is excluded. Firestore queries therefore use `>= start` and `< endExclusive`. Recurring expenses keep their user-facing `endDate` as an inclusive calendar date, while internal range calculations use the following day as the exclusive boundary.
 
-Les séries récurrentes peuvent également porter des `occurrenceExceptions` dans le document Firestore. Une exception est indexée par la clé stable `$id@YYYY-MM-DD` de l'occurrence source et peut surcharger le montant, le nom, la catégorie, la date de débit ou masquer l'occurrence. `ExpenseOccurrenceCalculator` applique ces exceptions au moment de la projection afin que les historiques restent immuables sans créer une collection Firestore supplémentaire.
+## Expenses and recurrence
 
-Les dépenses encore non débitées des périodes précédentes sont orchestrées par `UndebitedExpensesService`. Au chargement, le service liste les dépenses du compte via `ExpensesService.listExpensesForAccount`, projette toutes les échéances antérieures à la période courante avec `ExpenseOccurrenceCalculator` et ne conserve que celles non débitées. La liste est triée par date croissante. La bannière d'avertissement s'affiche dès qu'il reste des dépenses à traiter ; sa fermeture est mémorisée dans `LocalCache` (`undebited.banner.dismissedAt.*`) et elle réapparaît au bout de 3 h tant que des éléments restent en attente. Son bouton ouvre une bottom sheet qui somme le montant total en tête, regroupe les dépenses par période d'origine et permet trois actions par occurrence : reporter vers la période courante sans débiter (action principale), débiter sur la période d'origine ou débiter immédiatement sur la période courante. Les mutations sont déléguées respectivement à `moveOccurrenceToDate` (avec ou sans `markDebited`) et à `markOccurrenceDebited` sur `ExpensesService`.
+`ExpenseOccurrenceCalculator` is the single projection engine for recurring occurrences. It accepts `CalendarDateRange`, jumps directly to the first relevant occurrence and applies keyed occurrence exceptions without creating a separate Firestore collection.
 
-## Contrat offline-first
+Undebited historical occurrences are handled by `UndebitedExpensesService`. The initial Firestore scan is bounded to expenses whose source series begins before the current period; occurrence expansion then determines which historical occurrences actually require action.
 
-Budgly privilégie toujours la donnée locale utilisable. Une donnée distante ne doit pas bloquer l'affichage lorsqu'une version locale est disponible.
+## Offline-first contract
 
-### Ownership
+Local optimistic changes remain visible immediately and survive refreshes, retries and process crashes until the remote mutation is confirmed.
 
-| Donnée | Local | Distant | Sync |
-|---|---|---|---|
-| Profile | `ProfileStore` + `LocalCache` | Supabase | `SyncQueue` |
-| Accounts | `AccountsStore` + `LocalCache` | Supabase | `SyncQueue` |
-| Categories | `CategoriesStore` + `LocalCache` | Supabase | `SyncQueue` |
-| Expenses | `ExpensesStore` + cache Firestore | Firestore | Firestore offline |
-| Budgets | `AccountBudgetsStore` + cache Firestore | Firestore | Firestore offline |
-| Category icons | assets embarqués | Supabase optionnel | aucun |
-
-### Flot de lecture
-
-```text
-UI
-  ↓
-ViewModel
-  ↓
-Service
-  ↓
-Store / Firestore cache (+ _periodData)
-  ↓
-UI immédiatement si possible
-  ↓
-refresh distant en arrière-plan
-```
-
-Les services dédupliquent les requêtes concurrentes lorsqu'un même chargement est déjà en cours.
-
-**Revenu :** `AccountBudgetsService.getMostRecentRevenue` est offline-first : store → `Source.cache` → marche arrière 60 mois en `get(..., Source.cache)` → `Source.server`. Un changement de période hors-ligne en `2027-02` hérite ainsi de `2026-11` même sans query 60 docs en cache.
-
-**Dépenses (Overview) :** `ExpensesService._periodData` est mis à jour de façon optimiste (`optimisticUpdateExpense`) pour les edits non-récurrents même compte/période, et invalidé pour les récurrents. `OverviewViewModel._onExpensesChanged` reconstruit immédiatement `periodOccurrences` depuis le Store filtré si le cache période est vide, puis relance un `loadSelectedPeriodExpenses(forceRefresh:true)` en arrière-plan.
-
-### Écriture Supabase
+For Supabase-backed mutations:
 
 ```text
 mutation
   ↓
-Store local
+Riverpod session update
   ↓
 LocalCache
   ↓
 SyncQueue
   ↓
+SyncManager
+  ↓
 Supabase
 ```
 
-L'utilisateur n'attend pas le round-trip réseau pour voir sa mutation locale.
+Sync ordering is preserved per entity. A failed account blocks only dependent categories/expenses; unrelated entities continue to synchronize. Failed operations are retried with backoff (scheduled to wake at the earliest retry time, not just on the periodic timer) and are never silently dropped. A failure the server will keep rejecting (see `SyncError` classification in `sync_error_classifier.dart`) is flagged `permanent`: it stops being replayed by background triggers but stays visible and durable, and an explicit user retry (`flush(retryPermanent: true)`) gives it another chance.
 
-### Écriture Firestore
+For Firestore-backed expenses and budgets, native Firestore offline persistence provides the durable write queue; Budgly does not introduce a second application queue for those writes. Expense/budget writes are not awaited by the caller: the write's Future only completes on a server acknowledgement, which never happens offline. A rejection is reported asynchronously (`ExpensesService.rejectedWrites`) and reconciled by reloading the affected account.
 
-Les dépenses et budgets utilisent directement la persistance offline native de Firestore. Il n'existe pas de seconde queue applicative pour Firestore.
+Deleting an account or a category enqueues a durable `cleanup` operation (`DeletionCleanupService`) once the Supabase delete is server-confirmed. It purges the Firestore documents this device may not have cached (server-side query) and the storage folder, and is retried like any other queue entry until it succeeds — it is not a fire-and-forget best effort.
 
-### Overview
+Sign-out never blocks on an empty queue: it replays pending work with a bounded timeout, then signs out regardless. Every queue entry is scoped to the user who created it (`PendingSync.ownerUserId`) and is durable across sessions, so nothing is lost and nothing leaks between users.
 
-`OverviewRepository` coordonne uniquement les chargements multi-services de l'écran : initialisation, refresh, préchargement d'autres comptes et période de dépenses. Il ne remplace pas les services et ne possède pas d'état UI.
+## Startup
 
-### Startup
+`main()` initializes Flutter, Firebase, Supabase and crash reporting, then creates the Riverpod application scope. The sync composition provider explicitly registers domain handlers and starts the lifecycle-bound coordinator. Analytics and other non-blocking enrichment work starts after `runApp()`.
 
-Le démarrage attend uniquement l'infrastructure nécessaire au premier arbre Flutter (`dotenv` + Firebase + SharedPreferences → Supabase init → `runApp()`). Les opérations de synchronisation, analytics et enrichissement non bloquants sont déclenchées après `runApp()`.
+## Testing
 
-Le Firebase `currentUser` est utilisé pour le routing initial. Un refresh auth/profil distant peut invalider la session plus tard, mais il n'est pas un prérequis au premier frame.
+- Domain contracts: deterministic unit tests.
+- Services: persistence, synchronization, errors and business rules.
+- Riverpod Notifiers: state transitions and feature mutations.
+- Widgets: presentation and local interaction.
+- Integration tests: a small set of end-to-end offline/recovery journeys.
 
-### Règles `unawaited()`
-
-Un `unawaited()` est acceptable uniquement si :
-
-- l'opération est réellement non bloquante ;
-- ses erreurs sont gérées dans la fonction appelée ;
-- son résultat n'est pas requis pour poursuivre l'action utilisateur courante.
-
-### Ce qui a été supprimé
-
-- loaders génériques ;
-- cache générique de période Overview ;
-- métriques Firestore dédiées ;
-- couche de session dédiée devenue redondante ;
-- système d'erreur UI non alimenté ;
-- dépendances inutilisées liées aux anciennes implémentations (`flutter_iconpicker`, `flutter_localization`).
-
-## Règle de simplification
-
-Avant d'ajouter une abstraction, vérifier :
-
-1. Est-elle utilisée à plusieurs endroits ?
-2. Retire-t-elle une responsabilité réelle ?
-3. Réduit-elle la duplication ?
-4. Rend-elle les tests plus simples ?
-5. Peut-on obtenir le même résultat avec une méthode ou un calculator existant ?
-
-Si la réponse est non, ne pas ajouter la couche.
+Critical contracts take priority over raw coverage: offline sync, authentication/session boundaries, dates/recurrence, optimistic mutations, ownership and financial calculations.

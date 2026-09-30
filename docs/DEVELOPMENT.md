@@ -1,4 +1,8 @@
-# Budgly — Guideline de développement d'une nouvelle fonctionnalité
+# Budgly — Guideline de développement
+
+> Source de vérité pour créer ou refactorer une fonctionnalité.
+
+
 
 Cette guideline définit le niveau de qualité attendu avant qu'une nouvelle fonctionnalité soit considérée comme terminée.
 
@@ -28,7 +32,7 @@ L'issue doit préciser :
 
 Avant d'ajouter du code :
 
-- rechercher les services, stores, ViewModels, widgets et calculators existants ;
+- rechercher les services, sessions Riverpod, Notifiers, widgets et calculators existants ;
 - réutiliser les helpers existants avant d'en créer un nouveau ;
 - vérifier les règles de formatage, devise, arrondi et localisation ;
 - vérifier le comportement des données hors ligne ;
@@ -45,9 +49,9 @@ Budgly utilise une architecture **MVVM pragmatique**.
 ### Responsabilités
 
 - **View** : affichage, interaction utilisateur et composition des widgets.
-- **ViewModel** : état de présentation et orchestration des actions utilisateur.
+- **Notifier** : état de présentation et orchestration des actions utilisateur.
+- **Session Riverpod** : source de vérité réactive en mémoire pour les données partagées d'une session.
 - **Service** : orchestration d'accès aux données, synchronisation et opérations applicatives.
-- **Store** : état local observable et cache de l'application.
 - **Calculator / logique pure** : calculs métier déterministes et testables sans Flutter/Firebase.
 - **Provider** : accès technique à une source externe (Firestore, Supabase, Storage...).
 - **Model** : représentation des données et conversions associées.
@@ -58,7 +62,7 @@ Budgly utilise une architecture **MVVM pragmatique**.
 2. Une abstraction est justifiée si elle isole une responsabilité réelle, simplifie les tests ou supprime une duplication significative.
 3. Ne pas déplacer du code uniquement pour réduire le nombre de lignes d'un fichier.
 4. La logique métier non liée à l'UI doit, autant que possible, être pure et indépendante de Flutter.
-5. Les providers restent concentrés sur leur source de données ; l'orchestration reste dans les services/ViewModels selon le besoin.
+5. Les providers de dépendances composent les services ; les Notifiers orchestrent l'état UI et les actions utilisateur.
 6. Éviter les dépendances globales dans les nouvelles classes testables : préférer l'injection des dépendances externes lorsque cela apporte un vrai bénéfice de testabilité.
 
 ---
@@ -127,7 +131,7 @@ Vérifier systématiquement :
 - responsive sur les tailles d'écran utilisées ;
 - accessibilité minimale : labels, tailles tactiles, contraste et navigation logique.
 
-Ne pas ajouter de logique métier dans un widget uniquement pour simplifier son ViewModel.
+Ne pas ajouter de logique métier dans un widget uniquement pour simplifier son Notifier.
 
 ---
 
@@ -205,7 +209,7 @@ La priorité est :
 1. logique métier ;
 2. synchronisation/offline ;
 3. mutations de données ;
-4. ViewModels et orchestration ;
+4. Notifiers et orchestration ;
 5. widgets à comportement significatif ;
 6. code purement visuel ou généré en dernier.
 
@@ -260,22 +264,32 @@ Les changements de schéma doivent inclure leur migration SQL/Firestore/règles 
 
 ## 11. Validation finale
 
-Avant de considérer l'issue terminée :
+Avant de considérer l'issue terminée, la source de vérité est le runner de la pyramide :
 
 ```bash
-flutter pub get
-dart analyze
-flutter test
-flutter test --coverage
+flutter analyze
+dart run tool/test_pyramid.dart all
 ```
 
-Pour une fonctionnalité nécessitant un parcours complet :
+`all` couvre `test/` (unitaires + widgets) et produit la couverture. Pour un changement touchant l'offline,
+la synchronisation ou un parcours de bout en bout, il faut aussi la suite d'intégration, qui **exige un
+device** (`emulator-*`) :
 
 ```bash
-flutter test integration_test
+flutter devices                       # vérifier qu'un émulateur est disponible
+flutter test integration_test -d emulator-5554
 ```
 
-Puis vérifier manuellement le parcours principal sur l'environnement cible lorsque nécessaire.
+ou, pour tout lancer d'un coup (unitaires + intégration + couverture fusionnée) :
+
+```bash
+dart run tool/test_pyramid.dart full
+```
+
+`full` supprime `coverage_report.log/json` si une suite échoue : un rapport de couverture périmé ne doit
+jamais être lu comme un résultat frais.
+
+Puis vérifier manuellement le parcours principal sur l'appareil cible lorsque nécessaire.
 
 ### Checklist de PR / issue
 

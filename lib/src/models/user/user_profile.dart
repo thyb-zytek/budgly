@@ -5,6 +5,7 @@ import 'package:budgly/src/models/account/account.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
+@immutable
 class UserProfile {
   final String id;
   final String email;
@@ -35,7 +36,7 @@ class UserProfile {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : color = color ?? UserProfile.generateRandomColor(),
-       accounts = accounts ?? [],
+       accounts = List.unmodifiable(accounts ?? const []),
        onboardingCompleted = onboardingCompleted ?? false,
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
@@ -51,13 +52,14 @@ class UserProfile {
           : UserProfile.generateRandomColor(),
       themeMode: json['theme_mode']?.toString() ?? 'system',
       currency: json['currency']?.toString() ?? 'EUR',
-      amountDecimalPlaces: (json['amount_decimal_places'] as num?)?.toInt().clamp(0, 2) ?? 2,
+      amountDecimalPlaces:
+          (json['amount_decimal_places'] as num?)?.toInt().clamp(0, 2) ?? 2,
       language: json['language']?.toString() ?? AppConstants.defaultLocale,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       accounts: json['accounts'] != null
           ? (json['accounts'] as List)
-              .map((account) => Account.fromJson(account))
-              .toList()
+                .map((account) => Account.fromJson(account))
+                .toList()
           : [],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'].toString())
@@ -109,7 +111,7 @@ class UserProfile {
       currency: currency ?? this.currency,
       amountDecimalPlaces: amountDecimalPlaces ?? this.amountDecimalPlaces,
       language: language ?? this.language,
-      accounts: accounts ?? this.accounts,
+      accounts: accounts == null ? this.accounts : List.unmodifiable(accounts),
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
@@ -119,4 +121,15 @@ class UserProfile {
   static Color generateRandomColor() {
     return Colors.primaries[Random().nextInt(Colors.primaries.length)];
   }
+
+  // Same convention as Account/User: identity follows the server-assigned
+  // (non-nullable, here) id.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is UserProfile && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

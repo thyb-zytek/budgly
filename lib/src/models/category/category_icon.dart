@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
+@immutable
 class CategoryIcon {
   final String iconName;
   final int iconCode;
   final String iconPack;
   final Map<String, String> labels;
 
-  const CategoryIcon({
+  CategoryIcon({
     required this.iconName,
     required this.iconCode,
     required this.iconPack,
-    required this.labels,
-  });
+    required Map<String, String> labels,
+  }) : labels = Map.unmodifiable(labels);
 
   factory CategoryIcon.fromJson(Map<String, dynamic> json) => CategoryIcon(
     iconName: json['icon_name'],
@@ -29,7 +30,7 @@ class CategoryIcon {
       'icon_name': iconName,
       'icon_code': iconCode,
       'icon_pack': iconPack,
-      'labels': labels,
+      'labels': Map<String, String>.from(labels),
     };
   }
 
@@ -54,7 +55,7 @@ class CategoryIcon {
       iconName: iconName ?? this.iconName,
       iconCode: iconCode ?? this.iconCode,
       iconPack: iconPack ?? this.iconPack,
-      labels: labels ?? this.labels,
+      labels: labels == null ? this.labels : Map.unmodifiable(labels),
     );
   }
 

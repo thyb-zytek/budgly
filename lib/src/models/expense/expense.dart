@@ -3,7 +3,12 @@ import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' hide Category;
 
+DateTime _calendarDate(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+@immutable
 class Expense {
   final String? id;
   final String accountId;
@@ -17,6 +22,11 @@ class Expense {
   final bool isDebited;
 
   final List<String> debitedOccurrences;
+  // Written as a whole array on every update (see ExpensesService), so two
+  // devices editing different exceptions of the same series while both
+  // offline will have one edit silently overwrite the other once both sync.
+  // This is a deliberate product decision (docs/AUDIT_PLAN.md, X6), not an
+  // oversight: kept as last-write-wins rather than adding merge logic.
   final List<ExpenseOccurrenceException> occurrenceExceptions;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -29,25 +39,31 @@ class Expense {
     required this.categoryId,
     required this.name,
     required this.amount,
-    required this.debitDate,
-    this.endDate,
+    required DateTime debitDate,
+    DateTime? endDate,
     this.recurrence = RecurrenceType.none,
     int? recurrenceAnchorDay,
     this.isDebited = false,
-    this.debitedOccurrences = const [],
-    this.occurrenceExceptions = const [],
+    List<String> debitedOccurrences = const [],
+    List<ExpenseOccurrenceException> occurrenceExceptions = const [],
     this.createdAt,
     this.updatedAt,
     this.account,
     this.category,
-  }) : recurrenceAnchorDay = recurrenceAnchorDay ?? debitDate.day;
+  }) : debitDate = _calendarDate(debitDate),
+       endDate = endDate == null ? null : _calendarDate(endDate),
+       recurrenceAnchorDay = recurrenceAnchorDay ?? debitDate.day,
+       debitedOccurrences = List.unmodifiable(debitedOccurrences),
+       occurrenceExceptions = List.unmodifiable(occurrenceExceptions);
 
   bool get isRecurring => recurrence.isRecurring;
 
-  DateTime? get endOfEndDate {
+  /// Exclusive upper bound for recurrence end-date filtering.
+  /// The persisted [endDate] itself remains inclusive as a business date.
+  DateTime? get endDateExclusive {
     final end = endDate;
     if (end == null) return null;
-    return DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+    return end.add(const Duration(days: 1));
   }
 
   ExpenseOccurrenceException? exceptionAt(DateTime date) {
@@ -82,12 +98,15 @@ class Expense {
       endDate: (map['endDate'] as Timestamp?)?.toDate(),
       isDebited: map['isDebited'] as bool? ?? false,
       debitedOccurrences: rawDebited is List
-          ? rawDebited.cast<String>()
+          ? List<String>.from(rawDebited.map((value) => value.toString()))
           : const [],
-      occurrenceExceptions: (map['occurrenceExceptions'] as List?)
-              ?.map((item) => ExpenseOccurrenceException.fromJson(
-                    Map<String, dynamic>.from(item as Map),
-                  ))
+      occurrenceExceptions:
+          (map['occurrenceExceptions'] as List?)
+              ?.map(
+                (item) => ExpenseOccurrenceException.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ),
+              )
               .toList() ??
           const [],
       recurrence: RecurrenceType.fromString(map['recurrence'] as String?),
@@ -107,7 +126,9 @@ class Expense {
       'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
       'isDebited': isDebited,
       'debitedOccurrences': debitedOccurrences,
-      'occurrenceExceptions': occurrenceExceptions.map((e) => e.toJson()).toList(),
+      'occurrenceExceptions': occurrenceExceptions
+          .map((e) => e.toJson())
+          .toList(),
       'recurrence': recurrence.name,
       'recurrenceAnchorDay': recurrenceAnchorDay,
     };
@@ -118,52 +139,58 @@ class Expense {
   /// Firestore's [Timestamp] and [FieldValue] types cannot be serialized by
   /// [jsonEncode], so queued mutations use ISO-8601 strings instead.
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'accountId': accountId,
-        'categoryId': categoryId,
-        'name': name,
-        'amount': amount,
-        'debitDate': debitDate.toIso8601String(),
-        'endDate': endDate?.toIso8601String(),
-        'recurrence': recurrence.name,
-        'recurrenceAnchorDay': recurrenceAnchorDay,
-        'isDebited': isDebited,
-        'debitedOccurrences': debitedOccurrences,
-        'occurrenceExceptions': occurrenceExceptions.map((e) => e.toJson()).toList(),
-        'createdAt': createdAt?.toIso8601String(),
-        'updatedAt': updatedAt?.toIso8601String(),
-      };
+    'id': id,
+    'accountId': accountId,
+    'categoryId': categoryId,
+    'name': name,
+    'amount': amount,
+    'debitDate': debitDate.toIso8601String(),
+    'endDate': endDate?.toIso8601String(),
+    'recurrence': recurrence.name,
+    'recurrenceAnchorDay': recurrenceAnchorDay,
+    'isDebited': isDebited,
+    'debitedOccurrences': debitedOccurrences,
+    'occurrenceExceptions': occurrenceExceptions
+        .map((e) => e.toJson())
+        .toList(),
+    'createdAt': createdAt?.toIso8601String(),
+    'updatedAt': updatedAt?.toIso8601String(),
+  };
 
   factory Expense.fromJson(Map<String, dynamic> json) => Expense(
-        id: json['id']?.toString(),
-        accountId: json['accountId'] as String,
-        categoryId: json['categoryId'] as String,
-        name: json['name'] as String? ?? '',
-        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-        debitDate: DateTime.parse(json['debitDate'].toString()),
-        endDate: json['endDate'] == null
-            ? null
-            : DateTime.parse(json['endDate'].toString()),
-        recurrence: RecurrenceType.fromString(json['recurrence'] as String?),
-        recurrenceAnchorDay: (json['recurrenceAnchorDay'] as num?)?.toInt(),
-        isDebited: json['isDebited'] as bool? ?? false,
-        debitedOccurrences: (json['debitedOccurrences'] as List?)
-                ?.map((value) => value.toString())
-                .toList() ??
-            const [],
-        occurrenceExceptions: (json['occurrenceExceptions'] as List?)
-                ?.map((item) => ExpenseOccurrenceException.fromJson(
-                      Map<String, dynamic>.from(item as Map),
-                    ))
-                .toList() ??
-            const [],
-        createdAt: json['createdAt'] == null
-            ? null
-            : DateTime.parse(json['createdAt'].toString()),
-        updatedAt: json['updatedAt'] == null
-            ? null
-            : DateTime.parse(json['updatedAt'].toString()),
-      );
+    id: json['id']?.toString(),
+    accountId: json['accountId'] as String,
+    categoryId: json['categoryId'] as String,
+    name: json['name'] as String? ?? '',
+    amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+    debitDate: DateTime.parse(json['debitDate'].toString()),
+    endDate: json['endDate'] == null
+        ? null
+        : DateTime.parse(json['endDate'].toString()),
+    recurrence: RecurrenceType.fromString(json['recurrence'] as String?),
+    recurrenceAnchorDay: (json['recurrenceAnchorDay'] as num?)?.toInt(),
+    isDebited: json['isDebited'] as bool? ?? false,
+    debitedOccurrences:
+        (json['debitedOccurrences'] as List?)
+            ?.map((value) => value.toString())
+            .toList() ??
+        const [],
+    occurrenceExceptions:
+        (json['occurrenceExceptions'] as List?)
+            ?.map(
+              (item) => ExpenseOccurrenceException.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
+            .toList() ??
+        const [],
+    createdAt: json['createdAt'] == null
+        ? null
+        : DateTime.parse(json['createdAt'].toString()),
+    updatedAt: json['updatedAt'] == null
+        ? null
+        : DateTime.parse(json['updatedAt'].toString()),
+  );
 
   Map<String, dynamic> toCreateMap() {
     return {
@@ -174,10 +201,7 @@ class Expense {
   }
 
   Map<String, dynamic> toUpdateMap() {
-    return {
-      ..._sharedFieldsMap(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+    return {..._sharedFieldsMap(), 'updatedAt': FieldValue.serverTimestamp()};
   }
 
   Expense copyWith({
@@ -218,4 +242,20 @@ class Expense {
       category: category ?? this.category,
     );
   }
+
+  // Same convention as Account/Category: two Expense instances represent the
+  // same domain entity when they share the same id. `id` is only ever null
+  // for the brief moment before ExpensesService.createExpense assigns one
+  // (server id or offline UUID) — by the time an Expense reaches
+  // ExpensesSession or the UI it always has one.
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Expense) return false;
+    if (id == null || other.id == null) return false;
+    return other.id == id;
+  }
+
+  @override
+  int get hashCode => id == null ? identityHashCode(this) : id.hashCode;
 }

@@ -4,8 +4,5 @@ class RecurringExpenseVersion {
   final Expense previous;
   final Expense next;
 
-  const RecurringExpenseVersion({
-    required this.previous,
-    required this.next,
-  });
+  const RecurringExpenseVersion({required this.previous, required this.next});
 }
