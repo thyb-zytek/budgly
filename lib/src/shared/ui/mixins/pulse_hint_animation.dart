@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-mixin PulseHintAnimationMixin<T extends StatefulWidget> on TickerProviderStateMixin<T> {
+mixin PulseHintAnimationMixin<T extends StatefulWidget>
+    on TickerProviderStateMixin<T> {
   static const Duration hintFirstDelay = Duration(milliseconds: 1500);
   static const Duration hintRepeatInterval = Duration(seconds: 3);
 
@@ -73,7 +74,6 @@ mixin PulseHintAnimationMixin<T extends StatefulWidget> on TickerProviderStateMi
     hintController?.dispose();
     pulseController?.dispose();
   }
-
 }
 
 class PulseHint extends StatelessWidget {

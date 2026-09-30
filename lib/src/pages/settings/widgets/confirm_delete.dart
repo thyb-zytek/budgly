@@ -24,47 +24,45 @@ class ConfirmDelete extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SafeArea(
-          top: false,
-          child: AnimatedPadding(
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(
-              left: BudglySpacing.xl,
-              right: BudglySpacing.xl,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      top: false,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          left: BudglySpacing.xl,
+          right: BudglySpacing.xl,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 24,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 24,
-              children: [
-                Text(
-                 title,
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  content,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                FormActions(
-                  destructiveSubmit: true,
-                  dense: true,
-                  onCancel: () => Navigator.pop(context),
-                  onSubmit: () async {
-                    await onConfirm();
-                    if (context.mounted) {
-                      Navigator.pop(context, true);
-                    }
-                  },
-                ),
-              ],
+            Text(content, style: theme.textTheme.bodyMedium),
+            FormActions(
+              destructiveSubmit: true,
+              dense: true,
+              onCancel: () => Navigator.pop(context),
+              onSubmit: () async {
+                await onConfirm();
+                if (context.mounted) {
+                  Navigator.pop(context, true);
+                }
+              },
             ),
-          ),
-        );
+          ],
+        ),
+      ),
+    );
   }
 }
 
 enum RecurringDeleteChoice { single, future }
+
 enum RecurringEditChoice { single, future }
 
 Future<bool?> showConfirmDelete(
@@ -78,11 +76,8 @@ Future<bool?> showConfirmDelete(
   return showAppBottomSheet<bool>(
     context,
     backgroundColor: theme.colorScheme.surface,
-    builder: (context) => ConfirmDelete(
-      title: title,
-      content: content,
-      onConfirm: onConfirm,
-    ),
+    builder: (context) =>
+        ConfirmDelete(title: title, content: content, onConfirm: onConfirm),
   );
 }
 
@@ -126,7 +121,8 @@ Future<RecurringDeleteChoice?> showRecurringDeleteOptions(
               width: double.infinity,
               child: FilledButton(
                 style: ButtonType.neutralVariant.filledStyle(theme),
-                onPressed: () => Navigator.pop(context, RecurringDeleteChoice.single),
+                onPressed: () =>
+                    Navigator.pop(context, RecurringDeleteChoice.single),
                 child: Text(tr.deleteSingleOccurrence),
               ),
             ),
@@ -134,7 +130,8 @@ Future<RecurringDeleteChoice?> showRecurringDeleteOptions(
               width: double.infinity,
               child: FilledButton(
                 style: ButtonType.error.filledStyle(theme),
-                onPressed: () => Navigator.pop(context, RecurringDeleteChoice.future),
+                onPressed: () =>
+                    Navigator.pop(context, RecurringDeleteChoice.future),
                 child: Text(tr.deleteFutureOccurrences),
               ),
             ),
@@ -151,7 +148,6 @@ Future<RecurringDeleteChoice?> showRecurringDeleteOptions(
     ),
   );
 }
-
 
 Future<RecurringEditChoice?> showRecurringEditOptions(
   BuildContext context, {
@@ -192,7 +188,8 @@ Future<RecurringEditChoice?> showRecurringEditOptions(
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => Navigator.pop(context, RecurringEditChoice.single),
+                onPressed: () =>
+                    Navigator.pop(context, RecurringEditChoice.single),
                 child: Text(tr.modifyThisOccurrence),
               ),
             ),
@@ -200,7 +197,8 @@ Future<RecurringEditChoice?> showRecurringEditOptions(
               width: double.infinity,
               child: FilledButton(
                 style: ButtonType.primary.filledStyle(theme),
-                onPressed: () => Navigator.pop(context, RecurringEditChoice.future),
+                onPressed: () =>
+                    Navigator.pop(context, RecurringEditChoice.future),
                 child: Text(tr.modifyOccurrenceAndFollowing),
               ),
             ),

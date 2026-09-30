@@ -1,7 +1,7 @@
-import 'package:budgly/src/core/auth/auth_session.dart';
 import 'package:budgly/src/core/navigation/app_routes.dart';
 import 'package:budgly/src/core/navigation/route_guards.dart';
-import 'package:budgly/src/services/profile/profile_service.dart';
+import 'package:budgly/src/state/profile_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/category_expenses/view.dart';
 import 'package:budgly/src/pages/login/view.dart';
@@ -14,7 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
-  AppRouter._();
+  AppRouter({required ChangeNotifier authSession})
+    : router = _createRouter(authSession);
+
+  final GoRouter router;
 
   static final GlobalKey<NavigatorState> rootNavigatorKey =
       GlobalKey<NavigatorState>();
@@ -23,14 +26,20 @@ class AppRouter {
   static final GlobalKey<NavigatorState> settingsNavigatorKey =
       GlobalKey<NavigatorState>();
 
-  static final GoRouter router = GoRouter(
+  static GoRouter _createRouter(ChangeNotifier authSession) => GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.login,
-    refreshListenable: Listenable.merge([
-      AuthSessionNotifier.instance,
-      ProfileService.instance,
-    ]),
-    redirect: (context, state) => RouteGuards.authRedirect(state),
+    refreshListenable: authSession,
+    redirect: (context, state) {
+      final profileSession = ProviderScope.containerOf(
+        context,
+      ).read(profileSessionProvider);
+      return RouteGuards.decideRedirect(
+        location: state.matchedLocation,
+        profileUser: profileSession.currentUser,
+        hasLoaded: profileSession.hasLoaded,
+      );
+    },
     routes: [
       GoRoute(
         path: AppRoutes.login,
@@ -84,10 +93,8 @@ class AppRouter {
             ],
           ),
         ],
-        pageBuilder: (context, state, navigationShell) => _page(
-          BottomNavBar(child: navigationShell),
-          state,
-        ),
+        pageBuilder: (context, state, navigationShell) =>
+            _page(BottomNavBar(child: navigationShell), state),
       ),
     ],
   );

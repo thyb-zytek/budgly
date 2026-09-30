@@ -46,10 +46,7 @@ class UndebitedSwipeActionBackground extends StatelessWidget {
     final isLeading = alignment == Alignment.centerLeft;
 
     return Container(
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BudglyRadius.large,
-      ),
+      decoration: BoxDecoration(color: color, borderRadius: BudglyRadius.large),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       alignment: alignment,
       child: actions.length == 1

@@ -17,7 +17,10 @@ class AuthValidators {
     };
   }
 
-  static String? translateConfirmPasswordError(AppLocalizations tr, String? code) {
+  static String? translateConfirmPasswordError(
+    AppLocalizations tr,
+    String? code,
+  ) {
     return switch (code) {
       'confirmPasswordRequired' => tr.passwordRequired,
       'passwordsDoNotMatch' => tr.passwordsDontMatch,

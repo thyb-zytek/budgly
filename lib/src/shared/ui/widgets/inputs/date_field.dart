@@ -28,8 +28,7 @@ class DateField extends StatelessWidget {
 
   Future<void> _pickDate(BuildContext context) async {
     final now = DateTime.now();
-    final effectiveFirst =
-        firstDate ?? now.subtract(const Duration(days: 365));
+    final effectiveFirst = firstDate ?? now.subtract(const Duration(days: 365));
     final lastDate = now.add(
       const Duration(days: AppConstants.maxFutureExpenseDays),
     );

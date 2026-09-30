@@ -42,7 +42,10 @@ class FormActions extends StatelessWidget {
                   child: Text(cancelLabel ?? tr.cancel),
                 )
               : OutlinedButton(
-                  style: ButtonType.secondary.outlinedStyle(theme, dense: dense),
+                  style: ButtonType.secondary.outlinedStyle(
+                    theme,
+                    dense: dense,
+                  ),
                   onPressed: isLoading ? null : onCancel,
                   child: Text(cancelLabel ?? tr.cancel),
                 ),

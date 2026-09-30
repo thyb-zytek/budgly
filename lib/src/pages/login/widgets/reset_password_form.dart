@@ -47,7 +47,8 @@ class ResetPasswordForm extends StatelessWidget {
                   labelText: tr.email,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) => AuthValidators.translateEmailError(tr, validateEmail(v)),
+                  hotValidating: (v) =>
+                      AuthValidators.translateEmailError(tr, validateEmail(v)),
                 ),
               ],
             ),
@@ -73,10 +74,8 @@ class ResetPasswordForm extends StatelessWidget {
         Padding(
           padding: EdgeInsets.only(top: BudglySpacing.xl),
           child: FilledButton(
-                        onPressed: onSubmitForm,
-            child: Text(
-              tr.sendEmail,
-            ),
+            onPressed: onSubmitForm,
+            child: Text(tr.sendEmail),
           ),
         ),
       ],

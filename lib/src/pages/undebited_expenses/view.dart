@@ -1,77 +1,60 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/view_models/view_model_selector.dart';
-import 'package:budgly/src/pages/undebited_expenses/view_model.dart';
+import 'package:budgly/src/pages/undebited_expenses/undebited_expenses_provider.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/swipe_hint_wrapper.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/undebited_expenses_content.dart';
-import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/riverpod_feedback.dart';
 
-class UndebitedExpensesPage extends StatefulWidget {
-  final UndebitedExpensesViewModel? injectedViewModel;
-
-  const UndebitedExpensesPage({super.key, this.injectedViewModel});
+class UndebitedExpensesPage extends ConsumerStatefulWidget {
+  const UndebitedExpensesPage({super.key});
 
   @override
-  State<UndebitedExpensesPage> createState() => _UndebitedExpensesPageState();
+  ConsumerState<UndebitedExpensesPage> createState() =>
+      _UndebitedExpensesPageState();
 }
 
-class _UndebitedExpensesPageState extends State<UndebitedExpensesPage> {
-  late final UndebitedExpensesViewModel _viewModel;
-  late final bool _ownsViewModel;
+class _UndebitedExpensesPageState extends ConsumerState<UndebitedExpensesPage> {
   final GlobalKey<UndebitedSwipeHintWrapperState> _swipeHintKey =
       GlobalKey<UndebitedSwipeHintWrapperState>();
 
   @override
   void initState() {
     super.initState();
-    _ownsViewModel = widget.injectedViewModel == null;
-    _viewModel = widget.injectedViewModel ??
-        UndebitedExpensesViewModel(onResolved: _autoPop);
-    _viewModel.ensureDataLoaded();
-  }
-
-  @override
-  void dispose() {
-    if (_ownsViewModel) _viewModel.dispose();
-    super.dispose();
-  }
-
-  /// A dedicated report page returns once there is nothing left to manage.
-  void _autoPop() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_viewModel.isEmpty) return;
-      Navigator.of(context).pop();
-    });
+    Future.microtask(
+      () => ref.read(undebitedExpensesProvider.notifier).ensureDataLoaded(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
+    final state = ref.watch(undebitedExpensesProvider);
+
+    ref.listen(undebitedExpensesProvider.select((state) => state.isEmpty), (
+      previous,
+      next,
+    ) {
+      if (previous == true || next != true) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ref.read(undebitedExpensesProvider).isEmpty) {
+          Navigator.of(context).pop();
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(tr.undebitedSheetTitle)),
-      body: ViewModelFeedback(
-        viewModel: _viewModel,
-        child: ViewModelSelector<UndebitedExpensesViewModel, Object?>(
-          model: _viewModel,
-          selector: (model) => (
-            model.occurrences,
-            model.totalCount,
-            model.totalAmount,
-            model.isSelectionMode,
-            model.currentPeriod,
-            model.accounts,
-            model.selectedAccountId,
-            model.currencyCode,
-            model.localeName,
-            model.amountDecimalPlaces,
-            model.isProcessing,
-            model.busyKey,
-          ),
-          builder: (context, _) => UndebitedExpensesContent(
-            viewModel: _viewModel,
-            swipeHintKey: _swipeHintKey,
-          ),
+      body: RiverpodFeedback(
+        messageListenable: undebitedExpensesProvider.select(
+          (state) => state.status.pendingMessage,
+        ),
+        onConsume: (ref) =>
+            ref.read(undebitedExpensesProvider.notifier).consumeMessage(),
+        child: UndebitedExpensesContent(
+          state: state,
+          notifier: ref.read(undebitedExpensesProvider.notifier),
+          swipeHintKey: _swipeHintKey,
         ),
       ),
     );

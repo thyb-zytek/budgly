@@ -49,7 +49,8 @@ class ExpenseCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) => DateFormat.yMMMd(localeName).format(date);
+  String _formatDate(DateTime date) =>
+      DateFormat.yMMMd(localeName).format(date);
 
   void _showQuickActionsMenu(BuildContext context) {
     HapticFeedback.mediumImpact();
@@ -80,8 +81,9 @@ class ExpenseCard extends StatelessWidget {
       onLongPress: () => _showQuickActionsMenu(context),
       child: Dismissible(
         key: ValueKey(occurrence.key),
-        direction:
-            isDebited ? DismissDirection.endToStart : DismissDirection.horizontal,
+        direction: isDebited
+            ? DismissDirection.endToStart
+            : DismissDirection.horizontal,
         confirmDismiss: (direction) async {
           onUserInteracted?.call();
           if (direction == DismissDirection.startToEnd) {
@@ -97,9 +99,7 @@ class ExpenseCard extends StatelessWidget {
         background: SwipeActionBackground(
           alignment: Alignment.centerLeft,
           icon: isDebited ? Icons.undo_rounded : Icons.check_rounded,
-          color: isDebited
-              ? theme.colorScheme.secondary
-              : success.background,
+          color: isDebited ? theme.colorScheme.secondary : success.background,
           foregroundColor: isDebited
               ? theme.colorScheme.onSecondary
               : success.foreground,

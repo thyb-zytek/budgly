@@ -45,12 +45,11 @@ class ExpenseAdvancedOptions extends StatelessWidget {
           onTap: onToggleAdvanced,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.6,
+              ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
@@ -137,13 +136,13 @@ class ExpenseAdvancedOptions extends StatelessWidget {
                           SizedBox(
                             width: double.infinity,
                             child: AdvancedDateField(
-                                      label: tr.debitDate,
-                                      child: DateField(
-                                        date: data.debitDate,
-                                        localeName: localeName,
-                                        onDateChanged: onDateChanged,
-                                      ),
-                                    ),
+                              label: tr.debitDate,
+                              child: DateField(
+                                date: data.debitDate,
+                                localeName: localeName,
+                                onDateChanged: onDateChanged,
+                              ),
+                            ),
                           ),
                           AnimatedSize(
                             duration: const Duration(milliseconds: 220),
@@ -178,4 +177,3 @@ class ExpenseAdvancedOptions extends StatelessWidget {
     );
   }
 }
-

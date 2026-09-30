@@ -27,7 +27,12 @@ class TutorialStepScaffold extends StatelessWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(BudglySpacing.xxl, BudglySpacing.sm, BudglySpacing.xxl, BudglySpacing.lg),
+            padding: EdgeInsets.fromLTRB(
+              BudglySpacing.xxl,
+              BudglySpacing.sm,
+              BudglySpacing.xxl,
+              BudglySpacing.lg,
+            ),
             child: _buildStepEntrance(
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -66,10 +71,7 @@ class TutorialStepScaffold extends StatelessWidget {
           ),
           child: Column(
             spacing: BudglySpacing.sm,
-            children: [
-              primaryAction,
-              ?secondaryAction,
-            ],
+            children: [primaryAction, ?secondaryAction],
           ),
         ),
       ],
@@ -94,4 +96,3 @@ Widget _buildStepEntrance(Widget child) {
     child: child,
   );
 }
-

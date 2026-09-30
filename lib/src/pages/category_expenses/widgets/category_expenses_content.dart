@@ -1,7 +1,8 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
-import 'package:budgly/src/pages/category_expenses/view_model.dart';
+import 'package:budgly/src/pages/category_expenses/category_expenses_provider.dart'
+    hide CategoryExpenses;
 import 'package:budgly/src/pages/category_expenses/widgets/expense_card.dart';
 import 'package:budgly/src/pages/category_expenses/widgets/swipe_hint_wrapper.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_expenses.dart';
@@ -9,7 +10,7 @@ import 'package:budgly/src/shared/ui/widgets/layout/empty_state.dart';
 import 'package:flutter/material.dart';
 
 class CategoryExpensesContent extends StatelessWidget {
-  final CategoryExpensesViewModel viewModel;
+  final CategoryExpensesState state;
   final AppLocalizations translations;
   final GlobalKey<SwipeHintWrapperState> swipeHintKey;
   final ValueChanged<ExpenseOccurrence> onEdit;
@@ -19,7 +20,7 @@ class CategoryExpensesContent extends StatelessWidget {
 
   const CategoryExpensesContent({
     super.key,
-    required this.viewModel,
+    required this.state,
     required this.translations,
     required this.swipeHintKey,
     required this.onEdit,
@@ -30,20 +31,25 @@ class CategoryExpensesContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final occurrences = viewModel.occurrences;
-    final summary = viewModel.summarize(occurrences);
+    final occurrences = state.occurrences;
+    final summary = state.summary;
 
     // The category card stays pinned above the scrollable expense list so it
     // remains visible while scrolling.
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, BudglySpacing.sm),
+          padding: EdgeInsets.fromLTRB(
+            BudglySpacing.lg,
+            BudglySpacing.xs,
+            BudglySpacing.lg,
+            BudglySpacing.sm,
+          ),
           child: CategoryExpenses(
-            summary: summary,
-            currencyCode: viewModel.currencyCode,
-            localeName: viewModel.localeName,
-            decimalPlaces: viewModel.amountDecimalPlaces,
+            summary: summary!,
+            currencyCode: state.currencyCode,
+            localeName: state.localeName,
+            decimalPlaces: state.amountDecimalPlaces,
           ),
         ),
         Expanded(
@@ -61,18 +67,24 @@ class CategoryExpensesContent extends StatelessWidget {
                 )
               else
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.xs, BudglySpacing.lg, 88),
+                  padding: EdgeInsets.fromLTRB(
+                    BudglySpacing.lg,
+                    BudglySpacing.xs,
+                    BudglySpacing.lg,
+                    88,
+                  ),
                   sliver: SliverList.separated(
                     itemCount: occurrences.length,
-                    separatorBuilder: (_, _) => SizedBox(height: BudglySpacing.md),
+                    separatorBuilder: (_, _) =>
+                        SizedBox(height: BudglySpacing.md),
                     itemBuilder: (context, index) {
                       final occurrence = occurrences[index];
                       final card = ExpenseCard(
                         occurrence: occurrence,
-                        currencyCode: viewModel.currencyCode,
-                        localeName: viewModel.localeName,
-                        decimalPlaces: viewModel.amountDecimalPlaces,
-                        accountColor: viewModel.accountColor,
+                        currencyCode: state.currencyCode,
+                        localeName: state.localeName,
+                        decimalPlaces: state.amountDecimalPlaces,
+                        accountColor: state.accountColor,
                         onTap: () => onEdit(occurrence),
                         onEdit: () => onEdit(occurrence),
                         onToggleDebited: () => onToggleDebited(occurrence),
@@ -90,10 +102,15 @@ class CategoryExpensesContent extends StatelessWidget {
                     },
                   ),
                 ),
-              if (viewModel.isLoadingMore)
+              if (state.isLoadingMore)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.lg, 88),
+                    padding: EdgeInsets.fromLTRB(
+                      BudglySpacing.lg,
+                      BudglySpacing.sm,
+                      BudglySpacing.lg,
+                      88,
+                    ),
                     child: const Center(child: CircularProgressIndicator()),
                   ),
                 ),

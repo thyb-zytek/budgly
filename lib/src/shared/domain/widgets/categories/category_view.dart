@@ -2,12 +2,13 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/category/category.dart';
-import 'package:budgly/src/stores/profile.dart';
+import 'package:budgly/src/state/profile_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:budgly/src/shared/ui/widgets/actions/edit_delete_actions.dart';
 import 'package:flutter/material.dart';
 
-class CategoryView extends StatelessWidget {
+class CategoryView extends ConsumerWidget {
   final Category category;
   final Color? color;
   final bool showThreshold;
@@ -23,20 +24,26 @@ class CategoryView extends StatelessWidget {
     this.showThreshold = true,
   });
 
+  String _formatThreshold(WidgetRef ref, double threshold) {
+    final profile = ref.watch(profileSessionProvider);
+    return formatCurrency(
+      amount: threshold,
+      currencyCode: profile.currency,
+      localeName: profile.locale.toLanguageTag(),
+      decimalPlaces: profile.amountDecimalPlaces,
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
-    final profile = ProfileStore.instance;
     final threshold = category.monthlyThreshold;
     final thresholdLabel = threshold == null
         ? tr.thresholdNotSet
-        : formatCurrency(
-            amount: threshold,
-            currencyCode: profile.currency,
-            localeName: profile.locale.toLanguageTag(),
-            decimalPlaces: profile.amountDecimalPlaces,
-          );
+        : showThreshold
+        ? _formatThreshold(ref, threshold)
+        : '';
 
     return Row(
       spacing: 16,

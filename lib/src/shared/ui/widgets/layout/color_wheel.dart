@@ -19,21 +19,22 @@ class ColorWheel extends StatelessWidget {
           label: AppLocalizations.of(context)?.semanticColorPicker,
           explicitChildNodes: true,
           child: MediaQuery(
-          data: mediaQuery.copyWith(
-            size: Size(availableWidth, availableWidth * 0.6),
-          ),
-          child: SizedBox(
-            height: 220,
-            child: HueRingPicker(
-              pickerColor: color,
-              onColorChanged: onChanged,
-              enableAlpha: false,
-              displayThumbColor: true,
-              colorPickerHeight: availableWidth * 0.65,
-              hueRingStrokeWidth: 16,
+            data: mediaQuery.copyWith(
+              size: Size(availableWidth, availableWidth * 0.6),
+            ),
+            child: SizedBox(
+              height: 220,
+              child: HueRingPicker(
+                pickerColor: color,
+                onColorChanged: onChanged,
+                enableAlpha: false,
+                displayThumbColor: true,
+                colorPickerHeight: availableWidth * 0.65,
+                hueRingStrokeWidth: 16,
+              ),
             ),
           ),
-        ));
+        );
       },
     );
   }

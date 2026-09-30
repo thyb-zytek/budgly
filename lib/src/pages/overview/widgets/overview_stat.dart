@@ -6,11 +6,7 @@ class OverviewStat extends StatelessWidget {
   final OverviewStatItem item;
   final bool compact;
 
-  const OverviewStat({
-    super.key,
-    required this.item,
-    this.compact = false,
-  });
+  const OverviewStat({super.key, required this.item, this.compact = false});
 
   @override
   Widget build(BuildContext context) {

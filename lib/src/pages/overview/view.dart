@@ -1,86 +1,117 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/navigation/navigation_helper.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/core/view_models/view_model_selector.dart';
 import 'package:budgly/src/models/budget/period.dart';
-import 'package:budgly/src/pages/overview/view_model.dart';
-import 'package:budgly/src/shared/domain/widgets/expenses/expense_editor_sheet.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
-import 'package:budgly/src/shared/domain/widgets/expenses/undebited_expenses_banner.dart';
+import 'package:budgly/src/state/categories_provider.dart';
+import 'package:budgly/src/state/profile_providers.dart';
+import 'package:budgly/src/pages/overview/account_selection_provider.dart';
+import 'package:budgly/src/pages/overview/overview_provider.dart';
+import 'package:budgly/src/pages/overview/widgets/overview_content.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
-import 'package:budgly/src/pages/overview/widgets/overview_content.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_editor_sheet.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_controller.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/undebited_expenses_banner.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/riverpod_feedback.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/budgly_fab.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/fab_label_auto_hide_mixin.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/framed_container.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
-import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class OverviewPage extends StatefulWidget {
-  final OverviewViewModel? injectedViewModel;
-
-  const OverviewPage({super.key, this.injectedViewModel});
+class OverviewPage extends ConsumerStatefulWidget {
+  const OverviewPage({super.key});
 
   @override
-  State<OverviewPage> createState() => _OverviewPageState();
+  ConsumerState<OverviewPage> createState() => _OverviewPageState();
 }
 
-class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin {
-  late final OverviewViewModel _viewModel;
-  late final bool _ownsViewModel;
+class _OverviewPageState extends ConsumerState<OverviewPage>
+    with FabLabelAutoHideMixin {
   final ValueNotifier<int> _slideDirection = ValueNotifier(1);
+  late final ExpenseFormController _expenseForm;
 
   @override
   void initState() {
     super.initState();
-    _ownsViewModel = widget.injectedViewModel == null;
-    _viewModel = widget.injectedViewModel ?? OverviewViewModel();
-    _loadData();
+    _expenseForm = ExpenseFormController();
+    Future.microtask(
+      () => ref.read(overviewProvider.notifier).loadInitialData(),
+    );
     startFabLabelAutoHide();
   }
-
-  Future<void> _loadData() => _viewModel.loadInitialData();
 
   @override
   void dispose() {
     disposeFabLabelAutoHide();
     _slideDirection.dispose();
-    if (_ownsViewModel) _viewModel.dispose();
+    _expenseForm.dispose();
     super.dispose();
   }
 
   void _openAddExpenseModal() {
     final tr = AppLocalizations.of(context)!;
+    final overview = ref.read(overviewProvider.notifier);
+    final accounts = ref.read(accountSelectionProvider);
+    final profile = ref.read(profileSessionProvider);
     dismissFabLabel();
-    _viewModel.startNewExpense();
+    final account = accounts.selectedAccount;
+    final categories =
+        ref.read(categoriesSessionProvider).categoriesByAccount[account?.id] ??
+        const [];
+    _expenseForm.resetForCreation(
+      account: account,
+      category: categories.isNotEmpty ? categories.first : null,
+    );
+
     showAppBottomSheet(
       context,
       builder: (context) => ExpenseEditorSheet(
-        listenable: _viewModel,
-        editingData: _viewModel.expenseForm.data,
+        listenable: _expenseForm,
+        editingData: _expenseForm.data,
         title: tr.newExpense,
-        currencyCode: _viewModel.currencyCode,
-        localeName: _viewModel.localeName,
-        validate: (tr) => _viewModel.expenseForm.validate(
-          tr,
-          requireAccountAndCategory: true,
+        currencyCode: profile.currency,
+        localeName: profile.locale.languageCode,
+        validate: (tr) =>
+            _expenseForm.validate(tr, requireAccountAndCategory: true),
+        onSubmit: () => overview.createExpense(
+          form: ExpenseFormData(
+            name: _expenseForm.data.nameController.text,
+            amount: _expenseForm.data.amountController.text,
+            account: _expenseForm.data.account,
+            category: _expenseForm.data.category,
+            debitDate: _expenseForm.data.debitDate,
+            endDate: _expenseForm.data.effectiveEndDate,
+            recurrence: _expenseForm.data.recurrence,
+          ),
         ),
-        onSubmit: _viewModel.createExpense,
-        onToggleAdvanced: _viewModel.expenseForm.toggleAdvancedOptions,
-        onDateChanged: _viewModel.expenseForm.setDebitDate,
-        onRecurrenceChanged: _viewModel.expenseForm.setRecurrence,
-        onEndDateChanged: _viewModel.expenseForm.setEndDate,
-        onEndDateCleared: _viewModel.expenseForm.clearEndDate,
-        isSaving: () => _viewModel.isSaving,
-        isSubmitEnabled: () => _viewModel.categoriesForSelectedAccount().isNotEmpty &&
-            _viewModel.expenseForm.data.account != null &&
-            _viewModel.expenseForm.data.category != null,
+        onToggleAdvanced: _expenseForm.toggleAdvancedOptions,
+        onDateChanged: _expenseForm.setDebitDate,
+        onRecurrenceChanged: (value) =>
+            _expenseForm.setRecurrence(value, preventPastStart: true),
+        onEndDateChanged: _expenseForm.setEndDate,
+        onEndDateCleared: _expenseForm.clearEndDate,
+        isSubmitEnabled: () {
+          final data = _expenseForm.data;
+          return (ref
+                          .read(categoriesSessionProvider)
+                          .categoriesByAccount[data.account?.id] ??
+                      const [])
+                  .isNotEmpty &&
+              data.account != null &&
+              data.category != null;
+        },
         preFieldsBuilder: (context) {
           final theme = Theme.of(context);
-          final data = _viewModel.expenseForm.data;
-          final categories = _viewModel.categoriesForSelectedAccount();
+          final data = _expenseForm.data;
+          final categories =
+              ref
+                  .read(categoriesSessionProvider)
+                  .categoriesByAccount[data.account?.id] ??
+              const [];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 18,
@@ -92,10 +123,18 @@ class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin 
                   SectionLabel(tr.account),
                   FramedContainer(
                     child: AccountSelector(
-                      accounts: _viewModel.accounts,
+                      accounts: ref.read(accountSelectionProvider).accounts,
                       selectedAccount: data.account,
                       backgroundColor: theme.colorScheme.surface,
-                      onSelect: _viewModel.selectFormAccount,
+                      onSelect: (account) async {
+                        _expenseForm.setAccount(account);
+                        final loaded = await ref
+                            .read(categoriesSessionProvider.notifier)
+                            .load(account.id!);
+                        if (loaded.isNotEmpty) {
+                          _expenseForm.setCategory(loaded.first);
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -107,16 +146,29 @@ class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin 
                   SectionLabel(tr.category),
                   categories.isEmpty
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.errorContainer.withValues(alpha: 0.6),
+                            color: theme.colorScheme.errorContainer.withValues(
+                              alpha: 0.6,
+                            ),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: theme.colorScheme.error.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                           ),
                           child: Row(
                             spacing: 8,
                             children: [
-                              Icon(Icons.error_outline, size: 18, color: theme.colorScheme.error),
+                              Icon(
+                                Icons.error_outline,
+                                size: 18,
+                                color: theme.colorScheme.error,
+                              ),
                               Expanded(
                                 child: Text(
                                   tr.noCategoryForAccount,
@@ -134,7 +186,7 @@ class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin 
                           child: CategorySelector(
                             categories: categories,
                             selectedCategory: data.category,
-                            onSelect: _viewModel.selectFormCategory,
+                            onSelect: _expenseForm.setCategory,
                           ),
                         ),
                 ],
@@ -147,7 +199,7 @@ class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin 
   }
 
   void _onPeriodChanged(Period period) {
-    final current = _viewModel.selectedPeriod;
+    final current = ref.read(overviewProvider).selectedPeriod;
     if (period.isAfter(current)) {
       _slideDirection.value = 1;
     } else if (period.isBefore(current)) {
@@ -155,27 +207,30 @@ class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin 
     } else {
       return;
     }
-    _viewModel.selectedPeriod = period;
+    ref.read(overviewProvider.notifier).selectPeriod(period);
   }
 
   void _changePeriodBySwipe(bool next) {
-    final current = _viewModel.selectedPeriod;
-    final target = next ? current.next : current.previous;
-    if (target.isBefore(_viewModel.minPeriod) ||
-        target.isAfter(_viewModel.maxPeriod)) {
+    final state = ref.read(overviewProvider);
+    final target = next
+        ? state.selectedPeriod.next
+        : state.selectedPeriod.previous;
+    if (target.isBefore(overviewMinPeriod()) ||
+        target.isAfter(overviewMaxPeriod())) {
       return;
     }
     _onPeriodChanged(target);
   }
 
   void _openCategoryDetails(String categoryId) {
-    final accountId = _viewModel.account?.id;
+    final state = ref.read(overviewProvider);
+    final accountId = ref.read(accountSelectionProvider).selectedAccount?.id;
     if (accountId == null) return;
     context.push(
       NavigationHelper.buildCategoryExpensesPath(
         accountId,
         categoryId,
-        _viewModel.selectedPeriod,
+        state.selectedPeriod,
       ),
     );
   }
@@ -183,42 +238,30 @@ class _OverviewPageState extends State<OverviewPage> with FabLabelAutoHideMixin 
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
+    final overview = ref.watch(overviewProvider);
+    final body = !overview.hasLoaded
+        ? const AppLoadingIndicator()
+        : OverviewContent(
+            slideDirection: _slideDirection,
+            onPeriodChanged: _onPeriodChanged,
+            onSwipe: _changePeriodBySwipe,
+            onCategoryTap: _openCategoryDetails,
+            onRefresh: ref.read(overviewProvider.notifier).refreshAll,
+            translations: tr,
+          );
 
     return Scaffold(
       body: Column(
         children: [
-          ViewModelSelector<OverviewViewModel, Object?>(
-            model: _viewModel,
-            selector: (model) => (
-              model.amountDecimalPlaces,
-              model.currencyCode,
-              model.localeName,
-            ),
-            builder: (context, _) => UndebitedExpensesBanner(
-              service: _viewModel.undebitedExpensesService,
-              currencyCode: _viewModel.currencyCode,
-              localeName: _viewModel.localeName,
-              amountDecimalPlaces: _viewModel.amountDecimalPlaces,
-            ),
-          ),
+          const UndebitedExpensesBanner(),
           Expanded(
-            child: ViewModelFeedback(
-              viewModel: _viewModel,
-              child: ViewModelSelector<OverviewViewModel, bool>(
-                model: _viewModel,
-                selector: (model) => model.isLoading,
-                builder: (context, isLoading) => isLoading
-                    ? const AppLoadingIndicator()
-                    : OverviewContent(
-                        viewModel: _viewModel,
-                        slideDirection: _slideDirection,
-                        onPeriodChanged: _onPeriodChanged,
-                        onSwipe: _changePeriodBySwipe,
-                        onCategoryTap: _openCategoryDetails,
-                        onRefresh: _viewModel.refreshAll,
-                        translations: tr,
-                      ),
+            child: RiverpodFeedback(
+              messageListenable: overviewProvider.select(
+                (s) => s.status.pendingMessage,
               ),
+              onConsume: (ref) =>
+                  ref.read(overviewProvider.notifier).consumeMessage(),
+              child: body,
             ),
           ),
         ],

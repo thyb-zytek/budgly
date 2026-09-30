@@ -34,7 +34,8 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isFilePicture = picture != null &&
+    final isFilePicture =
+        picture != null &&
         (isLocalPicture ||
             picture!.startsWith('/') ||
             picture!.startsWith('file://'));
@@ -55,19 +56,22 @@ class Avatar extends StatelessWidget {
       }
     }
     final effectiveBorderColor = borderColor ?? backgroundColor;
-    final innerRadius =
-        effectiveBorderColor == null ? size / 2 : size / 2 - borderWidth;
+    final innerRadius = effectiveBorderColor == null
+        ? size / 2
+        : size / 2 - borderWidth;
 
     final foregroundImage = picture == null
         ? null
         : isFilePicture
-            ? FileImage(pictureFile!)
-            : NetworkImage(picture!) as ImageProvider;
+        ? FileImage(pictureFile!)
+        : NetworkImage(picture!) as ImageProvider;
     Widget avatar = CircleAvatar(
       radius: innerRadius,
       backgroundColor: backgroundColor,
       foregroundImage: foregroundImage,
-      onForegroundImageError: foregroundImage == null ? null : (exception, stackTrace) {},
+      onForegroundImageError: foregroundImage == null
+          ? null
+          : (exception, stackTrace) {},
       child: Text(
         initial,
         style: size < 100

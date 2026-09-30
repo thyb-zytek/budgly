@@ -23,21 +23,20 @@ class UserCard extends StatelessWidget {
             CircleAvatar(
               radius: 32,
               backgroundColor: theme.colorScheme.primary,
-              foregroundImage:
-                  user.avatarUrl == null
-                      ? null
-                      : NetworkImage(user.avatarUrl!.toString()),
-              onForegroundImageError:
-                  user.avatarUrl == null ? null : (exception, stackTrace) {},
-              child:
-                  user.profile != null
-                      ? Text(
-                        user.profile!.fullName.characters.first.toUpperCase(),
-                        style: theme.textTheme.headlineLarge!.copyWith(
-                          color: theme.colorScheme.onPrimary,
-                        ),
-                      )
-                      : const Icon(Icons.person, size: 30),
+              foregroundImage: user.avatarUrl == null
+                  ? null
+                  : NetworkImage(user.avatarUrl!.toString()),
+              onForegroundImageError: user.avatarUrl == null
+                  ? null
+                  : (exception, stackTrace) {},
+              child: user.profile != null
+                  ? Text(
+                      user.profile!.fullName.characters.first.toUpperCase(),
+                      style: theme.textTheme.headlineLarge!.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Icon(Icons.person, size: 30),
             ),
             Expanded(
               child: Column(

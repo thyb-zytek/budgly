@@ -7,11 +7,8 @@ import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
 
-typedef CategoryPreviewBuilder = Widget Function(
-  BuildContext context,
-  CategoryIcon icon,
-  Color color,
-);
+typedef CategoryPreviewBuilder =
+    Widget Function(BuildContext context, CategoryIcon icon, Color color);
 
 Future<bool> showCategoryCustomizationSheet(
   BuildContext context, {
@@ -57,8 +54,11 @@ Future<bool> showCategoryCustomizationSheet(
             child: SingleChildScrollView(
               child: CustomizationPicker(
                 title: tr.categoryCustomization,
-                previewWidget:
-                    previewBuilder(context, selectedIcon, selectedColor),
+                previewWidget: previewBuilder(
+                  context,
+                  selectedIcon,
+                  selectedColor,
+                ),
                 tabTitles: [
                   TabTitle(icon: Icons.category_rounded, title: tr.icon),
                   TabTitle(icon: Icons.palette_rounded, title: tr.color),
@@ -71,9 +71,8 @@ Future<bool> showCategoryCustomizationSheet(
                       TextInput(
                         controller: searchController,
                         labelText: tr.searchIcon,
-                        onChange: (query) => setModalState(
-                          () => filterIcons(query),
-                        ),
+                        onChange: (query) =>
+                            setModalState(() => filterIcons(query)),
                         onFieldSubmitted: (_) {
                           if (filteredIcons.isNotEmpty) {
                             setModalState(
@@ -87,18 +86,20 @@ Future<bool> showCategoryCustomizationSheet(
                         child: GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 6,
-                            mainAxisSpacing: 4,
-                            crossAxisSpacing: 4,
-                            childAspectRatio: 1,
-                          ),
+                                crossAxisCount: 6,
+                                mainAxisSpacing: 4,
+                                crossAxisSpacing: 4,
+                                childAspectRatio: 1,
+                              ),
                           itemCount: filteredIcons.length,
                           itemBuilder: (context, index) => _IconGridTile(
                             icon: filteredIcons[index],
-                            isSelected: selectedIcon.iconName ==
+                            isSelected:
+                                selectedIcon.iconName ==
                                 filteredIcons[index].iconName,
-                            onTap: () =>
-                                setModalState(() => selectIcon(filteredIcons[index])),
+                            onTap: () => setModalState(
+                              () => selectIcon(filteredIcons[index]),
+                            ),
                           ),
                         ),
                       ),

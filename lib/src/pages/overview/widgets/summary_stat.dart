@@ -64,13 +64,14 @@ class SummaryStat extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: (compact
-                        ? theme.textTheme.labelMedium
-                        : theme.textTheme.labelSmall)
-                    ?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
+                style:
+                    (compact
+                            ? theme.textTheme.labelMedium
+                            : theme.textTheme.labelSmall)
+                        ?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -114,4 +115,3 @@ class SummaryStat extends StatelessWidget {
         : Tooltip(message: tooltip!, child: tappable);
   }
 }
-

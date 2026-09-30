@@ -14,14 +14,7 @@ import 'package:flutter/material.dart';
 /// Use [filledStyle], [outlinedStyle] or [textButtonStyle] with the same
 /// [ButtonType] to keep filled/outlined/text buttons visually consistent
 /// wherever they appear.
-enum ButtonType {
-  primary,
-  secondary,
-  tertiary,
-  success,
-  error,
-  neutralVariant,
-}
+enum ButtonType { primary, secondary, tertiary, success, error, neutralVariant }
 
 class ButtonColors {
   final Color background;
@@ -42,41 +35,41 @@ extension ButtonTypeStyles on ButtonType {
 
     return switch (this) {
       ButtonType.primary => ButtonColors(
-          background: scheme.primary,
-          foreground: scheme.onPrimary,
-          icon: scheme.primary,
-        ),
+        background: scheme.primary,
+        foreground: scheme.onPrimary,
+        icon: scheme.primary,
+      ),
       ButtonType.secondary => ButtonColors(
-          background: scheme.secondary,
-          foreground: scheme.onSecondary,
-          icon: scheme.secondary,
-        ),
+        background: scheme.secondary,
+        foreground: scheme.onSecondary,
+        icon: scheme.secondary,
+      ),
       ButtonType.tertiary => ButtonColors(
-          background: scheme.tertiary,
-          foreground: scheme.onTertiary,
-          icon: scheme.tertiary,
-        ),
+        background: scheme.tertiary,
+        foreground: scheme.onTertiary,
+        icon: scheme.tertiary,
+      ),
       ButtonType.success => ButtonColors(
-          background: isLight
-              ? MaterialTheme.success.light.color
-              : MaterialTheme.success.dark.color,
-          foreground: isLight
-              ? MaterialTheme.success.light.onColor
-              : MaterialTheme.success.dark.onColor,
-          icon: isLight
-              ? MaterialTheme.success.light.color
-              : MaterialTheme.success.dark.color,
-        ),
+        background: isLight
+            ? MaterialTheme.success.light.color
+            : MaterialTheme.success.dark.color,
+        foreground: isLight
+            ? MaterialTheme.success.light.onColor
+            : MaterialTheme.success.dark.onColor,
+        icon: isLight
+            ? MaterialTheme.success.light.color
+            : MaterialTheme.success.dark.color,
+      ),
       ButtonType.error => ButtonColors(
-          background: scheme.error,
-          foreground: scheme.onError,
-          icon: scheme.error,
-        ),
+        background: scheme.error,
+        foreground: scheme.onError,
+        icon: scheme.error,
+      ),
       ButtonType.neutralVariant => ButtonColors(
-          background: scheme.outlineVariant,
-          foreground: scheme.onSurfaceVariant,
-          icon: scheme.outlineVariant,
-        ),
+        background: scheme.outlineVariant,
+        foreground: scheme.onSurfaceVariant,
+        icon: scheme.outlineVariant,
+      ),
     };
   }
 

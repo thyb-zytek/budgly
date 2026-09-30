@@ -38,10 +38,9 @@ class AccountSelector extends StatelessWidget {
     this.onSelectAll,
   });
 
-  Account? get _allOption =>
-      showAllOption && allAccountsLabel.isNotEmpty
-          ? Account(name: allAccountsLabel)
-          : null;
+  Account? get _allOption => showAllOption && allAccountsLabel.isNotEmpty
+      ? Account(name: allAccountsLabel)
+      : null;
 
   void _handleSelect(Account item, VoidCallback onSelectAll) {
     if (item.id == null) {
@@ -93,8 +92,9 @@ class AccountSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final validAccounts =
-        accounts.where((account) => account.id != null).toList();
+    final validAccounts = accounts
+        .where((account) => account.id != null)
+        .toList();
     if (validAccounts.isEmpty && _allOption == null) {
       return const SizedBox.shrink();
     }
@@ -104,25 +104,20 @@ class AccountSelector extends StatelessWidget {
       final options = [?allOption, ...validAccounts];
       final current = allOption != null && isAllSelected
           ? allOption
-          : selectedAccount != null &&
-                  validAccounts.contains(selectedAccount)
-              ? selectedAccount!
-              : options.first;
+          : selectedAccount != null && validAccounts.contains(selectedAccount)
+          ? selectedAccount!
+          : options.first;
       return Selector<Account>(
         items: options,
         selectedItem: current,
-        onSelect: (item) =>
-            _handleSelect(item, onSelectAll ?? () {}),
+        onSelect: (item) => _handleSelect(item, onSelectAll ?? () {}),
         maxHeight: 300,
         backgroundColor: backgroundColor,
         itemBuilder: (context, item) => item.id == null
             ? _buildAllItem(context)
             : Padding(
                 padding: EdgeInsets.all(BudglySpacing.xs),
-                child: AccountView(
-                  account: item,
-                  color: Colors.transparent,
-                ),
+                child: AccountView(account: item, color: Colors.transparent),
               ),
       );
     }
@@ -131,12 +126,12 @@ class AccountSelector extends StatelessWidget {
     final current = allOption != null && isAllSelected
         ? allOption
         : selectedAccount != null && validAccounts.contains(selectedAccount)
-            ? selectedAccount!
-            : validAccounts.isNotEmpty
-                ? validAccounts.first
-                : allOption!;
-    final anyAccount = selectedAccount != null &&
-        validAccounts.contains(selectedAccount);
+        ? selectedAccount!
+        : validAccounts.isNotEmpty
+        ? validAccounts.first
+        : allOption!;
+    final anyAccount =
+        selectedAccount != null && validAccounts.contains(selectedAccount);
 
     return PopupMenuButton<Account>(
       initialValue: current,

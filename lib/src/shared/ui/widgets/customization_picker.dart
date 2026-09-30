@@ -95,7 +95,12 @@ class _CustomizationPickerState extends State<CustomizationPicker> {
           ),
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(BudglySpacing.xl, 0, BudglySpacing.xl, BudglySpacing.sm),
+          padding: EdgeInsets.fromLTRB(
+            BudglySpacing.xl,
+            0,
+            BudglySpacing.xl,
+            BudglySpacing.sm,
+          ),
           child: FormActions(
             destructiveCancel: true,
             dense: true,

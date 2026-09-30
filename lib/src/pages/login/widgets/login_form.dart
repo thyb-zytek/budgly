@@ -75,7 +75,8 @@ class LoginForm extends StatelessWidget {
                   labelText: tr.email,
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  hotValidating: (v) => AuthValidators.translateEmailError(tr, validateEmail(v)),
+                  hotValidating: (v) =>
+                      AuthValidators.translateEmailError(tr, validateEmail(v)),
                 ),
                 TextInput(
                   controller: passwordController,
@@ -83,7 +84,10 @@ class LoginForm extends StatelessWidget {
                   type: InputType.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmitForm(),
-                  hotValidating: (v) => AuthValidators.translatePasswordError(tr, validatePassword(v)),
+                  hotValidating: (v) => AuthValidators.translatePasswordError(
+                    tr,
+                    validatePassword(v),
+                  ),
                 ),
                 TextButton(
                   onPressed: onResetPassword,
@@ -117,12 +121,7 @@ class LoginForm extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(top: BudglySpacing.xl),
-          child: FilledButton(
-                        onPressed: onSubmitForm,
-            child: Text(
-              tr.signIn,
-            ),
-          ),
+          child: FilledButton(onPressed: onSubmitForm, child: Text(tr.signIn)),
         ),
       ],
     );

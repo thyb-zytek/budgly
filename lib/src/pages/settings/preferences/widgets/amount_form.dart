@@ -19,7 +19,7 @@ class AmountForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    
+
     return PreferenceSection(
       title: tr.amountFormat,
       child: Container(
@@ -32,7 +32,7 @@ class AmountForm extends StatelessWidget {
         child: AmountFormatIncrementer(
           decimalPlaces: amountDecimalPlaces,
           onChanged: onChanged,
-          currency: currency
+          currency: currency,
         ),
       ),
     );

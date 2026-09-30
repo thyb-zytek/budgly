@@ -58,14 +58,19 @@ class UndebitedSwipeActionsSheet extends StatelessWidget {
           children: [
             Text(
               tr.undebitedSwipeSheetTitle,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             SizedBox(height: BudglySpacing.xs),
             FilledButton.icon(
               style: ButtonType.primary.filledStyle(theme, dense: true),
               icon: const Icon(Icons.schedule_send_rounded),
-              label: Text(carryLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+              label: Text(
+                carryLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               onPressed: () => Navigator.pop(
                 context,
                 UndebitedSwipeRightAction.carryToCurrentPeriod,
@@ -74,7 +79,11 @@ class UndebitedSwipeActionsSheet extends StatelessWidget {
             FilledButton.icon(
               style: ButtonType.success.filledStyle(theme, dense: true),
               icon: const Icon(Icons.check_circle_outline),
-              label: Text(debitNowLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+              label: Text(
+                debitNowLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               onPressed: () => Navigator.pop(
                 context,
                 UndebitedSwipeRightAction.debitOnCurrentPeriod,

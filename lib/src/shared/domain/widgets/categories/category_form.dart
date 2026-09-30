@@ -1,7 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
-import 'package:budgly/src/shared/domain/view_models/category_form_view_model.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
@@ -12,8 +10,15 @@ import 'package:flutter/material.dart';
 
 class CategoryForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
-  final CategoryFormViewModel viewModel;
-  final Category? category;
+  final TextEditingController nameController;
+  final TextEditingController? monthlyThresholdController;
+  final CategoryIcon initialIcon;
+  final Color initialColor;
+  final List<CategoryIcon> availableIcons;
+  final ValueChanged<CategoryIcon>? onIconChanged;
+  final ValueChanged<Color>? onColorChanged;
+  final VoidCallback? onSubmit;
+  final VoidCallback? onCancel;
   final bool withPulse;
   final bool withHint;
   final bool compact;
@@ -22,8 +27,15 @@ class CategoryForm extends StatefulWidget {
   const CategoryForm({
     super.key,
     required this.formKey,
-    required this.viewModel,
-    this.category,
+    required this.nameController,
+    required this.initialIcon,
+    required this.initialColor,
+    required this.availableIcons,
+    this.monthlyThresholdController,
+    this.onIconChanged,
+    this.onColorChanged,
+    this.onSubmit,
+    this.onCancel,
     this.withPulse = false,
     this.withHint = false,
     this.compact = false,
@@ -50,33 +62,30 @@ class _CategoryFormState extends State<CategoryForm>
   @override
   void initState() {
     super.initState();
-    _tempIcon = widget.viewModel.categoryEditingData.icon;
-    _tempColor = widget.viewModel.categoryEditingData.color;
+    _tempIcon = widget.initialIcon;
+    _tempColor = widget.initialColor;
     _nameFocusNode = FocusNode();
-
     initPulseHintAnimations();
-
-    if (widget.category?.id == null) {
+    if (widget.nameController.text.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _nameFocusNode.requestFocus();
-    });
+        if (mounted) _nameFocusNode.requestFocus();
+      });
     }
   }
 
   @override
   void didUpdateWidget(covariant CategoryForm oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final newIcon = widget.viewModel.categoryEditingData.icon;
-    final newColor = widget.viewModel.categoryEditingData.color;
-    if (newIcon != _tempIcon) _tempIcon = newIcon;
-    if (newColor != _tempColor) _tempColor = newColor;
-
+    if (widget.initialIcon != oldWidget.initialIcon) {
+      _tempIcon = widget.initialIcon;
+    }
+    if (widget.initialColor != oldWidget.initialColor) {
+      _tempColor = widget.initialColor;
+    }
     if (widget.enabled && !oldWidget.enabled && widget.withHint) {
       onHintEnabled();
     }
-    if (!widget.enabled) {
-      onHintDisabled();
-    }
+    if (!widget.enabled) onHintDisabled();
   }
 
   @override
@@ -86,138 +95,82 @@ class _CategoryFormState extends State<CategoryForm>
     super.dispose();
   }
 
-  void _openCustomizationPicker(BuildContext context) {
+  Future<void> _openCustomizationPicker(BuildContext context) async {
     cancelHint();
-
-    showCategoryCustomizationSheet(
+    var icon = _tempIcon;
+    var color = _tempColor;
+    final confirmed = await showCategoryCustomizationSheet(
       context,
-      availableIcons: widget.viewModel.categoryEditingData.availableIcons,
-      initialIcon: _tempIcon,
-      initialColor: _tempColor,
-      previewBuilder: (context, icon, color) => CategoryIconView(
-        icon: icon,
-        color: color,
-        size: 80,
-      ),
-      onIconChanged: (icon) => _tempIcon = icon,
-      onColorChanged: (color) => _tempColor = color,
-    ).then((confirmed) {
-      if (confirmed) {
-        widget.viewModel.categoryEditingData.icon = _tempIcon;
-        widget.viewModel.categoryEditingData.color = _tempColor;
-      }
-      if (!mounted) return;
-      setState(() {});
-    });
+      availableIcons: widget.availableIcons,
+      initialIcon: icon,
+      initialColor: color,
+      previewBuilder: (context, selectedIcon, selectedColor) =>
+          CategoryIconView(icon: selectedIcon, color: selectedColor, size: 80),
+      onIconChanged: (value) => icon = value,
+      onColorChanged: (value) => color = value,
+    );
+    if (!mounted) return;
+    if (confirmed) {
+      setState(() {
+        _tempIcon = icon;
+        _tempColor = color;
+      });
+      widget.onIconChanged?.call(_tempIcon);
+      widget.onColorChanged?.call(_tempColor);
+    }
+    onHintEnabled();
   }
 
+  Widget _icon() => PulseHint(
+    pulseAnimation: pulseAnimation,
+    hintAnimation: hintAnimation,
+    child: CategoryIconView(
+      icon: _tempIcon,
+      color: _tempColor,
+      size: 52,
+      onTap: widget.enabled ? () => _openCustomizationPicker(context) : null,
+      showEditBadge: widget.enabled,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
-
-    return ListenableBuilder(
-      listenable: widget.viewModel,
-      builder: (context, child) {
-        if (widget.compact) {
-          return Row(
-            spacing: 8,
-            children: [
-              PulseHint(
-                pulseAnimation: pulseAnimation,
-                hintAnimation: hintAnimation,
-                child: CategoryIconView(
-                  icon: _tempIcon,
-                  color: _tempColor,
-                  size: 52,
-                  onTap: widget.enabled
-                      ? () => _openCustomizationPicker(context)
-                      : null,
-                  showEditBadge: widget.enabled,
-                ),
-              ),
-              Expanded(
-                child: TextInput(
-                  focusNode: _nameFocusNode,
-                  controller: widget.viewModel.categoryEditingData.nameController,
-                  labelText: tr.categoryName,
-                  textInputAction: TextInputAction.done,
-                ),
-              ),
-            ],
-          );
-        }
-
-        return EntityForm(
-          formKey: widget.formKey,
-          focusNode: _nameFocusNode,
-          leadingWidget: PulseHint(
-            pulseAnimation: pulseAnimation,
-            hintAnimation: hintAnimation,
-            child: CategoryIconView(
-              icon: _tempIcon,
-              color: _tempColor,
-              size: 52,
-              onTap: widget.enabled
-                  ? () => _openCustomizationPicker(context)
-                  : null,
-              showEditBadge: widget.enabled,
+    if (widget.compact) {
+      return Row(
+        spacing: 8,
+        children: [
+          _icon(),
+          Expanded(
+            child: TextInput(
+              focusNode: _nameFocusNode,
+              controller: widget.nameController,
+              labelText: tr.categoryName,
+              textInputAction: TextInputAction.done,
             ),
           ),
-          nameController: widget.viewModel.categoryEditingData.nameController,
-          extraFields: [
-            if (widget.viewModel.categoryEditingData.monthlyThresholdController != null)
-              TextInput(
-                controller: widget.viewModel.categoryEditingData.monthlyThresholdController!,
-                labelText: tr.monthlyThreshold,
-                hintText: tr.thresholdOptionalHint,
-                type: InputType.currency,
-              ),
-          ],
-          labelText: tr.categoryName,
-          validator: (v) =>
-              v == null || v.trim().isEmpty ? tr.nameRequired : null,
-          onSubmit: () {
-            widget.viewModel.categoryEditingData.icon = _tempIcon;
-            widget.viewModel.categoryEditingData.color = _tempColor;
+        ],
+      );
+    }
 
-            if (widget.category?.id == null) {
-              widget.viewModel.createCategory(
-                widget.category ??
-                    Category(
-                      name: widget
-                          .viewModel
-                          .categoryEditingData
-                          .nameController
-                          .text
-                          .trim(),
-                      color: _tempColor,
-                      icon: _tempIcon,
-                      accountId: '',
-                    ),
-              );
-            } else {
-              widget.viewModel.updateCategory(widget.category!);
-            }
-          },
-          onCancel: () {
-            final category = widget.category;
-            if (category == null || category.id == null) {
-              widget.viewModel.removeCategory(
-                category ??
-                    Category(
-                      name: '',
-                      color: _tempColor,
-                      icon: _tempIcon,
-                      accountId: '',
-                    ),
-              );
-            } else {
-              widget.viewModel.cancelEdit();
-            }
-          },
-        );
-      },
+    return EntityForm(
+      formKey: widget.formKey,
+      focusNode: _nameFocusNode,
+      leadingWidget: _icon(),
+      nameController: widget.nameController,
+      extraFields: [
+        if (widget.monthlyThresholdController != null)
+          TextInput(
+            controller: widget.monthlyThresholdController!,
+            labelText: tr.monthlyThreshold,
+            hintText: tr.thresholdOptionalHint,
+            type: InputType.currency,
+          ),
+      ],
+      labelText: tr.categoryName,
+      validator: (v) => v == null || v.trim().isEmpty ? tr.nameRequired : null,
+      onSubmit: widget.onSubmit ?? () {},
+      onCancel: widget.onCancel ?? () {},
     );
   }
 }

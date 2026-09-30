@@ -53,7 +53,9 @@ Future<bool> showAvatarCustomizationSheet(
                 ),
                 tabTitles: [
                   TabTitle(
-                      icon: Icons.photo_library_rounded, title: tr.picture),
+                    icon: Icons.photo_library_rounded,
+                    title: tr.picture,
+                  ),
                   TabTitle(icon: Icons.palette_rounded, title: tr.color),
                 ],
                 tabs: [

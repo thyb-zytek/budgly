@@ -1,33 +1,27 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/theme/input_styles.dart';
-import 'package:budgly/src/pages/settings/profile/view_model.dart';
+import 'package:budgly/src/pages/settings/profile/profile_settings_provider.dart';
 import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
 
-class ChangePasswordSheet extends StatefulWidget {
-  final ProfileViewModel viewModel;
-  final VoidCallback onSubmit;
+typedef ChangePasswordCallback =
+    void Function(String oldPassword, String newPassword);
 
-  const ChangePasswordSheet({
-    super.key,
-    required this.viewModel,
-    required this.onSubmit,
-  });
+class ChangePasswordSheet extends StatefulWidget {
+  final ChangePasswordCallback onSubmit;
+
+  const ChangePasswordSheet({super.key, required this.onSubmit});
 
   static Future<void> show(
     BuildContext context, {
-    required ProfileViewModel viewModel,
-    required VoidCallback onSubmit,
+    required ChangePasswordCallback onSubmit,
   }) {
     return showAppBottomSheet(
       context,
-      builder: (_) => ChangePasswordSheet(
-        viewModel: viewModel,
-        onSubmit: onSubmit,
-      ),
+      builder: (_) => ChangePasswordSheet(onSubmit: onSubmit),
     );
   }
 
@@ -37,11 +31,22 @@ class ChangePasswordSheet extends StatefulWidget {
 
 class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _oldPasswordController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   void _submit() {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
-    widget.onSubmit();
+    widget.onSubmit(_oldPasswordController.text, _passwordController.text);
     Navigator.pop(context);
   }
 
@@ -49,11 +54,10 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final vm = widget.viewModel;
 
     String? Function(String?) hotValidate(String mismatchKey) {
       return (v) {
-        final result = vm.validatePassword(v);
+        final result = validatePassword(v, _passwordController.text);
         if (result == 'passwordRequired') return tr.passwordRequired;
         if (result == mismatchKey) {
           return mismatchKey == 'passwordTooShort'
@@ -86,7 +90,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                     spacing: 8,
                     children: [
                       TextInput(
-                        controller: vm.oldPasswordController,
+                        controller: _oldPasswordController,
                         labelText: tr.oldPassword,
                         type: InputType.password,
                         textInputAction: TextInputAction.next,
@@ -96,7 +100,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                             v?.isEmpty ?? true ? tr.passwordRequired : null,
                       ),
                       TextInput(
-                        controller: vm.passwordController,
+                        controller: _passwordController,
                         labelText: tr.password,
                         type: InputType.password,
                         textInputAction: TextInputAction.next,
@@ -105,7 +109,7 @@ class _ChangePasswordSheetState extends State<ChangePasswordSheet> {
                         hotValidating: hotValidate('passwordTooShort'),
                       ),
                       TextInput(
-                        controller: vm.confirmPasswordController,
+                        controller: _confirmPasswordController,
                         labelText: tr.confirmPassword,
                         type: InputType.password,
                         textInputAction: TextInputAction.done,

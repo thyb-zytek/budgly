@@ -20,8 +20,8 @@ class StatusChip extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Chip(
-      avatar: Icon(icon, size: 16, color: color),
-      labelPadding: EdgeInsets.only(right: BudglySpacing.xs),
+      avatar: Icon(icon, size: BudglySpacing.lg, color: color),
+      labelPadding: EdgeInsets.only(right: BudglySpacing.xs, left: 0),
       label: Text(
         label,
         maxLines: 1,
@@ -31,10 +31,9 @@ class StatusChip extends StatelessWidget {
           fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
-      backgroundColor:
-          isHighlighted ? color.withAlpha(28) : Colors.transparent,
+      backgroundColor: isHighlighted ? color.withAlpha(28) : Colors.transparent,
       side: BorderSide.none,
-      padding: EdgeInsets.symmetric(horizontal: BudglySpacing.xxs, vertical: 0),
+      padding: EdgeInsets.all(BudglySpacing.xs),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );

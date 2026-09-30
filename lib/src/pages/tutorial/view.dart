@@ -1,65 +1,42 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/navigation/navigation_helper.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
-import 'package:budgly/src/pages/tutorial/view_model.dart';
+import 'package:budgly/src/pages/tutorial/tutorial_provider.dart';
+import 'package:budgly/src/pages/tutorial/widgets/account_step.dart';
+import 'package:budgly/src/pages/tutorial/widgets/budget_step.dart';
+import 'package:budgly/src/pages/tutorial/widgets/category_step.dart';
 import 'package:budgly/src/pages/tutorial/widgets/step_indicator.dart';
 import 'package:budgly/src/pages/tutorial/widgets/welcome_step.dart';
-import 'package:budgly/src/pages/tutorial/widgets/account_step.dart';
-import 'package:budgly/src/pages/tutorial/widgets/category_step.dart';
-import 'package:budgly/src/pages/tutorial/widgets/budget_step.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class TutorialPage extends StatefulWidget {
-  final TutorialViewModel? injectedViewModel;
-
-  const TutorialPage({super.key, this.injectedViewModel});
+class TutorialPage extends ConsumerStatefulWidget {
+  const TutorialPage({super.key});
 
   @override
-  State<TutorialPage> createState() => _TutorialPageState();
+  ConsumerState<TutorialPage> createState() => _TutorialPageState();
 }
 
-class _TutorialPageState extends State<TutorialPage> {
-  late final TutorialViewModel _viewModel;
-  late final bool _ownsViewModel;
+class _TutorialPageState extends ConsumerState<TutorialPage> {
   PageController? _pageController;
 
   @override
-  void initState() {
-    super.initState();
-    _ownsViewModel = widget.injectedViewModel == null;
-    _viewModel = widget.injectedViewModel ?? TutorialViewModel();
-  }
-
-  @override
   void dispose() {
-    if (_ownsViewModel) _viewModel.dispose();
     _pageController?.dispose();
     super.dispose();
   }
 
   Future<void> _goToOverview() async {
-    await _viewModel.completeTutorial();
-    if (mounted) {
-      context.go(NavigationHelper.overviewPath);
-    }
+    await ref.read(tutorialProvider.notifier).completeTutorial();
+    if (mounted) context.go(NavigationHelper.overviewPath);
   }
 
-  void _onNextStep() {
-    _viewModel.nextStep();
+  void _goToStep(int step) {
     _pageController?.animateToPage(
-      _viewModel.currentStep,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  void _onPreviousStep() {
-    _viewModel.previousStep();
-    _pageController?.animateToPage(
-      _viewModel.currentStep,
+      step,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
     );
@@ -67,84 +44,91 @@ class _TutorialPageState extends State<TutorialPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _viewModel,
-      builder: (context, child) {
-        final tr = AppLocalizations.of(context)!;
-        final theme = Theme.of(context);
+    final state = ref.watch(tutorialProvider);
+    final notifier = ref.read(tutorialProvider.notifier);
+    final tr = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
-        if (_viewModel.isInitializing) {
-          return const Scaffold(body: AppLoadingIndicator());
+    if (state.isInitializing) {
+      return const Scaffold(body: AppLoadingIndicator());
+    }
+
+    _pageController ??= PageController(initialPage: state.currentStep);
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (state.canGoBack) {
+          notifier.previousStep();
+          _goToStep(state.currentStep - 1);
+        } else {
+          _showLogoutDialog(context, tr);
         }
-
-        _pageController ??= PageController(initialPage: _viewModel.currentStep);
-
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
-            if (didPop) return;
-            if (_viewModel.canGoBack) {
-              _onPreviousStep();
-            } else {
-              _showLogoutDialog(context, tr);
-            }
-          },
-          child: Scaffold(
-            body: SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(BudglySpacing.md),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        StepIndicator(
-                          currentStep: _viewModel.currentStep,
-                          totalSteps: _viewModel.totalSteps,
-                        ),
-                        if (_viewModel.canGoBack)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              style: IconButton.styleFrom(
-                                backgroundColor:
-                                    theme.colorScheme.surfaceContainerHigh,
-                                shape: const CircleBorder(),
-                              ),
-                              icon: const Icon(
-                                Icons.arrow_back_rounded,
-                                size: 20,
-                              ),
-                              onPressed: _onPreviousStep,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: PageView(
-                      controller: _pageController!,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        WelcomeStep(onNext: _onNextStep),
-                        AccountStep(viewModel: _viewModel, onNext: _onNextStep),
-                        CategoryStep(
-                          viewModel: _viewModel,
-                          onNext: _onNextStep,
-                        ),
-                        BudgetStep(
-                          viewModel: _viewModel,
-                          onFinish: _goToOverview,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
       },
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.all(BudglySpacing.md),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    StepIndicator(
+                      currentStep: state.currentStep,
+                      totalSteps: state.totalSteps,
+                    ),
+                    if (state.canGoBack)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHigh,
+                            shape: const CircleBorder(),
+                          ),
+                          icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                          onPressed: () {
+                            notifier.previousStep();
+                            _goToStep(state.currentStep - 1);
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: PageView(
+                  controller: _pageController!,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    WelcomeStep(
+                      onNext: () {
+                        notifier.nextStep();
+                        _goToStep(state.currentStep + 1);
+                      },
+                    ),
+                    AccountStep(
+                      onNext: () {
+                        notifier.nextStep();
+                        _goToStep(state.currentStep + 1);
+                      },
+                    ),
+                    CategoryStep(
+                      onNext: () {
+                        notifier.nextStep();
+                        _goToStep(state.currentStep + 1);
+                      },
+                    ),
+                    BudgetStep(onFinish: _goToOverview),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -163,10 +147,8 @@ class _TutorialPageState extends State<TutorialPage> {
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
-                await _viewModel.signOut();
-                if (context.mounted) {
-                  context.go(NavigationHelper.loginPath);
-                }
+                await ref.read(tutorialProvider.notifier).signOut();
+                if (context.mounted) context.go(NavigationHelper.loginPath);
               } catch (_) {
                 if (context.mounted) {
                   showAppSnackBar(

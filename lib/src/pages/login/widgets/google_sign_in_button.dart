@@ -15,9 +15,7 @@ class GoogleSignInButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        shape: const RoundedRectangleBorder(
-          borderRadius: BudglyRadius.small,
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: BudglyRadius.small),
         side: BorderSide(color: theme.colorScheme.outline),
         padding: EdgeInsets.symmetric(
           horizontal: BudglySpacing.xl,
@@ -27,10 +25,7 @@ class GoogleSignInButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.max,
         children: [
-          Image.asset(
-            'assets/images/google.webp',
-            height: 30,
-          ),
+          Image.asset('assets/images/google.webp', height: 30),
           Expanded(
             child: Text(
               tr.googleSignIn,

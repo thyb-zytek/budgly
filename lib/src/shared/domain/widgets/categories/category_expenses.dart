@@ -38,7 +38,10 @@ class CategoryExpenses extends StatelessWidget {
     final tr = AppLocalizations.of(context)!;
     final category = summary.category;
     final hasPending = summary.undebitedCount > 0;
-    final threshold = const CategoryThresholdCalculator().calculate(total: summary.total, threshold: category.monthlyThreshold);
+    final threshold = const CategoryThresholdCalculator().calculate(
+      total: summary.total,
+      threshold: category.monthlyThreshold,
+    );
 
     return InkWell(
       onTap: onTap,
@@ -69,11 +72,18 @@ class CategoryExpenses extends StatelessWidget {
                 ),
               ],
             ),
-            if (threshold.isEnabled) CategoryThresholdBar(progress: threshold, currencyCode: currencyCode, localeName: localeName, decimalPlaces: decimalPlaces),
+            if (threshold.isEnabled)
+              CategoryThresholdBar(
+                progress: threshold,
+                currencyCode: currencyCode,
+                localeName: localeName,
+                decimalPlaces: decimalPlaces,
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Flexible(
+                  flex: 2,
                   fit: FlexFit.loose,
                   child: StatusChip(
                     label: tr.debited(_format(summary.debited)),
@@ -83,6 +93,7 @@ class CategoryExpenses extends StatelessWidget {
                 ),
                 if (hasPending)
                   Flexible(
+                    flex: 3,
                     fit: FlexFit.loose,
                     child: StatusChip(
                       label: tr.pending(

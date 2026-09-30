@@ -16,7 +16,7 @@ class Selector<T> extends StatefulWidget {
     required this.onSelect,
     required this.itemBuilder,
     this.backgroundColor,
-    this.maxHeight
+    this.maxHeight,
   });
 
   @override
@@ -32,7 +32,9 @@ class _SelectorState<T> extends State<Selector<T>> {
       return const SizedBox.shrink();
     }
 
-    final currentItem = (widget.selectedItem != null && widget.items.contains(widget.selectedItem))
+    final currentItem =
+        (widget.selectedItem != null &&
+            widget.items.contains(widget.selectedItem))
         ? widget.selectedItem!
         : widget.items.first;
 

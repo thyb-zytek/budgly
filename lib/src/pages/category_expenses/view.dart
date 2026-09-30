@@ -1,10 +1,10 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/bottom_sheet.dart';
-import 'package:budgly/src/core/view_models/view_model_selector.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/models/category/category.dart';
+import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
-import 'package:budgly/src/pages/category_expenses/view_model.dart';
+import 'package:budgly/src/pages/category_expenses/category_expenses_provider.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/expense_editor_sheet.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
@@ -17,54 +17,93 @@ import 'package:budgly/src/pages/category_expenses/widgets/swipe_hint_wrapper.da
 import 'package:budgly/src/pages/category_expenses/widgets/category_expenses_content.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
-import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/riverpod_feedback.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:budgly/src/state/accounts_provider.dart';
+import 'package:budgly/src/state/categories_provider.dart';
+import 'package:budgly/src/shared/domain/widgets/expenses/expense_form_controller.dart';
 
-class CategoryExpensesPage extends StatefulWidget {
+class CategoryExpensesPage extends ConsumerStatefulWidget {
   final String accountId;
   final String categoryId;
   final Period period;
-  final CategoryExpensesViewModel? injectedViewModel;
 
   const CategoryExpensesPage({
     super.key,
     required this.accountId,
     required this.categoryId,
     required this.period,
-    this.injectedViewModel,
   });
 
   @override
-  State<CategoryExpensesPage> createState() => _CategoryExpensesPageState();
+  ConsumerState<CategoryExpensesPage> createState() =>
+      _CategoryExpensesPageState();
 }
 
-class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
+class _CategoryExpensesPageState extends ConsumerState<CategoryExpensesPage> {
   final GlobalKey<SwipeHintWrapperState> _swipeHintKey =
       GlobalKey<SwipeHintWrapperState>();
   final ScrollController _scrollController = ScrollController();
 
-  late final CategoryExpensesViewModel _viewModel;
-  late final bool _ownsViewModel;
+  late final ExpenseFormController _expenseForm;
+
+  CategoryExpensesState get _state => ref.read(
+    categoryExpensesProvider(
+      widget.accountId,
+      widget.categoryId,
+      widget.period,
+    ),
+  );
+  CategoryExpenses get _notifier => ref.read(
+    categoryExpensesProvider(
+      widget.accountId,
+      widget.categoryId,
+      widget.period,
+    ).notifier,
+  );
 
   @override
   void initState() {
     super.initState();
-    _ownsViewModel = widget.injectedViewModel == null;
-    _viewModel = widget.injectedViewModel ??
-        CategoryExpensesViewModel(
-          accountId: widget.accountId,
-          categoryId: widget.categoryId,
-          period: widget.period,
-        );
-    _viewModel.ensureDataLoaded();
+    _expenseForm = ExpenseFormController();
+    Future.microtask(() => _notifier.ensureDataLoaded());
     _scrollController.addListener(_onScroll);
+  }
+
+  List<Account> get _formAccounts => ref.read(accountsSessionProvider).accounts;
+
+  List<Category> get _formCategories {
+    final accountId = _expenseForm.data.account?.id ?? widget.accountId;
+    return ref.read(categoriesSessionProvider).categoriesByAccount[accountId] ??
+        const [];
+  }
+
+  Future<void> _selectFormAccount(Account account) async {
+    if (_expenseForm.data.account?.id == account.id) return;
+    _expenseForm.setAccount(account);
+    if (account.id != null) {
+      final session = ref.read(categoriesSessionProvider);
+      if (!session.loadedAccounts.contains(account.id!)) {
+        await ref.read(categoriesSessionProvider.notifier).load(account.id!);
+      }
+    }
+    final categories = _formCategories;
+    if (categories.isNotEmpty) {
+      if (_expenseForm.data.category == null ||
+          !categories.any(
+            (category) => category.id == _expenseForm.data.category!.id,
+          )) {
+        _expenseForm.setCategory(categories.first);
+      }
+    } else {
+      _expenseForm.clearCategory();
+    }
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    if (_scrollController.position.extentAfter < 500) {
-      _viewModel.loadMore();
-    }
+    if (_scrollController.position.extentAfter < 500) _notifier.loadMore();
   }
 
   @override
@@ -72,34 +111,63 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
-    if (_ownsViewModel) _viewModel.dispose();
+    _expenseForm.dispose();
     super.dispose();
   }
 
   Future<void> _openEditSheet(ExpenseOccurrence occurrence) async {
     final tr = AppLocalizations.of(context)!;
-    _viewModel.startEditing(occurrence);
+    _notifier.startEditing(occurrence);
+    final category = ref
+        .read(categoriesSessionProvider)
+        .categoriesByAccount[occurrence.expense.accountId]
+        ?.where((item) => item.id == occurrence.categoryId)
+        .firstOrNull;
+    final account = ref
+        .read(accountsSessionProvider)
+        .accounts
+        .where((item) => item.id == occurrence.expense.accountId)
+        .firstOrNull;
+    _expenseForm.loadFromOccurrence(
+      occurrence,
+      category: category,
+      account: account,
+    );
     showAppBottomSheet(
       context,
       builder: (context) => ExpenseEditorSheet(
-        listenable: _viewModel,
-        editingData: _viewModel.expenseForm.data,
+        listenable: _expenseForm,
+        editingData: _expenseForm.data,
         title: tr.editExpense,
-        currencyCode: _viewModel.currencyCode,
-        localeName: _viewModel.localeName,
-        validate: (tr) => _viewModel.expenseForm.validate(tr, requireAccountAndCategory: true),
-        onSubmit: _viewModel.saveEditing,
+        currencyCode: _state.currencyCode,
+        localeName: _state.localeName,
+        validate: (tr) =>
+            _expenseForm.validate(tr, requireAccountAndCategory: true),
+        onSubmit: () {
+          final amount = _expenseForm.parseEnteredAmount();
+          if (amount == null) return Future.value(false);
+          return _notifier.saveEditing(
+            ExpenseFormData(
+              name: _expenseForm.data.nameController.text.trim(),
+              amount: amount,
+              categoryId: _expenseForm.data.category?.id,
+              debitDate: _expenseForm.data.debitDate,
+              endDate: _expenseForm.data.effectiveEndDate,
+              recurrence: _expenseForm.data.recurrence,
+            ),
+          );
+        },
         onBeforeSubmit: occurrence.recurrence.isRecurring
             ? () async {
                 final choice = await showRecurringEditOptions(
                   context,
                   expenseName: occurrence.name,
                   dateLabel: DateFormat.yMMMMd(
-                    _viewModel.localeName,
+                    _state.localeName,
                   ).format(occurrence.date),
                 );
                 if (!mounted || choice == null) return false;
-                _viewModel.setRecurringEditScope(
+                _notifier.setRecurringEditScope(
                   choice == RecurringEditChoice.single
                       ? RecurringEditScope.single
                       : RecurringEditScope.future,
@@ -108,37 +176,39 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
               }
             : null,
         submitFailureMessage: tr.expenseUpdateFailed,
-        onToggleAdvanced: _viewModel.expenseForm.toggleAdvancedOptions,
-        onDateChanged: _viewModel.expenseForm.setDebitDate,
-        onRecurrenceChanged: _viewModel.expenseForm.setRecurrence,
-        onEndDateChanged: _viewModel.expenseForm.setEndDate,
-        onEndDateCleared: _viewModel.expenseForm.clearEndDate,
-        isSaving: () => _viewModel.isSaving,
-        isSubmitEnabled: () => _viewModel.categoriesForAccount().isNotEmpty &&
-            _viewModel.expenseForm.data.account != null &&
-            _viewModel.expenseForm.data.category != null,
+        onToggleAdvanced: _expenseForm.toggleAdvancedOptions,
+        onDateChanged: _expenseForm.setDebitDate,
+        onRecurrenceChanged: _expenseForm.setRecurrence,
+        onEndDateChanged: _expenseForm.setEndDate,
+        onEndDateCleared: _expenseForm.clearEndDate,
+        isSubmitEnabled: () =>
+            _formCategories.isNotEmpty &&
+            _expenseForm.data.account != null &&
+            _expenseForm.data.category != null,
         titleLeadingBuilder: (context) {
-          final occ = _viewModel.editingOccurrence;
+          final occ = _state.editingOccurrence;
           if (occ == null) return const SizedBox(width: 40);
           final theme = Theme.of(context);
           return IconButton.filled(
             style: ButtonType.error.iconFilledStyle(theme),
-            onPressed: _viewModel.isSaving ? null : _deleteEditingExpense,
+            onPressed: _state.isSaving ? null : _deleteEditingExpense,
             icon: const Icon(Icons.delete_outline, size: 20),
             tooltip: tr.delete,
           );
         },
         titleTrailingBuilder: (context) {
-          final occ = _viewModel.editingOccurrence;
+          final occ = _state.editingOccurrence;
           if (occ == null) return const SizedBox(width: 40);
           final theme = Theme.of(context);
           final isDebited = occ.isDebited;
           return IconButton.filled(
             style: (isDebited ? ButtonType.secondary : ButtonType.success)
                 .iconFilledStyle(theme),
-            onPressed: _viewModel.isSaving ? null : _toggleEditingDebited,
+            onPressed: _state.isSaving ? null : _toggleEditingDebited,
             icon: Icon(
-              isDebited ? Icons.remove_circle_outline : Icons.check_circle_outline,
+              isDebited
+                  ? Icons.remove_circle_outline
+                  : Icons.check_circle_outline,
               size: 20,
             ),
             tooltip: isDebited ? tr.expenseMarkedAsPending : tr.markAsDebited,
@@ -146,9 +216,9 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
         },
         preFieldsBuilder: (context) {
           final theme = Theme.of(context);
-          final occ = _viewModel.editingOccurrence;
-          final categories = _viewModel.categoriesForAccount();
-          final accounts = _viewModel.formAccounts;
+          final occ = _state.editingOccurrence;
+          final categories = _formCategories;
+          final accounts = _formAccounts;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 16,
@@ -161,9 +231,9 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
                   FramedContainer(
                     child: AccountSelector(
                       accounts: accounts,
-                      selectedAccount: _viewModel.expenseForm.data.account,
+                      selectedAccount: _expenseForm.data.account,
                       backgroundColor: theme.colorScheme.surface,
-                      onSelect: _viewModel.selectFormAccount,
+                      onSelect: _selectFormAccount,
                     ),
                   ),
                 ],
@@ -175,16 +245,29 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
                   SectionLabel(tr.category),
                   categories.isEmpty
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.errorContainer.withValues(alpha: 0.6),
+                            color: theme.colorScheme.errorContainer.withValues(
+                              alpha: 0.6,
+                            ),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: theme.colorScheme.error.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                           ),
                           child: Row(
                             spacing: 8,
                             children: [
-                              Icon(Icons.error_outline, size: 18, color: theme.colorScheme.error),
+                              Icon(
+                                Icons.error_outline,
+                                size: 18,
+                                color: theme.colorScheme.error,
+                              ),
                               Expanded(
                                 child: Text(
                                   tr.noCategoryForAccount,
@@ -201,8 +284,8 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: CategorySelector(
                             categories: categories,
-                            selectedCategory: _viewModel.expenseForm.data.category,
-                            onSelect: _viewModel.selectFormCategory,
+                            selectedCategory: _expenseForm.data.category,
+                            onSelect: _expenseForm.setCategory,
                           ),
                         ),
                 ],
@@ -210,7 +293,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
               if (occ != null && occ.recurrence.isRecurring)
                 Text(
                   tr.recurringEditFromDate(
-                    DateFormat.yMMMMd(_viewModel.localeName).format(occ.date),
+                    DateFormat.yMMMMd(_state.localeName).format(occ.date),
                   ),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -220,7 +303,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
               if (occ != null && occ.recurrence.isRecurring)
                 Text(
                   tr.markDebitedOccurrence(
-                    DateFormat.yMMMMd(_viewModel.localeName).format(occ.date),
+                    DateFormat.yMMMMd(_state.localeName).format(occ.date),
                   ),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -246,8 +329,8 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
 
   Future<void> _toggleEditingDebited() async {
     final tr = AppLocalizations.of(context)!;
-    final wasDebited = _viewModel.editingOccurrence?.isDebited ?? false;
-    final success = await _viewModel.toggleEditingOccurrenceDebited();
+    final wasDebited = _state.editingOccurrence?.isDebited ?? false;
+    final success = await _notifier.toggleEditingOccurrenceDebited();
     if (!mounted || !success) return;
 
     showAppSnackBar(
@@ -261,7 +344,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
 
   Future<void> _deleteEditingExpense() async {
     final tr = AppLocalizations.of(context)!;
-    final occurrence = _viewModel.editingOccurrence;
+    final occurrence = _state.editingOccurrence;
     if (occurrence == null) return;
 
     var success = false;
@@ -271,14 +354,14 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
       final choice = await showRecurringDeleteOptions(
         context,
         expenseName: occurrence.name,
-        dateLabel: DateFormat.yMMMMd(_viewModel.localeName).format(occurrence.date),
+        dateLabel: DateFormat.yMMMMd(_state.localeName).format(occurrence.date),
       );
       if (choice == null) return;
       if (choice == RecurringDeleteChoice.single) {
-        success = await _viewModel.deleteSingleOccurrence(occurrence);
+        success = await _notifier.deleteSingleOccurrence(occurrence);
         confirmed = success;
       } else {
-        success = await _viewModel.deleteFutureOccurrences(occurrence);
+        success = await _notifier.deleteFutureOccurrences(occurrence);
         confirmed = success;
       }
     } else {
@@ -287,7 +370,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
         title: tr.confirmDeleteExpense(occurrence.name),
         content: tr.confirmDeleteExpenseMessage(occurrence.name),
         onConfirm: () async {
-          success = await _viewModel.deleteEditingExpense();
+          success = await _notifier.deleteEditingExpense();
         },
       );
       if (confirmed != true) return;
@@ -301,12 +384,11 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
     );
   }
 
-
   Future<void> _toggleDebited(ExpenseOccurrence occurrence) async {
     final tr = AppLocalizations.of(context)!;
     final wasDebited = occurrence.isDebited;
 
-    final success = await _viewModel.toggleDebited(occurrence);
+    final success = await _notifier.toggleDebited(occurrence);
     if (!mounted || !success) return;
 
     showAppSnackBar(
@@ -328,13 +410,13 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
       final choice = await showRecurringDeleteOptions(
         context,
         expenseName: occurrence.name,
-        dateLabel: DateFormat.yMMMMd(_viewModel.localeName).format(occurrence.date),
+        dateLabel: DateFormat.yMMMMd(_state.localeName).format(occurrence.date),
       );
       if (choice == null) return;
       if (choice == RecurringDeleteChoice.single) {
-        success = await _viewModel.deleteSingleOccurrence(occurrence);
+        success = await _notifier.deleteSingleOccurrence(occurrence);
       } else {
-        success = await _viewModel.deleteFutureOccurrences(occurrence);
+        success = await _notifier.deleteFutureOccurrences(occurrence);
       }
     } else {
       final deleted = await showConfirmDelete(
@@ -342,7 +424,7 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
         title: tr.confirmDeleteExpense(occurrence.name),
         content: tr.confirmDeleteExpenseMessage(occurrence.name),
         onConfirm: () async {
-          success = await _viewModel.deleteOccurrence(occurrence);
+          success = await _notifier.deleteOccurrence(occurrence);
         },
       );
       if (deleted != true) return;
@@ -358,61 +440,49 @@ class _CategoryExpensesPageState extends State<CategoryExpensesPage> {
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
+    final state = ref.watch(
+      categoryExpensesProvider(
+        widget.accountId,
+        widget.categoryId,
+        widget.period,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: ViewModelSelector<CategoryExpensesViewModel, String>(
-          model: _viewModel,
-          selector: (model) => model.category?.name ?? '',
-          builder: (context, name) => Text(
-            name,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        title: Text(
+          state.category?.name ?? '',
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
-      body: ViewModelFeedback(
-        viewModel: _viewModel,
-        child: ViewModelSelector<CategoryExpensesViewModel, bool>(
-        model: _viewModel,
-        selector: (model) => model.isLoading,
-        builder: (context, isLoading) {
-          if (isLoading || _viewModel.category == null) {
-            return const AppLoadingIndicator();
-          }
-
-          return ViewModelSelector<CategoryExpensesViewModel, (
-            List<ExpenseOccurrence>,
-            bool,
-            Category?,
-            String,
-            String,
-            int,
-            Color?,
-          )>(
-            model: _viewModel,
-            selector: (model) => (
-              model.occurrences,
-              model.isLoadingMore,
-              model.category,
-              model.currencyCode,
-              model.localeName,
-              model.amountDecimalPlaces,
-              model.accountColor,
-            ),
-            builder: (context, _) => CategoryExpensesContent(
-              viewModel: _viewModel,
-              translations: tr,
-              swipeHintKey: _swipeHintKey,
-              onEdit: _openEditSheet,
-              onToggleDebited: _toggleDebited,
-              onDelete: _deleteOccurrence,
-              scrollController: _scrollController,
-            ),
-          );
-        },
-        ),
+      body: RiverpodFeedback(
+        messageListenable: categoryExpensesProvider(
+          widget.accountId,
+          widget.categoryId,
+          widget.period,
+        ).select((state) => state.status.pendingMessage),
+        onConsume: (ref) => ref
+            .read(
+              categoryExpensesProvider(
+                widget.accountId,
+                widget.categoryId,
+                widget.period,
+              ).notifier,
+            )
+            .consumeMessage(),
+        child: state.isLoading || state.category == null
+            ? const AppLoadingIndicator()
+            : CategoryExpensesContent(
+                state: state,
+                translations: tr,
+                swipeHintKey: _swipeHintKey,
+                onEdit: _openEditSheet,
+                onToggleDebited: _toggleDebited,
+                onDelete: _deleteOccurrence,
+                scrollController: _scrollController,
+              ),
       ),
     );
   }

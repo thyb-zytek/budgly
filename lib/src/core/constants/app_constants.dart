@@ -1,17 +1,27 @@
 import 'package:budgly/src/models/category/category_icon.dart';
 
 class AppConstants {
-
   static const String bucketAccounts = 'accounts-pictures';
 
   static const String cacheCategoryIcons = 'cached_category_icons';
 
-
   static const String loginFormTypeKey = 'LoginDefaultFormType';
 
-  static const String themeKey = 'theme_mode';
-  static const String localeKey = 'app_locale';
-  static const String currencyKey = 'app_currency';
+  // Local preference cache keys are scoped per Firebase uid (RL-01 §1.3):
+  // they are only ever a fast local mirror of `UserProfile`'s preference
+  // fields, never an independent source of truth, so they must not leak
+  // between accounts sharing a device nor survive as stale global state once
+  // nobody is signed in.
+  static const String _themeKeyPrefix = 'theme_mode_';
+  static const String _localeKeyPrefix = 'app_locale_';
+  static const String _currencyKeyPrefix = 'app_currency_';
+  static const String _amountDecimalPlacesKeyPrefix = 'amount_decimal_places_';
+  static String themeKey(String uid) => '$_themeKeyPrefix$uid';
+  static String localeKey(String uid) => '$_localeKeyPrefix$uid';
+  static String currencyKey(String uid) => '$_currencyKeyPrefix$uid';
+  static String amountDecimalPlacesKey(String uid) =>
+      '$_amountDecimalPlacesKeyPrefix$uid';
+
   static const String tutorialStepKeyPrefix = 'tutorial_step_';
   static const String tutorialCompletedKeyPrefix = 'tutorial_completed_';
 
@@ -39,7 +49,7 @@ class AppConstants {
     'webp',
   ];
 
-  static const CategoryIcon defaultCategoryIcon = CategoryIcon(
+  static final CategoryIcon defaultCategoryIcon = CategoryIcon(
     iconName: 'category_rounded',
     iconCode: 0xf624,
     iconPack: 'MaterialIcons',

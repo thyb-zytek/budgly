@@ -34,7 +34,8 @@ class CurrencyForm extends StatelessWidget {
         child: TabSwitcher(
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
           selectedIndex: reversedCurrencies.indexOf(currentCurrency),
-          onTabSelected: (index) => onCurrencyChanged(reversedCurrencies[index]),
+          onTabSelected: (index) =>
+              onCurrencyChanged(reversedCurrencies[index]),
           tabs: reversedCurrencies
               .map(
                 (currency) => Padding(

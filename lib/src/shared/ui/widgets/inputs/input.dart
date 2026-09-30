@@ -39,7 +39,7 @@ class TextInput extends StatefulWidget {
     this.enabled,
     this.onFieldSubmitted,
     this.onChange,
-    this.suffix
+    this.suffix,
   });
 
   @override
@@ -89,26 +89,28 @@ class _TextInputState extends State<TextInput> {
   }
 
   InputDecoration _buildDecoration(ThemeData theme) {
-  final baseDecoration = (widget.decoration ?? const InputDecoration()).copyWith(
-    labelText: widget.labelText,
-    hintText: widget.hintText,
-    helperText: widget.helperText,
-    errorText: widget.errorText,
-    contentPadding: EdgeInsets.all(BudglySpacing.lg)
-  );
+    final baseDecoration = (widget.decoration ?? const InputDecoration())
+        .copyWith(
+          labelText: widget.labelText,
+          hintText: widget.hintText,
+          helperText: widget.helperText,
+          errorText: widget.errorText,
+          contentPadding: EdgeInsets.all(BudglySpacing.lg),
+        );
 
-  return widget.type.decorate(
-    baseDecoration,
-    InputTypeContext(
-      theme: theme,
-      obscureText: _obscurePassword,
-      onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
-      showClearButton: _hasText,
-      onClear: _clearText,
-      suffix: widget.suffix,
-    ),
-  );
-}
+    return widget.type.decorate(
+      baseDecoration,
+      InputTypeContext(
+        theme: theme,
+        obscureText: _obscurePassword,
+        onToggleObscure: () =>
+            setState(() => _obscurePassword = !_obscurePassword),
+        showClearButton: _hasText,
+        onClear: _clearText,
+        suffix: widget.suffix,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +118,11 @@ class _TextInputState extends State<TextInput> {
     final tr = AppLocalizations.of(context)!;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: BudglySpacing.sm, left: BudglySpacing.xs, right: BudglySpacing.xs),
+      padding: EdgeInsets.only(
+        bottom: BudglySpacing.sm,
+        left: BudglySpacing.xs,
+        right: BudglySpacing.xs,
+      ),
       child: TextFormField(
         controller: widget.controller,
         focusNode: _focusNode,

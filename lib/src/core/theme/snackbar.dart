@@ -8,9 +8,10 @@ extension SnackBarTypeStyles on SnackBarType {
     final theme = Theme.of(context);
     return switch (this) {
       SnackBarType.error => theme.colorScheme.errorContainer,
-      SnackBarType.success => theme.brightness == Brightness.light
-          ? MaterialTheme.success.light.color
-          : MaterialTheme.success.dark.color,
+      SnackBarType.success =>
+        theme.brightness == Brightness.light
+            ? MaterialTheme.success.light.color
+            : MaterialTheme.success.dark.color,
       SnackBarType.info => theme.colorScheme.tertiaryContainer,
       SnackBarType.pending => theme.colorScheme.secondary,
     };
@@ -20,9 +21,10 @@ extension SnackBarTypeStyles on SnackBarType {
     final theme = Theme.of(context);
     return switch (this) {
       SnackBarType.error => theme.colorScheme.onErrorContainer,
-      SnackBarType.success => theme.brightness == Brightness.light
-          ? MaterialTheme.success.light.onColor
-          : MaterialTheme.success.dark.onColor,
+      SnackBarType.success =>
+        theme.brightness == Brightness.light
+            ? MaterialTheme.success.light.onColor
+            : MaterialTheme.success.dark.onColor,
       SnackBarType.info => theme.colorScheme.onTertiaryContainer,
       SnackBarType.pending => theme.colorScheme.onSecondary,
     };

@@ -16,7 +16,12 @@ class PreferenceSection extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(BudglySpacing.lg, BudglySpacing.sm, BudglySpacing.sm, BudglySpacing.xs),
+      padding: EdgeInsets.fromLTRB(
+        BudglySpacing.lg,
+        BudglySpacing.sm,
+        BudglySpacing.sm,
+        BudglySpacing.xs,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 8,
@@ -28,10 +33,7 @@ class PreferenceSection extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: child,
-          ),
+          Align(alignment: Alignment.centerRight, child: child),
         ],
       ),
     );

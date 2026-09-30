@@ -1,63 +1,50 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/pages/settings/profile/view_model.dart';
-import 'package:budgly/src/pages/settings/profile/widgets/change_password_sheet.dart';
+import 'package:budgly/src/state/profile_providers.dart';
 import 'package:budgly/src/core/theme/button_styles.dart';
+import 'package:budgly/src/core/theme/design_tokens.dart';
+import 'package:budgly/src/pages/settings/profile/profile_settings_provider.dart';
+import 'package:budgly/src/pages/settings/profile/widgets/change_password_sheet.dart';
 import 'package:budgly/src/shared/domain/widgets/user/details.dart';
 import 'package:budgly/src/shared/domain/widgets/user/view_card.dart';
+import 'package:budgly/src/shared/ui/widgets/feedback/riverpod_feedback.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
-import 'package:budgly/src/shared/ui/widgets/feedback/view_model_feedback.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ProfileTab extends StatefulWidget {
-  final ProfileViewModel? injectedViewModel;
+class ProfileTab extends ConsumerWidget {
+  const ProfileTab({super.key});
 
-  const ProfileTab({super.key, this.injectedViewModel});
-
-  @override
-  State<ProfileTab> createState() => _ProfileTabState();
-}
-
-class _ProfileTabState extends State<ProfileTab> {
-  late final ProfileViewModel _viewModel;
-  late final bool _ownsViewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    _ownsViewModel = widget.injectedViewModel == null;
-    _viewModel = widget.injectedViewModel ?? ProfileViewModel();
-  }
-
-  @override
-  void dispose() {
-    if (_ownsViewModel) _viewModel.dispose();
-    super.dispose();
-  }
-
-  void _displayChangePasswordDialog() {
+  void _displayChangePasswordDialog(BuildContext context, WidgetRef ref) {
     ChangePasswordSheet.show(
       context,
-      viewModel: _viewModel,
-      onSubmit: () => _viewModel.changePassword(true),
+      onSubmit: (oldPassword, newPassword) => ref
+          .read(profileSettingsProvider.notifier)
+          .changePassword(oldPassword: oldPassword, newPassword: newPassword),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final notifier = ref.read(profileSettingsProvider.notifier);
 
-    return ViewModelFeedback(
-      viewModel: _viewModel,
-      child: ListenableBuilder(
-        listenable: _viewModel,
-        builder: (context, child) {
-          if (_viewModel.isLoading || _viewModel.currentUser == null) {
+    final user = ref.watch(profileSessionProvider.select((s) => s.currentUser));
+    final isLoading = ref.watch(
+      profileSettingsProvider.select((s) => s.isLoading),
+    );
+
+    return RiverpodFeedback(
+      messageListenable: profileSettingsProvider.select(
+        (s) => s.pendingMessage,
+      ),
+      onConsume: (ref) =>
+          ref.read(profileSettingsProvider.notifier).consumeMessage(),
+      child: Builder(
+        builder: (context) {
+          if (isLoading || user == null) {
             return const AppLoadingIndicator();
           }
-
-          final user = _viewModel.currentUser!;
 
           return Padding(
             padding: EdgeInsets.all(BudglySpacing.lg),
@@ -76,10 +63,10 @@ class _ProfileTabState extends State<ProfileTab> {
                         UserCard(user: user),
                         UserDetails(
                           user: user,
-                          onChangeName: _viewModel.onChangeName,
+                          onChangeName: notifier.onChangeName,
                         ),
                         FilledButton.icon(
-                          onPressed: _viewModel.refreshUser,
+                          onPressed: notifier.refreshUser,
                           iconAlignment: IconAlignment.start,
                           icon: const Icon(Icons.refresh),
                           label: Text(tr.refreshProfile),
@@ -87,16 +74,21 @@ class _ProfileTabState extends State<ProfileTab> {
                         if (!user.isGoogleUser)
                           FilledButton.icon(
                             style: ButtonType.tertiary.filledStyle(theme),
-                            onPressed: _displayChangePasswordDialog,
+                            onPressed: () =>
+                                _displayChangePasswordDialog(context, ref),
                             iconAlignment: IconAlignment.start,
                             icon: Icon(
                               Icons.lock,
-                              color: ButtonType.tertiary.colors(theme).foreground,
+                              color: ButtonType.tertiary
+                                  .colors(theme)
+                                  .foreground,
                             ),
                             label: Text(
                               tr.changePassword,
                               style: theme.textTheme.labelLarge?.copyWith(
-                                color: ButtonType.tertiary.colors(theme).foreground,
+                                color: ButtonType.tertiary
+                                    .colors(theme)
+                                    .foreground,
                               ),
                             ),
                           ),
@@ -106,7 +98,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 ),
                 FilledButton.icon(
                   style: ButtonType.error.filledStyle(theme),
-                  onPressed: _viewModel.signOut,
+                  onPressed: notifier.signOut,
                   iconAlignment: IconAlignment.start,
                   icon: Icon(
                     Icons.logout,
