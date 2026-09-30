@@ -7,8 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const calculator = ExpenseSummaryCalculator();
 
-  final food = Category(id: 'food', accountId: 'account', name: 'Food');
-  final transport = Category(id: 'transport', accountId: 'account', name: 'Transport');
+  const food = Category(id: 'food', accountId: 'account', name: 'Food');
+  const transport = Category(
+    id: 'transport',
+    accountId: 'account',
+    name: 'Transport',
+  );
 
   ExpenseOccurrence occurrence({
     required double amount,
@@ -62,10 +66,7 @@ void main() {
     });
 
     test('empty occurrences', () {
-      final result = calculator.summarize(
-        category: food,
-        occurrences: [],
-      );
+      final result = calculator.summarize(category: food, occurrences: []);
       expect(result.total, 0);
       expect(result.debited, 0);
       expect(result.undebited, 0);
@@ -87,9 +88,24 @@ void main() {
   group('ExpenseSummaryCalculator.summarizeByCategory', () {
     test('groups by category and sorts by total descending', () {
       final occurrences = [
-        occurrence(amount: 10, debited: true, categoryId: 'food', expenseId: 'e1'),
-        occurrence(amount: 30, debited: false, categoryId: 'transport', expenseId: 'e2'),
-        occurrence(amount: 20, debited: true, categoryId: 'food', expenseId: 'e3'),
+        occurrence(
+          amount: 10,
+          debited: true,
+          categoryId: 'food',
+          expenseId: 'e1',
+        ),
+        occurrence(
+          amount: 30,
+          debited: false,
+          categoryId: 'transport',
+          expenseId: 'e2',
+        ),
+        occurrence(
+          amount: 20,
+          debited: true,
+          categoryId: 'food',
+          expenseId: 'e3',
+        ),
       ];
 
       final results = calculator.summarizeByCategory(
@@ -110,8 +126,18 @@ void main() {
 
     test('skips categories that cannot be resolved', () {
       final occurrences = [
-        occurrence(amount: 10, debited: true, categoryId: 'food', expenseId: 'e1'),
-        occurrence(amount: 20, debited: false, categoryId: 'unknown', expenseId: 'e2'),
+        occurrence(
+          amount: 10,
+          debited: true,
+          categoryId: 'food',
+          expenseId: 'e1',
+        ),
+        occurrence(
+          amount: 20,
+          debited: false,
+          categoryId: 'unknown',
+          expenseId: 'e2',
+        ),
       ];
 
       final results = calculator.summarizeByCategory(

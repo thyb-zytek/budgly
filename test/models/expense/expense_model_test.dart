@@ -48,29 +48,28 @@ void main() {
 
   group('Expense.isRecurring', () {
     test('none is not recurring', () {
-      expect(buildExpense(recurrence: RecurrenceType.none).isRecurring, isFalse);
+      expect(
+        buildExpense(recurrence: RecurrenceType.none).isRecurring,
+        isFalse,
+      );
     });
 
     test('monthly is recurring', () {
-      expect(buildExpense(recurrence: RecurrenceType.monthly).isRecurring, isTrue);
+      expect(
+        buildExpense(recurrence: RecurrenceType.monthly).isRecurring,
+        isTrue,
+      );
     });
   });
 
-  group('Expense.endOfEndDate', () {
+  group('Expense.endDateExclusive', () {
     test('null when endDate is null', () {
-      expect(buildExpense().endOfEndDate, isNull);
+      expect(buildExpense().endDateExclusive, isNull);
     });
 
-    test('returns 23:59:59.999 of endDate', () {
+    test('returns the day after endDate as the exclusive bound', () {
       final expense = buildExpense(endDate: DateTime(2026, 6, 15));
-      final result = expense.endOfEndDate!;
-      expect(result.year, 2026);
-      expect(result.month, 6);
-      expect(result.day, 15);
-      expect(result.hour, 23);
-      expect(result.minute, 59);
-      expect(result.second, 59);
-      expect(result.millisecond, 999);
+      expect(expense.endDateExclusive, DateTime(2026, 6, 16));
     });
   });
 
@@ -95,10 +94,7 @@ void main() {
   group('Expense.copyWith', () {
     test('copies with new values', () {
       final expense = buildExpense();
-      final copy = expense.copyWith(
-        name: 'New Name',
-        amount: 99.99,
-      );
+      final copy = expense.copyWith(name: 'New Name', amount: 99.99);
       expect(copy.name, 'New Name');
       expect(copy.amount, 99.99);
       expect(copy.id, expense.id);
@@ -284,5 +280,24 @@ void main() {
     });
   });
 
-}
+  group('equality', () {
+    test(
+      'two expenses with the same id are equal, even with different fields',
+      () {
+        final a = buildExpense(id: 'e1', amount: 10);
+        final b = buildExpense(id: 'e1', amount: 99, name: 'Différent');
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
 
+    test(
+      'two expenses with different ids are not equal, even with the same fields',
+      () {
+        final a = buildExpense(id: 'e1');
+        final b = buildExpense(id: 'e2');
+        expect(a, isNot(equals(b)));
+      },
+    );
+  });
+}

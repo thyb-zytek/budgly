@@ -26,84 +26,92 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers/pump_app.dart';
 
 void main() {
-  testWidgets('summary widgets cover optional detail, tooltip and action branches', (tester) async {
-    var taps = 0;
-    final item = OverviewStatItem(
-      icon: Icons.payments_outlined,
-      label: 'Dépenses',
-      value: '120 €',
-      detail: '8 opérations',
-      detailColor: Colors.green,
-      color: Colors.blue,
-      isEmphasized: true,
-      tooltip: 'Détail des dépenses',
-      onTap: () => taps++,
-      trailingIcon: Icons.chevron_right,
-    );
+  testWidgets(
+    'summary widgets cover optional detail, tooltip and action branches',
+    (tester) async {
+      var taps = 0;
+      final item = OverviewStatItem(
+        icon: Icons.payments_outlined,
+        label: 'Dépenses',
+        value: '120 €',
+        detail: '8 opérations',
+        detailColor: Colors.green,
+        color: Colors.blue,
+        isEmphasized: true,
+        tooltip: 'Détail des dépenses',
+        onTap: () => taps++,
+        trailingIcon: Icons.chevron_right,
+      );
 
-    await pumpApp(
-      tester,
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          OverviewStat(item: item),
-          const SummaryStat(
-            icon: Icons.wallet,
-            label: 'Simple',
-            value: '50 €',
-            compact: true,
-          ),
-          SummaryStatValue(
-            value: '100 €',
-            detail: 'prévu',
-            compact: false,
-            isEmphasized: false,
-            color: null,
-            detailColor: null,
-            theme: ThemeData.light(useMaterial3: true),
-          ),
-        ],
-      ),
-    );
+      await pumpApp(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OverviewStat(item: item),
+            const SummaryStat(
+              icon: Icons.wallet,
+              label: 'Simple',
+              value: '50 €',
+              compact: true,
+            ),
+            SummaryStatValue(
+              value: '100 €',
+              detail: 'prévu',
+              compact: false,
+              isEmphasized: false,
+              color: null,
+              detailColor: null,
+              theme: ThemeData.light(useMaterial3: true),
+            ),
+          ],
+        ),
+      );
 
-    expect(find.text('Dépenses'), findsOneWidget);
-    expect(find.text('120 €'), findsOneWidget);
-    expect(find.text('(8 opérations)'), findsOneWidget);
-    expect(find.byType(Tooltip), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+      expect(find.text('Dépenses'), findsOneWidget);
+      expect(find.text('120 €'), findsOneWidget);
+      expect(find.text('(8 opérations)'), findsOneWidget);
+      expect(find.byType(Tooltip), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
 
-    await tester.tap(find.text('Dépenses'));
-    expect(taps, 1);
-  });
+      await tester.tap(find.text('Dépenses'));
+      expect(taps, 1);
+    },
+  );
 
-  testWidgets('period slide switcher renders both directions and changes child', (tester) async {
-    const period = Period(year: 2026, month: 8);
-    await pumpApp(
-      tester,
-      const PeriodSlideSwitcher(
-        period: period,
-        direction: -1,
-        child: Text('Août'),
-      ),
-    );
-    expect(find.text('Août'), findsOneWidget);
+  testWidgets(
+    'period slide switcher renders both directions and changes child',
+    (tester) async {
+      const period = Period(year: 2026, month: 8);
+      await pumpApp(
+        tester,
+        const PeriodSlideSwitcher(
+          period: period,
+          direction: -1,
+          child: Text('Août'),
+        ),
+      );
+      expect(find.text('Août'), findsOneWidget);
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: PeriodSlideSwitcher(
-            period: Period(year: 2026, month: 9),
-            direction: 1,
-            child: Text('Septembre'),
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PeriodSlideSwitcher(
+              period: Period(year: 2026, month: 9),
+              direction: 1,
+              child: Text('Septembre'),
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    expect(find.text('Septembre'), findsOneWidget);
-  });
+      );
+      await tester.pump();
+      expect(find.text('Septembre'), findsOneWidget);
+    },
+  );
 
-  testWidgets('status chip covers normal and highlighted presentation', (tester) async {
+  testWidgets('status chip covers normal and highlighted presentation', (
+    tester,
+  ) async {
     await pumpApp(
       tester,
       const Row(
@@ -123,7 +131,9 @@ void main() {
     expect(find.byIcon(Icons.schedule), findsOneWidget);
   });
 
-  testWidgets('tutorial indicators and pop-in render their state', (tester) async {
+  testWidgets('tutorial indicators and pop-in render their state', (
+    tester,
+  ) async {
     await pumpApp(
       tester,
       const Column(
@@ -174,7 +184,9 @@ void main() {
     expect(cleared, 1);
   });
 
-  testWidgets('avatar covers remove and network picture branches', (tester) async {
+  testWidgets('avatar covers remove and network picture branches', (
+    tester,
+  ) async {
     var removed = 0;
     await pumpApp(
       tester,
@@ -195,7 +207,9 @@ void main() {
     expect(removed, 1);
   });
 
-  testWidgets('color wheel exposes accessible picker and reports changes', (tester) async {
+  testWidgets('color wheel exposes accessible picker and reports changes', (
+    tester,
+  ) async {
     Color? selected;
     final semantics = tester.ensureSemantics();
     await pumpApp(
@@ -216,7 +230,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('swipe tabs changes tab through the visible tab control', (tester) async {
+  testWidgets('swipe tabs changes tab through the visible tab control', (
+    tester,
+  ) async {
     var selected = -1;
     await pumpApp(
       tester,
@@ -263,7 +279,9 @@ void main() {
     expect(find.text('Gérez vos comptes'), findsOneWidget);
   });
 
-  testWidgets('AddEntity hides its label after press and invokes callback', (tester) async {
+  testWidgets('AddEntity hides its label after press and invokes callback', (
+    tester,
+  ) async {
     var calls = 0;
     await pumpApp(
       tester,
@@ -284,7 +302,9 @@ void main() {
     expect(find.text('Ajouter'), findsNothing);
   });
 
-  testWidgets('FormActions disables both actions while loading', (tester) async {
+  testWidgets('FormActions disables both actions while loading', (
+    tester,
+  ) async {
     var cancelCalls = 0;
     var submitCalls = 0;
     await pumpApp(
@@ -334,14 +354,14 @@ void main() {
               ),
             ),
           ),
-          UserCard(user: User(id: 'u2')),
+          const UserCard(user: User(id: 'u2')),
         ],
       ),
     );
     expect(find.text('Alex'), findsOneWidget);
     expect(find.text('alex@example.com'), findsOneWidget);
 
-    await pumpApp(tester, UserCard(user: User(id: 'u2')));
+    await pumpApp(tester, const UserCard(user: User(id: 'u2')));
     expect(find.byIcon(Icons.person), findsOneWidget);
   });
 }

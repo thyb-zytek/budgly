@@ -17,7 +17,9 @@ void main() {
 
   test('put copies the list and cached returns the stored snapshot', () {
     const period = Period(year: 2026, month: 9);
-    final expenses = [Fixtures.expense(id: 'e1', accountId: 'a1', categoryId: 'c1')];
+    final expenses = [
+      Fixtures.expense(id: 'e1', accountId: 'a1', categoryId: 'c1'),
+    ];
     final key = cache.key('a1', period, null);
 
     cache.put(key, expenses);
@@ -29,8 +31,18 @@ void main() {
   test('mergeServer preserves pending optimistic creates', () {
     const period = Period(year: 2026, month: 9);
     final key = cache.key('a1', period, null);
-    final local = Fixtures.expense(id: 'offline', accountId: 'a1', categoryId: 'c1', debitDate: DateTime(2026, 9, 20));
-    final server = Fixtures.expense(id: 'server', accountId: 'a1', categoryId: 'c1', debitDate: DateTime(2026, 9, 10));
+    final local = Fixtures.expense(
+      id: 'offline',
+      accountId: 'a1',
+      categoryId: 'c1',
+      debitDate: DateTime(2026, 9, 20),
+    );
+    final server = Fixtures.expense(
+      id: 'server',
+      accountId: 'a1',
+      categoryId: 'c1',
+      debitDate: DateTime(2026, 9, 10),
+    );
 
     cache.put(key, [local]);
     cache.addOptimistic('offline');
@@ -41,40 +53,56 @@ void main() {
     expect(merged.map((e) => e.id), ['offline', 'server']);
   });
 
-  test('mergeServer keeps pending mutations authoritative over stale snapshots', () {
-    const period = Period(year: 2026, month: 9);
-    final key = cache.key('a1', period, null);
-    final deleted = Fixtures.expense(id: 'deleted', accountId: 'a1', categoryId: 'c1');
-    final acknowledged = Fixtures.expense(id: 'ack', accountId: 'a1', categoryId: 'c1');
+  test(
+    'mergeServer keeps pending mutations authoritative over stale snapshots',
+    () {
+      const period = Period(year: 2026, month: 9);
+      final key = cache.key('a1', period, null);
+      final deleted = Fixtures.expense(
+        id: 'deleted',
+        accountId: 'a1',
+        categoryId: 'c1',
+      );
+      final acknowledged = Fixtures.expense(
+        id: 'ack',
+        accountId: 'a1',
+        categoryId: 'c1',
+      );
 
-    cache.put(key, [deleted, acknowledged]);
-    cache.markPendingDelete('deleted');
-    cache.markPending('ack', acknowledged);
+      cache.put(key, [deleted, acknowledged]);
+      cache.markPendingDelete('deleted');
+      cache.markPending('ack', acknowledged);
 
-    final merged = cache.mergeServer(key, [deleted, acknowledged]);
+      final merged = cache.mergeServer(key, [deleted, acknowledged]);
 
-    expect(merged.map((e) => e.id), ['ack']);
+      expect(merged.map((e) => e.id), ['ack']);
 
-    // A server snapshot containing the old value must not clear the pending
-    // protection. The shield is only released once the server confirms the
-    // expense in a refresh (ExpensePeriodCache.releaseConfirmed), not as a
-    // side effect of the read path.
-    final stale = acknowledged.copyWith(amount: acknowledged.amount + 50);
-    cache.markPending('ack', acknowledged);
-    final staleMerged = cache.mergeServer(key, [stale]);
-    expect(staleMerged.single.amount, acknowledged.amount);
+      // A server snapshot containing the old value must not clear the pending
+      // protection. The shield is only released once the server confirms the
+      // expense in a refresh (ExpensePeriodCache.releaseConfirmed), not as a
+      // side effect of the read path.
+      final stale = acknowledged.copyWith(amount: acknowledged.amount + 50);
+      cache.markPending('ack', acknowledged);
+      final staleMerged = cache.mergeServer(key, [stale]);
+      expect(staleMerged.single.amount, acknowledged.amount);
 
-    cache.clearPending('ack');
-    final authoritative = cache.mergeServer(key, [stale]);
-    expect(authoritative.single.amount, stale.amount);
-  });
+      cache.clearPending('ack');
+      final authoritative = cache.mergeServer(key, [stale]);
+      expect(authoritative.single.amount, stale.amount);
+    },
+  );
 
   test('optimistic update moves an expense between loaded periods', () {
     const oldPeriod = Period(year: 2026, month: 9);
     const newPeriod = Period(year: 2026, month: 10);
     final oldKey = cache.key('a1', oldPeriod, null);
     final newKey = cache.key('a1', newPeriod, null);
-    final oldExpense = Fixtures.expense(id: 'e1', accountId: 'a1', categoryId: 'c1', debitDate: DateTime(2026, 9, 20));
+    final oldExpense = Fixtures.expense(
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      debitDate: DateTime(2026, 9, 20),
+    );
     final newExpense = oldExpense.copyWith(debitDate: DateTime(2026, 10, 1));
 
     cache.put(oldKey, [oldExpense]);

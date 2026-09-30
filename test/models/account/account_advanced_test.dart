@@ -35,9 +35,7 @@ void main() {
       });
 
       test('handles null optional fields', () {
-        final account = Account.fromJson({
-          'name': 'Main',
-        });
+        final account = Account.fromJson({'name': 'Main'});
         expect(account.id, isNull);
         expect(account.userId, isNull);
         expect(account.picture, isNull);
@@ -83,10 +81,10 @@ void main() {
         expect(a, isNot(equals(b)));
       });
 
-      test('accounts with null ids are equal (known footgun)', () {
+      test('accounts with null ids are not equal', () {
         const a = Account(name: 'A');
         const b = Account(name: 'B');
-        expect(a, equals(b));
+        expect(a, isNot(equals(b)));
       });
 
       test('not equal to non-Account', () {

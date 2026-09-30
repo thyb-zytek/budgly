@@ -10,12 +10,29 @@ void main() {
     );
   });
 
-  test('falls back to current period for missing or invalid route parameters', () {
-    final expected = Period.current();
-    expect(AppRouter.parsePeriod(Uri.parse('/overview')), expected);
-    expect(
-      AppRouter.parsePeriod(Uri.parse('/overview?year=2026&month=13')),
-      expected,
-    );
-  });
+  test(
+    'falls back to current period for missing or invalid route parameters',
+    () {
+      final expected = Period.current();
+      expect(AppRouter.parsePeriod(Uri.parse('/overview')), expected);
+      expect(
+        AppRouter.parsePeriod(Uri.parse('/overview?year=2026&month=13')),
+        expected,
+      );
+      expect(
+        AppRouter.parsePeriod(Uri.parse('/overview?year=2026&month=0')),
+        expected,
+        reason: 'month must be in the 1-12 range',
+      );
+      expect(
+        AppRouter.parsePeriod(Uri.parse('/overview?year=not-a-number&month=9')),
+        expected,
+      );
+      expect(
+        AppRouter.parsePeriod(Uri.parse('/overview?year=2026')),
+        expected,
+        reason: 'month alone missing must not produce a half-parsed period',
+      );
+    },
+  );
 }

@@ -35,7 +35,9 @@ void main() {
       expect(find.byIcon(Icons.swipe_right_rounded), findsNothing);
     });
 
-    testWidgets('renders at the start and end of the animation without error', (tester) async {
+    testWidgets('renders at the start and end of the animation without error', (
+      tester,
+    ) async {
       await pumpApp(
         tester,
         const SizedBox(

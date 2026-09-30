@@ -6,7 +6,9 @@ import '../../../helpers/pump_app.dart';
 
 void main() {
   group('ThemeForm', () {
-    testWidgets('selecting a different theme mode calls onThemeChanged', (tester) async {
+    testWidgets('selecting a different theme mode calls onThemeChanged', (
+      tester,
+    ) async {
       ThemeMode? changedTo;
 
       await pumpApp(
@@ -23,7 +25,9 @@ void main() {
       expect(changedTo, ThemeMode.dark);
     });
 
-    testWidgets('tapping the already-selected mode still reports it', (tester) async {
+    testWidgets('tapping the already-selected mode still reports it', (
+      tester,
+    ) async {
       ThemeMode? changedTo;
 
       await pumpApp(

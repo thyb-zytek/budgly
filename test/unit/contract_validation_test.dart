@@ -37,8 +37,14 @@ void main() {
         expect(normalizeAmount(12.31, decimalPlaces: 1), 12.4);
       });
       test('clamp decimalPlaces 0..2', () {
-        expect(normalizeAmount(12.345, decimalPlaces: 5), normalizeAmount(12.345, decimalPlaces: 2));
-        expect(normalizeAmount(12.345, decimalPlaces: -1), normalizeAmount(12.345, decimalPlaces: 0));
+        expect(
+          normalizeAmount(12.345, decimalPlaces: 5),
+          normalizeAmount(12.345, decimalPlaces: 2),
+        );
+        expect(
+          normalizeAmount(12.345, decimalPlaces: -1),
+          normalizeAmount(12.345, decimalPlaces: 0),
+        );
       });
     });
 

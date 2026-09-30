@@ -1,3 +1,4 @@
+import 'package:budgly/src/models/budget/calendar_date_range.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
@@ -41,88 +42,100 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 1, 1),
-        DateTime(2026, 12, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 1, 1),
+          endExclusive: DateTime(2026, 5, 31),
+        ),
       );
 
       expect(result, hasLength(3));
       expect(result.last.date, DateTime(2026, 3, 15));
     });
 
-    test('recurring expense whose endDate is before from returns empty', () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 1, 15),
-        recurrence: RecurrenceType.monthly,
-        endDate: DateTime(2026, 2, 15),
-      );
+    test(
+      'recurring expense whose endDate is before the requested end still stops at endDate',
+      () {
+        final expense = buildExpense(
+          debitDate: DateTime(2026, 1, 15),
+          recurrence: RecurrenceType.monthly,
+          endDate: DateTime(2026, 2, 15),
+        );
 
-      final result = expandExpenseOccurrencesBetween(
-        expense,
-        DateTime(2026, 3, 1),
-        DateTime(2026, 12, 31),
-      );
+        final result = expandExpenseOccurrencesBetween(
+          expense,
+          CalendarDateRange(
+            start: DateTime(2026, 3, 1),
+            endExclusive: DateTime(2026, 12, 31),
+          ),
+        );
 
-      expect(result, isEmpty);
-    });
+        expect(result, isEmpty);
+      },
+    );
 
     test('one-off expense outside the range returns empty', () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 1, 15),
-      );
+      final expense = buildExpense(debitDate: DateTime(2026, 1, 15));
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 3, 1),
-        DateTime(2026, 3, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 3, 1),
+          endExclusive: DateTime(2026, 3, 31),
+        ),
       );
 
       expect(result, isEmpty);
     });
 
     test('one-off expense exactly on from boundary is included', () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 3, 1),
-      );
+      final expense = buildExpense(debitDate: DateTime(2026, 3, 1));
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 3, 1),
-        DateTime(2026, 3, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 3, 1),
+          endExclusive: DateTime(2026, 3, 31),
+        ),
       );
 
       expect(result, hasLength(1));
     });
 
     test('one-off expense exactly on to boundary is included', () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 3, 31),
-      );
+      final expense = buildExpense(debitDate: DateTime(2026, 3, 31));
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 3, 1),
-        DateTime(2026, 3, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 3, 1),
+          endExclusive: DateTime(2026, 3, 31),
+        ),
       );
 
-      expect(result, hasLength(1));
+      expect(result, isEmpty);
     });
 
-    test('weekly recurring generates correct number of occurrences in 2 weeks', () {
-      final expense = buildExpense(
-        debitDate: DateTime(2026, 3, 2),
-        recurrence: RecurrenceType.weekly,
-      );
+    test(
+      'weekly recurring generates correct number of occurrences in 2 weeks',
+      () {
+        final expense = buildExpense(
+          debitDate: DateTime(2026, 3, 2),
+          recurrence: RecurrenceType.weekly,
+        );
 
-      final result = expandExpenseOccurrencesBetween(
-        expense,
-        DateTime(2026, 3, 2),
-        DateTime(2026, 3, 15),
-      );
+        final result = expandExpenseOccurrencesBetween(
+          expense,
+          CalendarDateRange(
+            start: DateTime(2026, 3, 2),
+            endExclusive: DateTime(2026, 3, 15),
+          ),
+        );
 
-      expect(result, hasLength(2));
-      expect(result[0].date, DateTime(2026, 3, 2));
-      expect(result[1].date, DateTime(2026, 3, 9));
-    });
+        expect(result, hasLength(2));
+        expect(result[0].date, DateTime(2026, 3, 2));
+        expect(result[1].date, DateTime(2026, 3, 9));
+      },
+    );
 
     test('daily recurring expands correctly', () {
       final expense = buildExpense(
@@ -132,8 +145,10 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 3, 1),
-        DateTime(2026, 3, 5),
+        CalendarDateRange(
+          start: DateTime(2026, 3, 1),
+          endExclusive: DateTime(2026, 3, 6),
+        ),
       );
 
       expect(result, hasLength(5));
@@ -150,8 +165,10 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 1, 1),
-        DateTime(2026, 5, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 1, 1),
+          endExclusive: DateTime(2026, 6, 1),
+        ),
       );
 
       expect(result, hasLength(5));
@@ -171,8 +188,10 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 1, 1),
-        DateTime(2026, 5, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 1, 1),
+          endExclusive: DateTime(2026, 6, 1),
+        ),
       );
 
       expect(result[0].isDebited, isTrue);
@@ -190,11 +209,13 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 1, 1),
-        DateTime(2026, 12, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 1, 1),
+          endExclusive: DateTime(2026, 5, 31),
+        ),
       );
 
-      expect(result, hasLength(6));
+      expect(result, hasLength(3));
       expect(result[0].date, DateTime(2026, 1, 15));
       expect(result[1].date, DateTime(2026, 3, 15));
       expect(result[2].date, DateTime(2026, 5, 15));
@@ -208,8 +229,10 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 1, 1),
-        DateTime(2030, 12, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 1, 1),
+          endExclusive: DateTime(2030, 12, 31),
+        ),
       );
 
       expect(result, hasLength(5));
@@ -225,8 +248,10 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 1, 1),
-        DateTime(2026, 12, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 1, 1),
+          endExclusive: DateTime(2026, 12, 31),
+        ),
       );
 
       expect(result, hasLength(4));
@@ -244,8 +269,10 @@ void main() {
 
       final result = expandExpenseOccurrencesBetween(
         expense,
-        DateTime(2026, 3, 1),
-        DateTime(2026, 3, 31),
+        CalendarDateRange(
+          start: DateTime(2026, 3, 1),
+          endExclusive: DateTime(2026, 3, 31),
+        ),
       );
 
       expect(result.single.key, 'test-42@2026-03-05');

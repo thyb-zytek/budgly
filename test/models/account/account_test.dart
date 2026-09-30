@@ -78,28 +78,31 @@ void main() {
       expect(result.name, base.name);
     });
 
-    test('explicitly clears pictureUrl when passed null (sentinel pattern)', () {
-      final result = base.copyWith(pictureUrl: null);
-      expect(result.pictureUrl, isNull);
-    });
-
     test(
-      'color cannot be cleared via copyWith(color: null) — it falls back '
-      'to the existing value, unlike picture/pictureUrl',
+      'explicitly clears pictureUrl when passed null (sentinel pattern)',
       () {
-        final result = base.copyWith(color: null);
-        expect(result.color, base.color);
+        final result = base.copyWith(pictureUrl: null);
+        expect(result.pictureUrl, isNull);
       },
     );
+
+    test('color cannot be cleared via copyWith(color: null) — it falls back '
+        'to the existing value, unlike picture/pictureUrl', () {
+      final result = base.copyWith(color: null);
+      expect(result.color, base.color);
+    });
   });
 
   group('Account equality', () {
-    test('two accounts with the same id are equal regardless of other fields', () {
-      const a = Account(id: 'acc-1', name: 'Perso');
-      const b = Account(id: 'acc-1', name: 'Pro');
-      expect(a, equals(b));
-      expect(a.hashCode, b.hashCode);
-    });
+    test(
+      'two accounts with the same id are equal regardless of other fields',
+      () {
+        const a = Account(id: 'acc-1', name: 'Perso');
+        const b = Account(id: 'acc-1', name: 'Pro');
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
 
     test('two accounts with different ids are not equal', () {
       const a = Account(id: 'acc-1', name: 'Perso');
@@ -108,13 +111,11 @@ void main() {
     });
 
     test(
-      'two accounts with a null id are equal to each other — a real '
-      'footgun: two distinct not-yet-saved accounts would collide in a '
-      'Set/Map keyed by Account',
+      'two accounts with a null id are not equal because neither has a stable server identity',
       () {
         const a = Account(name: 'Perso');
         const b = Account(name: 'Pro');
-        expect(a, equals(b));
+        expect(a, isNot(equals(b)));
       },
     );
   });

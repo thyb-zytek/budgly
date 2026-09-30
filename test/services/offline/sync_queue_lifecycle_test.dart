@@ -9,32 +9,35 @@ void main() {
   setUpAll(() => SharedPreferences.setMockInitialValues({}));
 
   setUp(() async {
-    queue = SyncQueue.instance;
+    queue = SyncQueue();
     await queue.clear();
   });
 
-  test('offline create -> update -> delete collapses to no server work', () async {
-    await queue.enqueue(
-      id: 'create-e1',
-      type: 'expenses',
-      operation: 'create',
-      payload: {'id': 'e1', 'amount': 10},
-    );
-    await queue.enqueue(
-      id: 'update-e1',
-      type: 'expenses',
-      operation: 'update',
-      payload: {'id': 'e1', 'amount': 20},
-    );
-    await queue.enqueue(
-      id: 'delete-e1',
-      type: 'expenses',
-      operation: 'delete',
-      payload: {'id': 'e1'},
-    );
+  test(
+    'offline create -> update -> delete keeps create and delete for crash-safe replay',
+    () async {
+      await queue.enqueue(
+        id: 'create-e1',
+        type: 'expenses',
+        operation: 'create',
+        payload: {'id': 'e1', 'amount': 10},
+      );
+      await queue.enqueue(
+        id: 'update-e1',
+        type: 'expenses',
+        operation: 'update',
+        payload: {'id': 'e1', 'amount': 20},
+      );
+      await queue.enqueue(
+        id: 'delete-e1',
+        type: 'expenses',
+        operation: 'delete',
+        payload: {'id': 'e1'},
+      );
 
-    expect(await queue.all(), isEmpty);
-  });
+      expect(await queue.all(), hasLength(2));
+    },
+  );
 
   test('multiple offline updates retain only the latest payload', () async {
     for (var i = 1; i <= 10; i++) {
@@ -53,13 +56,22 @@ void main() {
 
   test('unrelated entities keep their relative operations', () async {
     await queue.enqueue(
-      id: 'e1-create', type: 'expenses', operation: 'create', payload: {'id': 'e1'},
+      id: 'e1-create',
+      type: 'expenses',
+      operation: 'create',
+      payload: {'id': 'e1'},
     );
     await queue.enqueue(
-      id: 'e2-update', type: 'expenses', operation: 'update', payload: {'id': 'e2', 'amount': 2},
+      id: 'e2-update',
+      type: 'expenses',
+      operation: 'update',
+      payload: {'id': 'e2', 'amount': 2},
     );
     await queue.enqueue(
-      id: 'e1-update', type: 'expenses', operation: 'update', payload: {'id': 'e1', 'amount': 3},
+      id: 'e1-update',
+      type: 'expenses',
+      operation: 'update',
+      payload: {'id': 'e1', 'amount': 3},
     );
 
     final ops = await queue.all();

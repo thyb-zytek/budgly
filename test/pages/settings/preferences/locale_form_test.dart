@@ -6,7 +6,9 @@ import '../../../helpers/pump_app.dart';
 
 void main() {
   group('LocaleForm', () {
-    testWidgets('selecting the other locale calls onLocaleChanged', (tester) async {
+    testWidgets('selecting the other locale calls onLocaleChanged', (
+      tester,
+    ) async {
       Locale? changedTo;
 
       await pumpApp(

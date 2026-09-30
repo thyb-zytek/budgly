@@ -27,20 +27,22 @@ void main() {
   }
 
   test('decodes the bundled JSON catalogue into CategoryIcon list', () async {
-    final service = buildService(jsonEncode([
-      {
-        'icon_name': 'groceries',
-        'icon_code': 16,
-        'icon_pack': 'BudglyIcons',
-        'labels': {'en': 'Groceries', 'fr': 'Courses'},
-      },
-      {
-        'icon_name': 'transport',
-        'icon_code': '32',
-        'icon_pack': 'BudglyIcons',
-        'labels': {'en': 'Transport'},
-      },
-    ]));
+    final service = buildService(
+      jsonEncode([
+        {
+          'icon_name': 'groceries',
+          'icon_code': 16,
+          'icon_pack': 'BudglyIcons',
+          'labels': {'en': 'Groceries', 'fr': 'Courses'},
+        },
+        {
+          'icon_name': 'transport',
+          'icon_code': '32',
+          'icon_pack': 'BudglyIcons',
+          'labels': {'en': 'Transport'},
+        },
+      ]),
+    );
 
     final icons = await service.getIcons();
 
@@ -53,33 +55,40 @@ void main() {
   });
 
   test('caches the loaded icons across calls', () async {
-    final service = buildService(jsonEncode([
-      {
-        'icon_name': 'groceries',
-        'icon_code': 16,
-        'icon_pack': 'BudglyIcons',
-        'labels': {'en': 'Groceries'},
-      },
-    ]));
+    final service = buildService(
+      jsonEncode([
+        {
+          'icon_name': 'groceries',
+          'icon_code': 16,
+          'icon_pack': 'BudglyIcons',
+          'labels': {'en': 'Groceries'},
+        },
+      ]),
+    );
 
     final first = await service.getIcons();
     final second = await service.getIcons();
 
     expect(first, hasLength(1));
     expect(second, hasLength(1));
-    expect(second, equals(first),
-        reason: 'second call should return the same cached icons');
+    expect(
+      second,
+      equals(first),
+      reason: 'second call should return the same cached icons',
+    );
   });
 
   test('deduplicates concurrent loads (returns the same list)', () async {
-    final service = buildService(jsonEncode([
-      {
-        'icon_name': 'groceries',
-        'icon_code': 16,
-        'icon_pack': 'BudglyIcons',
-        'labels': {'en': 'Groceries'},
-      },
-    ]));
+    final service = buildService(
+      jsonEncode([
+        {
+          'icon_name': 'groceries',
+          'icon_code': 16,
+          'icon_pack': 'BudglyIcons',
+          'labels': {'en': 'Groceries'},
+        },
+      ]),
+    );
 
     final results = await Future.wait([service.getIcons(), service.getIcons()]);
     expect(results[0], hasLength(1));
@@ -97,14 +106,16 @@ void main() {
 
   test('resetForTest forces a reload of the assets on the next call', () async {
     final service = CategoryIconsService(
-      assetBundle: _MockAssetBundle(jsonEncode([
-        {
-          'icon_name': 'groceries',
-          'icon_code': 16,
-          'icon_pack': 'BudglyIcons',
-          'labels': {'en': 'Groceries'},
-        },
-      ])),
+      assetBundle: _MockAssetBundle(
+        jsonEncode([
+          {
+            'icon_name': 'groceries',
+            'icon_code': 16,
+            'icon_pack': 'BudglyIcons',
+            'labels': {'en': 'Groceries'},
+          },
+        ]),
+      ),
     );
 
     final before = await service.getIcons();

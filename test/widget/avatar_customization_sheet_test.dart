@@ -33,7 +33,9 @@ Future<void> _openSheet(
 
 void main() {
   group('showAvatarCustomizationSheet', () {
-    testWidgets('cancelling after picking a new picture does not commit it', (tester) async {
+    testWidgets('cancelling after picking a new picture does not commit it', (
+      tester,
+    ) async {
       String? committedPicture;
 
       await _openSheet(
@@ -51,7 +53,8 @@ void main() {
       expect(
         committedPicture,
         isNull,
-        reason: 'picking a picture without confirming must not commit it, '
+        reason:
+            'picking a picture without confirming must not commit it, '
             'even after Cancel is tapped',
       );
     });
@@ -74,23 +77,26 @@ void main() {
       expect(committedPicture, '/tmp/fake-picture.jpg');
     });
 
-    testWidgets('cancelling after removing the picture does not commit the removal', (tester) async {
-      String? committedPicture = 'not-called';
+    testWidgets(
+      'cancelling after removing the picture does not commit the removal',
+      (tester) async {
+        String? committedPicture = 'not-called';
 
-      await _openSheet(
-        tester,
-        initialPicture: '/tmp/existing.jpg',
-        onPictureChanged: (picture) => committedPicture = picture,
-        onColorChanged: (_) {},
-      );
+        await _openSheet(
+          tester,
+          initialPicture: '/tmp/existing.jpg',
+          onPictureChanged: (picture) => committedPicture = picture,
+          onColorChanged: (_) {},
+        );
 
-      await tester.tap(find.byIcon(Icons.close_rounded));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.close_rounded));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Annuler'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Annuler'));
+        await tester.pumpAndSettle();
 
-      expect(committedPicture, 'not-called');
-    });
+        expect(committedPicture, 'not-called');
+      },
+    );
   });
 }

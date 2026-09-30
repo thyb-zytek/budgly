@@ -74,9 +74,13 @@ void main() {
       expect(period.contains(DateTime(2026, 3, 1)), isTrue);
     });
 
-    test('last millisecond of last day is contained', () {
+    test('a timestamp on the last day is contained', () {
       const period = Period(year: 2026, month: 3);
-      final endOfMonth = DateTime(2026, 4, 1).subtract(const Duration(milliseconds: 1));
+      final endOfMonth = DateTime(
+        2026,
+        4,
+        1,
+      ).subtract(const Duration(milliseconds: 1));
       expect(period.contains(endOfMonth), isTrue);
     });
 
@@ -86,26 +90,26 @@ void main() {
     });
   });
 
-  group('Period.endOfMonth', () {
+  group('Period.lastDay', () {
     test('January ends at 31', () {
       const period = Period(year: 2026, month: 1);
-      expect(period.endOfMonth.day, 31);
-      expect(period.endOfMonth.month, 1);
+      expect(period.lastDay.day, 31);
+      expect(period.lastDay.month, 1);
     });
 
     test('April ends at 30', () {
       const period = Period(year: 2026, month: 4);
-      expect(period.endOfMonth.day, 30);
+      expect(period.lastDay.day, 30);
     });
 
     test('December ends at 31', () {
       const period = Period(year: 2026, month: 12);
-      expect(period.endOfMonth.day, 31);
+      expect(period.lastDay.day, 31);
     });
 
     test('February 2026 ends at 28', () {
       const period = Period(year: 2026, month: 2);
-      expect(period.endOfMonth.day, 28);
+      expect(period.lastDay.day, 28);
     });
   });
 

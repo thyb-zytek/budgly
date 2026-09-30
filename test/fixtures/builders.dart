@@ -27,12 +27,12 @@ class Fixtures {
     String? picture,
     String? pictureUrl,
   }) => Account(
-        id: id ?? _nextId('acc'),
-        name: name,
-        color: color,
-        picture: picture,
-        pictureUrl: pictureUrl,
-      );
+    id: id ?? _nextId('acc'),
+    name: name,
+    color: color,
+    picture: picture,
+    pictureUrl: pictureUrl,
+  );
 
   static CategoryIcon categoryIcon({
     String iconName = 'groceries',
@@ -40,11 +40,11 @@ class Fixtures {
     String iconPack = 'BudglyIcons',
     Map<String, String> labels = const {'en': 'Groceries', 'fr': 'Courses'},
   }) => CategoryIcon(
-        iconName: iconName,
-        iconCode: iconCode,
-        iconPack: iconPack,
-        labels: labels,
-      );
+    iconName: iconName,
+    iconCode: iconCode,
+    iconPack: iconPack,
+    labels: labels,
+  );
 
   static Category category({
     String? id,
@@ -53,12 +53,12 @@ class Fixtures {
     Color color = const Color(0xFF66BB6A),
     CategoryIcon? icon,
   }) => Category(
-        id: id ?? _nextId('cat'),
-        accountId: accountId,
-        name: name,
-        color: color,
-        icon: icon ?? categoryIcon(),
-      );
+    id: id ?? _nextId('cat'),
+    accountId: accountId,
+    name: name,
+    color: color,
+    icon: icon ?? categoryIcon(),
+  );
 
   static Expense expense({
     String? id,
@@ -73,18 +73,18 @@ class Fixtures {
     bool isDebited = false,
     List<String> debitedOccurrences = const [],
   }) => Expense(
-        id: id ?? _nextId('exp'),
-        accountId: accountId,
-        categoryId: categoryId,
-        name: name,
-        amount: amount,
-        debitDate: debitDate ?? DateTime(2026, 3, 15),
-        endDate: endDate,
-        recurrence: recurrence,
-        recurrenceAnchorDay: recurrenceAnchorDay,
-        isDebited: isDebited,
-        debitedOccurrences: debitedOccurrences,
-      );
+    id: id ?? _nextId('exp'),
+    accountId: accountId,
+    categoryId: categoryId,
+    name: name,
+    amount: amount,
+    debitDate: debitDate ?? DateTime(2026, 3, 15),
+    endDate: endDate,
+    recurrence: recurrence,
+    recurrenceAnchorDay: recurrenceAnchorDay,
+    isDebited: isDebited,
+    debitedOccurrences: debitedOccurrences,
+  );
 
   static AccountBudget budget({
     String? id,
@@ -92,12 +92,12 @@ class Fixtures {
     required Period period,
     double revenue = 2000,
   }) => AccountBudget(
-        id: id ?? '${accountId}_${period.year}_${period.month}',
-        accountId: accountId,
-        year: period.year,
-        month: period.month,
-        revenue: revenue,
-      );
+    id: id ?? '${accountId}_${period.year}_${period.month}',
+    accountId: accountId,
+    year: period.year,
+    month: period.month,
+    revenue: revenue,
+  );
 
   static UserProfile profile({
     String id = 'user-1',
@@ -108,16 +108,17 @@ class Fixtures {
     int amountDecimalPlaces = 2,
     bool onboardingCompleted = true,
   }) => UserProfile(
-        id: id,
-        email: email,
-        fullName: fullName,
-        currency: currency,
-        language: language,
-        amountDecimalPlaces: amountDecimalPlaces,
-        onboardingCompleted: onboardingCompleted,
-      );
+    id: id,
+    email: email,
+    fullName: fullName,
+    currency: currency,
+    language: language,
+    amountDecimalPlaces: amountDecimalPlaces,
+    onboardingCompleted: onboardingCompleted,
+  );
 
   static Period period(int year, int month) => Period(year: year, month: month);
 
-  static DateTime date(int year, int month, int day) => DateTime(year, month, day);
+  static DateTime date(int year, int month, int day) =>
+      DateTime(year, month, day);
 }

@@ -12,7 +12,11 @@ void main() {
       final controller = TextEditingController(text: '12,50');
       await pumpApp(
         tester,
-        CurrencyInput(controller: controller, currencyCode: 'EUR', labelText: 'Montant'),
+        CurrencyInput(
+          controller: controller,
+          currencyCode: 'EUR',
+          labelText: 'Montant',
+        ),
       );
       expect(find.text('Montant'), findsOneWidget);
       // EUR icon via currency extension (not text EUR)
@@ -42,7 +46,9 @@ void main() {
       expect(selected, 'b');
     });
 
-    testWidgets('Selector responsive: mobile 360 vs tablet 768', (tester) async {
+    testWidgets('Selector responsive: mobile 360 vs tablet 768', (
+      tester,
+    ) async {
       for (final size in [const Size(360, 740), const Size(768, 1024)]) {
         String? sel = 'a';
         await pumpApp(
@@ -59,10 +65,16 @@ void main() {
       }
     });
 
-    testWidgets('BudglyFab affiche label étendu au premier usage', (tester) async {
+    testWidgets('BudglyFab affiche label étendu au premier usage', (
+      tester,
+    ) async {
       await pumpApp(
         tester,
-        BudglyFab(label: 'Nouvelle dépense', onPressed: () {}, heroTag: 'fab-test-1'),
+        BudglyFab(
+          label: 'Nouvelle dépense',
+          onPressed: () {},
+          heroTag: 'fab-test-1',
+        ),
       );
       expect(find.text('Nouvelle dépense'), findsOneWidget);
       expect(find.byIcon(Icons.add_rounded), findsOneWidget);
@@ -89,7 +101,11 @@ void main() {
     });
 
     testWidgets('Loading indicator affiché', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: Center(child: CircularProgressIndicator()))));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
@@ -97,7 +113,23 @@ void main() {
     testWidgets('Dialog confirmation suppression', (tester) async {
       await pumpApp(
         tester,
-        Builder(builder: (context) => ElevatedButton(onPressed: () => showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Supprimer ?'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))])), child: const Text('Ouvrir'))),
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Supprimer ?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Annuler'),
+                  ),
+                ],
+              ),
+            ),
+            child: const Text('Ouvrir'),
+          ),
+        ),
       );
       await tester.tap(find.text('Ouvrir'));
       await tester.pumpAndSettle();
@@ -110,7 +142,16 @@ void main() {
     testWidgets('BottomSheet expense quick actions', (tester) async {
       await pumpApp(
         tester,
-        Builder(builder: (context) => ElevatedButton(onPressed: () => showModalBottomSheet(context: context, builder: (_) => const SizedBox(height: 200, child: Text('Actions'))), child: const Text('Sheet'))),
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              builder: (_) =>
+                  const SizedBox(height: 200, child: Text('Actions')),
+            ),
+            child: const Text('Sheet'),
+          ),
+        ),
       );
       await tester.tap(find.text('Sheet'));
       await tester.pumpAndSettle();

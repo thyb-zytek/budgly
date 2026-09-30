@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('exposes the CategoryIconsService singleton', () {
+  test('creates CategoryIconsService through Riverpod', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
     expect(
       container.read(categoryIconsServiceProvider),
-      same(CategoryIconsService.instance),
+      isA<CategoryIconsService>(),
     );
   });
 

@@ -27,7 +27,9 @@ Future<GlobalKey<FormState>> _pumpForm(
 
 void main() {
   group('EntityForm', () {
-    testWidgets('does not call onSubmit when the name is empty', (tester) async {
+    testWidgets('does not call onSubmit when the name is empty', (
+      tester,
+    ) async {
       var submitCalls = 0;
       final controller = TextEditingController();
       addTearDown(controller.dispose);
@@ -64,22 +66,25 @@ void main() {
       expect(submitCalls, 1);
     });
 
-    testWidgets('calls onCancel even when the name is empty (no validation gate)', (tester) async {
-      var cancelCalls = 0;
-      final controller = TextEditingController();
-      addTearDown(controller.dispose);
+    testWidgets(
+      'calls onCancel even when the name is empty (no validation gate)',
+      (tester) async {
+        var cancelCalls = 0;
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
 
-      await _pumpForm(
-        tester,
-        controller: controller,
-        onSubmit: () {},
-        onCancel: () => cancelCalls++,
-      );
+        await _pumpForm(
+          tester,
+          controller: controller,
+          onSubmit: () {},
+          onCancel: () => cancelCalls++,
+        );
 
-      await tester.tap(find.text('Annuler'));
-      await tester.pump();
+        await tester.tap(find.text('Annuler'));
+        await tester.pump();
 
-      expect(cancelCalls, 1);
-    });
+        expect(cancelCalls, 1);
+      },
+    );
   });
 }

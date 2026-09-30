@@ -5,6 +5,7 @@ import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 
 import '../../fixtures/builders.dart';
 import 'package:mock_exceptions/mock_exceptions.dart';
@@ -29,7 +30,10 @@ class FakeUserProfileSupabase extends UserProfileSupabase {
   }
 
   @override
-  Future<bool> updateProfile(String userId, Map<String, dynamic> updates) async {
+  Future<bool> updateProfile(
+    String userId,
+    Map<String, dynamic> updates,
+  ) async {
     updateCalls++;
     lastUpdates = updates;
     return true;
@@ -44,14 +48,15 @@ void main() {
   });
 
   MockFirebaseAuth signedInAuth({String uid = 'u1'}) => MockFirebaseAuth(
-        signedIn: true,
-        mockUser: MockUser(uid: uid, email: 'test@budgly.app'),
-      );
+    signedIn: true,
+    mockUser: MockUser(uid: uid, email: 'test@budgly.app'),
+  );
 
   AuthService service(MockFirebaseAuth auth) => AuthService(
-        auth: auth,
-        userProfileSupabase: profileSupabase,
-      );
+    analytics: AnalyticsService(),
+    auth: auth,
+    userProfileSupabase: profileSupabase,
+  );
 
   group('currentUser', () {
     test('maps the signed-in firebase user to a domain user', () {
@@ -77,10 +82,9 @@ void main() {
       );
       profileSupabase.profiles['u1'] = Fixtures.profile(id: 'u1');
 
-      final user = await service(auth).signInWithEmailAndPassword(
-        'test@budgly.app',
-        'password',
-      );
+      final user = await service(
+        auth,
+      ).signInWithEmailAndPassword('test@budgly.app', 'password');
 
       expect(user.id, 'u1');
       expect(profileSupabase.getOrCreateCalls, 1);
@@ -94,8 +98,13 @@ void main() {
 
       expect(
         () => service(auth).signInWithEmailAndPassword('a@b.c', 'wrong'),
-        throwsA(isA<AuthenticationException>()
-            .having((e) => e.code, 'code', 'invalid-credential')),
+        throwsA(
+          isA<AuthenticationException>().having(
+            (e) => e.code,
+            'code',
+            'invalid-credential',
+          ),
+        ),
       );
     });
   });
@@ -104,17 +113,15 @@ void main() {
     test('signUpWithEmailAndPassword creates a user and the profile', () async {
       final auth = MockFirebaseAuth(signedIn: false);
 
-      final user = await service(auth).signUpWithEmailAndPassword(
-        'new@budgly.app',
-        'password',
-      );
+      final user = await service(
+        auth,
+      ).signUpWithEmailAndPassword('new@budgly.app', 'password');
 
       expect(user.email, 'new@budgly.app');
       expect(profileSupabase.getOrCreateCalls, 1);
     });
 
-    test('signUpWithEmailAndPassword surfaces email-already-in-use',
-        () async {
+    test('signUpWithEmailAndPassword surfaces email-already-in-use', () async {
       final auth = MockFirebaseAuth(signedIn: false);
       whenCalling(Invocation.method(#createUserWithEmailAndPassword, null))
           .on(auth)
@@ -122,8 +129,13 @@ void main() {
 
       expect(
         () => service(auth).signUpWithEmailAndPassword('a@b.c', 'pw'),
-        throwsA(isA<AuthenticationException>()
-            .having((e) => e.code, 'code', 'email-already-in-use')),
+        throwsA(
+          isA<AuthenticationException>().having(
+            (e) => e.code,
+            'code',
+            'email-already-in-use',
+          ),
+        ),
       );
     });
   });
@@ -141,8 +153,9 @@ void main() {
 
     test('changePassword throws when no user is signed in', () async {
       expect(
-        () => service(MockFirebaseAuth(signedIn: false))
-            .changePassword('old', 'new'),
+        () => service(
+          MockFirebaseAuth(signedIn: false),
+        ).changePassword('old', 'new'),
         throwsA(isA<AuthenticationException>()),
       );
     });
@@ -152,27 +165,36 @@ void main() {
       await service(auth).resetPassword('test@budgly.app');
     });
 
-    test('resetPassword maps provider errors onto AuthenticationException',
-        () async {
-      final auth = signedInAuth();
-      whenCalling(Invocation.method(#sendPasswordResetEmail, null))
-          .on(auth)
-          .thenThrow(fb.FirebaseAuthException(code: 'user-not-found'));
+    test(
+      'resetPassword maps provider errors onto AuthenticationException',
+      () async {
+        final auth = signedInAuth();
+        whenCalling(
+          Invocation.method(#sendPasswordResetEmail, null),
+        ).on(auth).thenThrow(fb.FirebaseAuthException(code: 'user-not-found'));
 
-      expect(
-        () => service(auth).resetPassword('a@b.c'),
-        throwsA(isA<AuthenticationException>()
-            .having((e) => e.code, 'code', 'user-not-found')),
-      );
-    });
+        expect(
+          () => service(auth).resetPassword('a@b.c'),
+          throwsA(
+            isA<AuthenticationException>().having(
+              (e) => e.code,
+              'code',
+              'user-not-found',
+            ),
+          ),
+        );
+      },
+    );
   });
 
   group('email verification', () {
-    test('sendEmailVerification requests verification for a verified user',
-        () async {
-      final auth = signedInAuth();
-      await service(auth).sendEmailVerification();
-    });
+    test(
+      'sendEmailVerification requests verification for a verified user',
+      () async {
+        final auth = signedInAuth();
+        await service(auth).sendEmailVerification();
+      },
+    );
   });
 
   group('profile + reload', () {
@@ -187,8 +209,13 @@ void main() {
     test('onChangeName throws without a signed-in user', () async {
       expect(
         () => service(MockFirebaseAuth(signedIn: false)).onChangeName('Alice'),
-        throwsA(isA<AuthenticationException>()
-            .having((e) => e.code, 'code', 'no-user')),
+        throwsA(
+          isA<AuthenticationException>().having(
+            (e) => e.code,
+            'code',
+            'no-user',
+          ),
+        ),
       );
     });
 
@@ -203,8 +230,9 @@ void main() {
     });
 
     test('reloadCurrentUser returns null when signed out', () async {
-      final user = await service(MockFirebaseAuth(signedIn: false))
-          .reloadCurrentUser();
+      final user = await service(
+        MockFirebaseAuth(signedIn: false),
+      ).reloadCurrentUser();
       expect(user, isNull);
     });
   });

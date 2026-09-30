@@ -59,43 +59,60 @@ void main() {
       );
     });
 
-    test('same-day edit keeps the original series id and recurrence anchor', () {
-      final result = versioning.split(
-        original: expense(),
-        updated: expense(id: 'ignored', amount: 20),
-        effectiveDate: DateTime(2026, 1, 15, 22),
-      );
+    test(
+      'same-day edit keeps the original series id and recurrence anchor',
+      () {
+        final result = versioning.split(
+          original: expense(),
+          updated: expense(id: 'ignored', amount: 20),
+          effectiveDate: DateTime(2026, 1, 15, 22),
+        );
 
-      expect(result.previous.id, 'series-1');
-      expect(result.next.id, 'series-1');
-      expect(result.next.amount, 20);
-      expect(result.next.recurrenceAnchorDay, 15);
-      expect(result.previous.endDate, isNull);
-    });
+        expect(result.previous.id, 'series-1');
+        expect(result.next.id, 'series-1');
+        expect(result.next.amount, 20);
+        expect(result.next.recurrenceAnchorDay, 15);
+        expect(result.previous.endDate, isNull);
+      },
+    );
 
-    test('middle split keeps only earlier debited occurrences in previous version', () {
-      final result = versioning.split(
-        original: expense(
-          debited: const ['2026-01-15', '2026-02-15', '2026-03-15', '2026-04-15'],
-        ),
-        updated: expense(amount: 20),
-        effectiveDate: DateTime(2026, 3, 15),
-      );
+    test(
+      'middle split keeps only earlier debited occurrences in previous version',
+      () {
+        final result = versioning.split(
+          original: expense(
+            debited: const [
+              '2026-01-15',
+              '2026-02-15',
+              '2026-03-15',
+              '2026-04-15',
+            ],
+          ),
+          updated: expense(amount: 20),
+          effectiveDate: DateTime(2026, 3, 15),
+        );
 
-      expect(result.previous.endDate, DateTime(2026, 3, 14));
-      expect(result.previous.debitedOccurrences, ['2026-01-15', '2026-02-15']);
-      expect(result.next.debitedOccurrences, ['2026-03-15', '2026-04-15']);
-    });
+        expect(result.previous.endDate, DateTime(2026, 3, 14));
+        expect(result.previous.debitedOccurrences, [
+          '2026-01-15',
+          '2026-02-15',
+        ]);
+        expect(result.next.debitedOccurrences, ['2026-03-15', '2026-04-15']);
+      },
+    );
 
-    test('switching to non-recurring clears future debited occurrence metadata', () {
-      final result = versioning.split(
-        original: expense(debited: const ['2026-01-15', '2026-02-15']),
-        updated: expense(amount: 20, recurrence: RecurrenceType.none),
-        effectiveDate: DateTime(2026, 3, 15),
-      );
+    test(
+      'switching to non-recurring clears future debited occurrence metadata',
+      () {
+        final result = versioning.split(
+          original: expense(debited: const ['2026-01-15', '2026-02-15']),
+          updated: expense(amount: 20, recurrence: RecurrenceType.none),
+          effectiveDate: DateTime(2026, 3, 15),
+        );
 
-      expect(result.next.recurrence, RecurrenceType.none);
-      expect(result.next.debitedOccurrences, isEmpty);
-    });
+        expect(result.next.recurrence, RecurrenceType.none);
+        expect(result.next.debitedOccurrences, isEmpty);
+      },
+    );
   });
 }

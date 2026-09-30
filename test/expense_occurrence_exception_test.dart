@@ -6,9 +6,7 @@ import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Expense recurring({
-    List<ExpenseOccurrenceException> exceptions = const [],
-  }) {
+  Expense recurring({List<ExpenseOccurrenceException> exceptions = const []}) {
     return Expense(
       id: 'expense-1',
       accountId: 'account-1',
@@ -24,10 +22,7 @@ void main() {
   test('single occurrence deletion leaves the series and history intact', () {
     final expense = recurring(
       exceptions: const [
-        ExpenseOccurrenceException(
-          key: 'expense-1@2026-02-15',
-          deleted: true,
-        ),
+        ExpenseOccurrenceException(key: 'expense-1@2026-02-15', deleted: true),
       ],
     );
 
@@ -118,5 +113,30 @@ void main() {
     expect(decoded.name, 'Rent corrected');
     expect(decoded.categoryId, 'category-2');
     expect(decoded.isDebited, isTrue);
+  });
+
+  group('equality', () {
+    test(
+      'two exceptions with the same key are equal, even with different fields',
+      () {
+        const a = ExpenseOccurrenceException(
+          key: 'expense-1@2026-02-15',
+          amount: 100,
+        );
+        const b = ExpenseOccurrenceException(
+          key: 'expense-1@2026-02-15',
+          amount: 200,
+          deleted: true,
+        );
+        expect(a, equals(b));
+        expect(a.hashCode, b.hashCode);
+      },
+    );
+
+    test('two exceptions with different keys are not equal', () {
+      const a = ExpenseOccurrenceException(key: 'expense-1@2026-02-15');
+      const b = ExpenseOccurrenceException(key: 'expense-1@2026-03-15');
+      expect(a, isNot(equals(b)));
+    });
   });
 }

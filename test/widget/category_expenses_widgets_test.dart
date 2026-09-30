@@ -16,10 +16,16 @@ import '../fixtures/builders.dart';
 import '../helpers/pump_app.dart';
 
 void main() {
-  testWidgets('ExpenseCard renders pending and recurring states', (tester) async {
+  testWidgets('ExpenseCard renders pending and recurring states', (
+    tester,
+  ) async {
     final expense = Fixtures.expense(
-      id: 'e1', accountId: 'a1', categoryId: 'c1',
-      name: 'Loyer', amount: 850, recurrence: RecurrenceType.monthly,
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Loyer',
+      amount: 850,
+      recurrence: RecurrenceType.monthly,
     );
     final occurrence = ExpenseOccurrence(
       expense: expense,
@@ -33,22 +39,38 @@ void main() {
         occurrence: occurrence,
         currencyCode: 'EUR',
         localeName: 'fr',
-        onTap: () {}, onEdit: () {}, onToggleDebited: () {}, onDelete: () {},
+        onTap: () {},
+        onEdit: () {},
+        onToggleDebited: () {},
+        onDelete: () {},
       ),
     );
 
     expect(find.text('Loyer'), findsOneWidget);
-    expect(find.byWidgetPredicate((widget) =>
-        widget is Text && widget.data != null && widget.data!.contains('850')), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            widget.data != null &&
+            widget.data!.contains('850'),
+      ),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
     expect(find.byType(RecurrenceBadge), findsOneWidget);
     expect(find.text('Mensuel'), findsOneWidget);
   });
 
-  testWidgets('ExpenseCard disables edit from quick actions once debited', (tester) async {
+  testWidgets('ExpenseCard disables edit from quick actions once debited', (
+    tester,
+  ) async {
     final expense = Fixtures.expense(
-      id: 'e1', accountId: 'a1', categoryId: 'c1',
-      name: 'Courses', amount: 50, isDebited: true,
+      id: 'e1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      name: 'Courses',
+      amount: 50,
+      isDebited: true,
     );
     final occurrence = ExpenseOccurrence(
       expense: expense,
@@ -79,7 +101,9 @@ void main() {
     expect(editCalls, 0);
   });
 
-  testWidgets('ExpenseStatusAvatar switches icon with debited state', (tester) async {
+  testWidgets('ExpenseStatusAvatar switches icon with debited state', (
+    tester,
+  ) async {
     await pumpApp(tester, const ExpenseStatusAvatar(isDebited: false));
     expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
 
@@ -87,65 +111,76 @@ void main() {
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
   });
 
-  testWidgets('RecurrenceSelector exposes all recurrence choices and reports selection', (tester) async {
-    var selected = RecurrenceType.none;
-    await pumpApp(
-      tester,
-      RecurrenceSelector(
-        selectedRecurrence: selected,
-        onRecurrenceChanged: (value) => selected = value,
-      ),
-    );
+  testWidgets(
+    'RecurrenceSelector exposes all recurrence choices and reports selection',
+    (tester) async {
+      var selected = RecurrenceType.none;
+      await pumpApp(
+        tester,
+        RecurrenceSelector(
+          selectedRecurrence: selected,
+          onRecurrenceChanged: (value) => selected = value,
+        ),
+      );
 
-    await tester.tap(find.text('Aucune'));
-    await tester.pumpAndSettle();
-    expect(find.text('Mensuel'), findsOneWidget);
-    expect(find.text('Hebdomadaire'), findsOneWidget);
-    expect(find.text('Tout les 2 mois'), findsOneWidget);
+      await tester.tap(find.text('Aucune'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mensuel'), findsOneWidget);
+      expect(find.text('Hebdomadaire'), findsOneWidget);
+      expect(find.text('Tout les 2 mois'), findsOneWidget);
 
-    final weekly = find.text('Hebdomadaire').last;
-    await tester.ensureVisible(weekly);
-    await tester.tap(weekly);
-    await tester.pumpAndSettle();
-    expect(selected, RecurrenceType.weekly);
-  });
+      final weekly = find.text('Hebdomadaire').last;
+      await tester.ensureVisible(weekly);
+      await tester.tap(weekly);
+      await tester.pumpAndSettle();
+      expect(selected, RecurrenceType.weekly);
+    },
+  );
 
-  testWidgets('AccountSelector compact mode opens accounts and returns selected account', (tester) async {
-    final first = Fixtures.account(id: 'a1', name: 'Courant');
-    final second = Fixtures.account(id: 'a2', name: 'Épargne');
-    Account? selected;
+  testWidgets(
+    'AccountSelector compact mode opens accounts and returns selected account',
+    (tester) async {
+      final first = Fixtures.account(id: 'a1', name: 'Courant');
+      final second = Fixtures.account(id: 'a2', name: 'Épargne');
+      Account? selected;
 
-    await pumpApp(
-      tester,
-      AccountSelector(
-        accounts: [first, second],
-        selectedAccount: first,
-        compact: true,
-        onSelect: (value) => selected = value,
-      ),
-    );
+      await pumpApp(
+        tester,
+        AccountSelector(
+          accounts: [first, second],
+          selectedAccount: first,
+          compact: true,
+          onSelect: (value) => selected = value,
+        ),
+      );
 
-    await tester.tap(find.byType(AccountSelector));
-    await tester.pumpAndSettle();
-    expect(find.text('Courant'), findsOneWidget);
-    expect(find.text('Épargne'), findsOneWidget);
+      await tester.tap(find.byType(AccountSelector));
+      await tester.pumpAndSettle();
+      expect(find.text('Courant'), findsOneWidget);
+      expect(find.text('Épargne'), findsOneWidget);
 
-    await tester.tap(find.text('Épargne'));
-    await tester.pumpAndSettle();
-    expect(selected?.id, 'a2');
-  });
+      await tester.tap(find.text('Épargne'));
+      await tester.pumpAndSettle();
+      expect(selected?.id, 'a2');
+    },
+  );
 
-  testWidgets('AccountSelector returns empty widget when no valid account exists', (tester) async {
-    const accountWithoutId = Account(name: 'Sans ID');
-    await pumpApp(
-      tester,
-      AccountSelector(accounts: [accountWithoutId], onSelect: (_) {}),
-    );
-    expect(find.byType(AccountSelector), findsOneWidget);
-    expect(find.byType(AccountView), findsNothing);
-  });
+  testWidgets(
+    'AccountSelector returns empty widget when no valid account exists',
+    (tester) async {
+      const accountWithoutId = Account(name: 'Sans ID');
+      await pumpApp(
+        tester,
+        AccountSelector(accounts: [accountWithoutId], onSelect: (_) {}),
+      );
+      expect(find.byType(AccountSelector), findsOneWidget);
+      expect(find.byType(AccountView), findsNothing);
+    },
+  );
 
-  testWidgets('CategorySelector opens category choices and reports selection', (tester) async {
+  testWidgets('CategorySelector opens category choices and reports selection', (
+    tester,
+  ) async {
     final c1 = Fixtures.category(id: 'c1', accountId: 'a1', name: 'Courses');
     final c2 = Fixtures.category(id: 'c2', accountId: 'a1', name: 'Transport');
     Category? selected;

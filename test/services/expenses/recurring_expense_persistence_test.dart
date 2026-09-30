@@ -2,85 +2,101 @@ import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/expenses/expense_period_cache.dart';
 import 'package:budgly/src/services/expenses/recurring_expense_persistence.dart';
-import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _FakeExpenseFirestore extends ExpenseFirestore {
-  Expense? created;
-  Expense? updated;
-  bool returnNull = false;
-  bool throwOnSplit = false;
-
-  @override
-  Future<Expense?> splitRecurringExpense({
-    required Expense previous,
-    required Expense next,
-  }) async {
-    updated = previous;
-    created = next;
-    if (throwOnSplit) throw StateError('offline');
-    if (returnNull) return null;
-    return next.copyWith(id: 'server-next');
-  }
-}
+import '../../helpers.dart';
 
 Expense _expense(String id, DateTime date) => Expense(
-      id: id,
-      accountId: 'a1',
-      categoryId: 'c1',
-      name: 'Rent',
-      amount: 100,
-      debitDate: date,
-      recurrence: RecurrenceType.monthly,
-      recurrenceAnchorDay: date.day,
-    );
+  id: id,
+  accountId: 'a1',
+  categoryId: 'c1',
+  name: 'Rent',
+  amount: 100,
+  debitDate: date,
+  recurrence: RecurrenceType.monthly,
+  recurrenceAnchorDay: date.day,
+);
 
 void main() {
-  late _FakeExpenseFirestore firestore;
+  late OfflineAwareExpenseFirestore firestore;
   late ExpensePeriodCache cache;
   late RecurringExpensePersistence persistence;
+  late List<String> rejected;
 
   setUp(() {
-    firestore = _FakeExpenseFirestore();
+    firestore = OfflineAwareExpenseFirestore();
     cache = ExpensePeriodCache();
+    rejected = [];
     persistence = RecurringExpensePersistence(
       firestore: firestore,
       periodData: cache,
+      onWriteRejected: rejected.add,
     );
   });
 
-  test('returns server identity when split is committed', () async {
-    final result = await persistence.split(
+  test('returns immediately with the next identity, even offline', () async {
+    final result = await persistence
+        .split(
+          previous: _expense('e1', DateTime(2026, 1, 15)),
+          next: _expense('e2', DateTime(2026, 3, 15)),
+        )
+        .timeout(const Duration(seconds: 2));
+
+    expect(result.id, 'e2');
+    expect(firestore.pendingWriteCount, 1);
+    expect(rejected, isEmpty);
+  });
+
+  test('the batch is delivered atomically by Firestore once online', () async {
+    await persistence.split(
       previous: _expense('e1', DateTime(2026, 1, 15)),
       next: _expense('e2', DateTime(2026, 3, 15)),
     );
 
-    expect(result.id, 'server-next');
-    expect(firestore.updated?.id, 'e1');
-    expect(firestore.created?.id, 'e2');
+    firestore.goOnline();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(firestore.server.map((e) => e.id), unorderedEquals(['e1', 'e2']));
   });
 
-  test('creates a local identity when Firestore returns null', () async {
-    firestore.returnNull = true;
+  test(
+    'allocates a deterministic identity when the next version has none',
+    () async {
+      final next = Expense(
+        accountId: 'a1',
+        categoryId: 'c1',
+        name: 'Rent',
+        amount: 100,
+        debitDate: DateTime(2026, 3, 15),
+        recurrence: RecurrenceType.monthly,
+        recurrenceAnchorDay: 15,
+      );
 
-    final result = await persistence.split(
+      final result = await persistence.split(
+        previous: _expense('e1', DateTime(2026, 1, 15)),
+        next: next,
+      );
+      firestore.goOnline();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(result.id, isNotNull);
+      expect(firestore.server.map((e) => e.id), contains(result.id));
+    },
+  );
+
+  test('a rejected batch is reported for reconciliation', () async {
+    firestore
+      ..online = true
+      ..rejectWrites = true;
+
+    await persistence.split(
       previous: _expense('e1', DateTime(2026, 1, 15)),
       next: _expense('e2', DateTime(2026, 3, 15)),
     );
+    await Future<void>.delayed(Duration.zero);
 
-    expect(result.id, isNotNull);
-    expect(result.id, isNot('e2'));
-  });
-
-  test('creates a local identity when split throws', () async {
-    firestore.throwOnSplit = true;
-
-    final result = await persistence.split(
-      previous: _expense('e1', DateTime(2026, 1, 15)),
-      next: _expense('e2', DateTime(2026, 3, 15)),
-    );
-
-    expect(result.id, isNotNull);
+    expect(rejected, ['a1']);
+    expect(firestore.server, isEmpty);
   });
 
   test('rejects a split without a previous expense id', () async {

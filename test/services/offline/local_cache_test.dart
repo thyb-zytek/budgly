@@ -24,14 +24,14 @@ void main() {
     // already-resolved instance). Instead, clear the keys we touched.
     final prefs = await SharedPreferences.getInstance();
     for (final key in [
-      'offline.accounts.user-1',
-      'offline.accounts.user-2',
-      'offline.accounts.nobody',
-      'offline.categories.acc-1',
-      'offline.categories.acc-2',
-      'offline.categories.nobody',
-      'offline.profile.user-1',
-      'offline.profile.nobody',
+      'offline.v1.accounts.user-1',
+      'offline.v1.accounts.user-2',
+      'offline.v1.accounts.nobody',
+      'offline.v1.categories.acc-1',
+      'offline.v1.categories.acc-2',
+      'offline.v1.categories.nobody',
+      'offline.v1.profile.user-1',
+      'offline.v1.profile.nobody',
     ]) {
       await prefs.remove(key);
     }
@@ -90,7 +90,9 @@ void main() {
 
     test('storage is isolated per user id', () async {
       await cache.saveAccounts('user-1', [buildAccount(name: 'A')]);
-      await cache.saveAccounts('user-2', [buildAccount(name: 'B', userId: 'user-2')]);
+      await cache.saveAccounts('user-2', [
+        buildAccount(name: 'B', userId: 'user-2'),
+      ]);
 
       final user1 = await cache.loadAccounts('user-1');
       final user2 = await cache.loadAccounts('user-2');
@@ -103,12 +105,39 @@ void main() {
       expect(await cache.loadAccounts('nobody'), isNull);
     });
 
-    test('returns empty list when cached JSON is corrupted', () async {
+    test('reports corrupted JSON as absent and quarantines it', () async {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('offline.accounts.user-1', 'not-valid-json');
+      await prefs.setString('offline.v1.accounts.user-1', 'not-valid-json');
       final loaded = await cache.loadAccounts('user-1');
-      expect(loaded, isEmpty);
+      // null (not []) so callers fall back to the server instead of showing
+      // "no accounts".
+      expect(loaded, isNull);
+      expect(prefs.getString('offline.v1.accounts.user-1'), isNull);
+      expect(
+        prefs.getString('offline.v1.accounts.user-1.corrupt'),
+        'not-valid-json',
+      );
     });
+
+    test(
+      'updateAccounts serializes overlapping read-modify-write cycles',
+      () async {
+        await cache.saveAccounts('user-1', const []);
+        Account account(String id) =>
+            Account(id: id, name: id, userId: 'user-1');
+
+        await Future.wait([
+          for (var i = 0; i < 20; i++)
+            cache.updateAccounts('user-1', (current) async {
+              // Yield so unserialized cycles would interleave and lose writes.
+              await Future<void>.delayed(Duration.zero);
+              return [...?current, account('a$i')];
+            }),
+        ]);
+
+        expect(await cache.loadAccounts('user-1'), hasLength(20));
+      },
+    );
   });
 
   group('categories cache', () {
@@ -126,8 +155,9 @@ void main() {
 
     test('storage is isolated per account id', () async {
       await cache.saveCategories('acc-1', [buildCategory(name: 'A')]);
-      await cache.saveCategories('acc-2',
-          [buildCategory(id: 'cat-2', accountId: 'acc-2', name: 'B')]);
+      await cache.saveCategories('acc-2', [
+        buildCategory(id: 'cat-2', accountId: 'acc-2', name: 'B'),
+      ]);
 
       final acc1 = await cache.loadCategories('acc-1');
       final acc2 = await cache.loadCategories('acc-2');
@@ -139,16 +169,21 @@ void main() {
       expect(await cache.loadCategories('nobody'), isNull);
     });
 
-    test('returns empty list when cached JSON is corrupted', () async {
+    test('reports corrupted JSON as absent and quarantines it', () async {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('offline.categories.acc-1', 'garbage[[[');
-      expect(await cache.loadCategories('acc-1'), isEmpty);
+      await prefs.setString('offline.v1.categories.acc-1', 'garbage[[[');
+      expect(await cache.loadCategories('acc-1'), isNull);
+      expect(
+        prefs.getString('offline.v1.categories.acc-1.corrupt'),
+        'garbage[[[',
+      );
     });
 
     test('clearAccount removes only that account categories', () async {
       await cache.saveCategories('acc-1', [buildCategory()]);
-      await cache.saveCategories('acc-2',
-          [buildCategory(id: 'cat-2', accountId: 'acc-2')]);
+      await cache.saveCategories('acc-2', [
+        buildCategory(id: 'cat-2', accountId: 'acc-2'),
+      ]);
 
       await cache.clearAccount('acc-1');
 
@@ -177,7 +212,7 @@ void main() {
 
     test('returns null when cached JSON is corrupted', () async {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('offline.profile.user-1', '{{not json');
+      await prefs.setString('offline.v1.profile.user-1', '{{not json');
       expect(await cache.loadProfile('user-1'), isNull);
     });
   });

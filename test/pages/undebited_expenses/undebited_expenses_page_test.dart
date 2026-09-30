@@ -2,27 +2,32 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/pages/undebited_expenses/view.dart';
-import 'package:budgly/src/pages/undebited_expenses/view_model.dart';
+import 'package:budgly/src/pages/undebited_expenses/undebited_expenses_provider.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/services/accounts/accounts_service_provider.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
-import 'package:budgly/src/services/expenses/undebited_expenses_service.dart';
+import 'package:budgly/src/services/expenses/expenses_service_provider.dart';
 import 'package:budgly/src/services/offline/local_cache.dart';
+import 'package:budgly/src/services/offline/local_cache_provider.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
+import 'package:budgly/src/state/profile_providers.dart';
+import 'package:budgly/src/state/accounts_provider.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/fake_stores.dart';
-import '../../helpers/pump_app.dart';
+import '../../helpers.dart';
 
 class _FakeExpensesService extends ExpensesService {
+  _FakeExpensesService(this.byAccount) : super(analytics: AnalyticsService());
   final Map<String, List<Expense>> byAccount;
   final List<(Expense, DateTime)> marks = [];
   final List<(Expense, DateTime, DateTime, bool)> moves = [];
-
-  _FakeExpensesService(this.byAccount);
 
   List<Expense> _for(String accountId) =>
       List.unmodifiable(byAccount[accountId] ?? const []);
@@ -31,7 +36,6 @@ class _FakeExpensesService extends ExpensesService {
     for (final expenses in byAccount.values) {
       expenses.removeWhere(test);
     }
-    notifyListeners();
   }
 
   @override
@@ -63,32 +67,50 @@ class _FakeExpensesService extends ExpensesService {
   }
 }
 
+/// Records banner-dismissal writes so a test can prove the notifier goes
+/// through the *shared* `localCacheProvider` instance rather than a private
+/// `LocalCache()` (docs/AUDIT_PLAN.md, 2026-09-27 review).
+class _RecordingLocalCache extends LocalCache {
+  final List<String> dismissedAccountIds = [];
+
+  @override
+  Future<void> saveUndebitedBannerDismissedAt(
+    String accountId, {
+    required Period period,
+    required DateTime value,
+  }) async {
+    dismissedAccountIds.add(accountId);
+  }
+}
+
 class _FakeAccountsService extends AccountsService {
+  _FakeAccountsService(this.values)
+    : super(
+        analytics: AnalyticsService(),
+        syncManager: testSyncManager,
+        syncQueue: testSyncQueue,
+      );
   final List<Account> values;
-  _FakeAccountsService(this.values);
 
   @override
-  List<Account> get accounts => values;
-
-  @override
-  bool get hasLoaded => true;
-
-  @override
-  Future<void> loadAccounts({bool forceRefresh = false}) async {}
+  Future<List<Account>> loadAccounts({
+    bool forceRefresh = false,
+    void Function(List<Account>)? onRevalidated,
+  }) async => values;
 }
 
 class _FakeProfileService extends ProfileService {
+  _FakeProfileService()
+    : super(
+        analytics: AnalyticsService(),
+        syncManager: testSyncManager,
+        syncQueue: testSyncQueue,
+      );
   @override
-  String get currency => 'EUR';
+  Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  int get amountDecimalPlaces => 2;
-
-  @override
-  void addListener(VoidCallback listener) {}
-
-  @override
-  void removeListener(VoidCallback listener) {}
+  Future<User?> refreshFromServer() async => null;
 }
 
 /// Locates the swipeable [Dismissible] wrapping the card whose title is
@@ -122,44 +144,98 @@ Expense _expense({
   required double amount,
   required DateTime debitDate,
 }) => Expense(
-      id: id,
-      accountId: accountId,
-      categoryId: 'category-1',
-      name: name,
-      amount: amount,
-      debitDate: debitDate,
-    );
+  id: id,
+  accountId: accountId,
+  categoryId: 'category-1',
+  name: name,
+  amount: amount,
+  debitDate: debitDate,
+);
 
-Future<({UndebitedExpensesViewModel viewModel, _FakeExpensesService expenses})>
-    _buildLoadedViewModel({
+ProviderContainer? _activeContainer;
+
+Future<({UndebitedExpenses viewModel, _FakeExpensesService expenses})>
+_buildLoadedViewModel({
   List<Account> accounts = const [],
   Map<String, List<Expense>> expensesByAccount = const {},
-  DateTime? now,
-  VoidCallback? onResolved,
+  LocalCache? localCache,
 }) async {
   final expensesService = _FakeExpensesService(
     Map<String, List<Expense>>.from(expensesByAccount),
   );
-  final clock = now == null ? DateTime.now : () => now;
-  addTearDown(expensesService.dispose);
-
-  final service = UndebitedExpensesService(
-    expensesService: expensesService,
-    localCache: LocalCache(),
-    now: clock,
+  final container = ProviderContainer(
+    overrides: [
+      expensesServiceProvider.overrideWithValue(expensesService),
+      accountsServiceProvider.overrideWithValue(_FakeAccountsService(accounts)),
+      profileServiceProvider.overrideWithValue(_FakeProfileService()),
+      if (localCache != null) localCacheProvider.overrideWithValue(localCache),
+      profileSessionProvider.overrideWithValue(
+        const ProfileSessionState(
+          currentUser: null,
+          hasLoaded: true,
+          themeMode: ThemeMode.system,
+          locale: Locale('fr'),
+          currency: 'EUR',
+          amountDecimalPlaces: 2,
+        ),
+      ),
+    ],
   );
-
-  final viewModel = UndebitedExpensesViewModel(
-    service: service,
-    expensesService: expensesService,
-    accountsService: _FakeAccountsService(accounts),
-    profileService: _FakeProfileService(),
-    now: clock,
-    onResolved: onResolved,
-  );
-  addTearDown(viewModel.dispose);
+  _activeContainer = container;
+  addTearDown(() {
+    container.dispose();
+    _activeContainer = null;
+  });
+  container.read(accountsSessionProvider.notifier).setAccounts(accounts);
+  final subscription = container.listen(undebitedExpensesProvider, (_, _) {});
+  addTearDown(subscription.close);
+  final viewModel = container.read(undebitedExpensesProvider.notifier);
   await viewModel.ensureDataLoaded();
   return (viewModel: viewModel, expenses: expensesService);
+}
+
+Widget _page() => UncontrolledProviderScope(
+  container: _activeContainer!,
+  child: const UndebitedExpensesPage(),
+);
+
+/// Pumps a [MaterialApp] whose home is a placeholder and pushes the report
+/// page on top, so the auto-close behavior can be asserted by checking that
+/// the placeholder is revealed again after popping.
+Future<void> _openReportPage(WidgetTester tester, {Size? size}) async {
+  if (size != null) {
+    await tester.binding.setSurfaceSize(size);
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+  }
+  final navigatorKey = GlobalKey<NavigatorState>();
+  await tester.pumpWidget(
+    MaterialApp(
+      navigatorKey: navigatorKey,
+      locale: const Locale('fr'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en'), Locale('fr')],
+      home: const Scaffold(body: Placeholder()),
+    ),
+  );
+  navigatorKey.currentState!.push(
+    MaterialPageRoute<void>(
+      builder: (_) => UncontrolledProviderScope(
+        container: _activeContainer!,
+        child: const UndebitedExpensesPage(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -171,7 +247,7 @@ void main() {
     'the bulk "debit on original period" button uses a generic label, not a '
     'specific period, since a selection can span several original periods',
     (tester) async {
-final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+      await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
@@ -193,11 +269,7 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-        size: const Size(400, 1200),
-      );
+      await pumpApp(tester, _page(), size: const Size(400, 1200));
 
       await tester.longPress(find.text('Loyer mars').first);
       await tester.pumpAndSettle();
@@ -206,7 +278,8 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
       expect(
         find.text("Débiter sur la période d'origine"),
         findsOneWidget,
-        reason: 'the bulk action must not claim a specific original period '
+        reason:
+            'the bulk action must not claim a specific original period '
             'when the selection spans several different ones',
       );
       final marchLabel = const Period(year: 2026, month: 3).label('fr');
@@ -216,68 +289,93 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     },
   );
 
-  testWidgets('aggregates every account, groups by period and shows full dates', (tester) async {
-    final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
-      accounts: [
-        _account('account-1', 'Compte courant'),
-        _account('account-2', 'Compte épargne'),
-      ],
-      expensesByAccount: {
-        'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Août long', amount: 100, debitDate: DateTime(2026, 8, 20)),
-          _expense(id: 'e3', accountId: 'account-1', name: 'Juin y', amount: 25, debitDate: DateTime(2026, 6, 1)),
+  testWidgets(
+    'aggregates every account, groups by period and shows full dates',
+    (tester) async {
+      await _buildLoadedViewModel(
+        accounts: [
+          _account('account-1', 'Compte courant'),
+          _account('account-2', 'Compte épargne'),
         ],
-        'account-2': [
-          _expense(id: 'e2', accountId: 'account-2', name: 'Juillet x', amount: 50, debitDate: DateTime(2026, 7, 10)),
-        ],
-      },
-    );
+        expensesByAccount: {
+          'account-1': [
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Août long',
+              amount: 100,
+              debitDate: DateTime(2026, 8, 20),
+            ),
+            _expense(
+              id: 'e3',
+              accountId: 'account-1',
+              name: 'Juin y',
+              amount: 25,
+              debitDate: DateTime(2026, 6, 1),
+            ),
+          ],
+          'account-2': [
+            _expense(
+              id: 'e2',
+              accountId: 'account-2',
+              name: 'Juillet x',
+              amount: 50,
+              debitDate: DateTime(2026, 7, 10),
+            ),
+          ],
+        },
+      );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-      size: const Size(400, 1500),
-    );
+      await pumpApp(tester, _page(), size: const Size(400, 1500));
 
-    expect(find.text('3 dépense(s) en attente'), findsOneWidget);
-    expect(find.textContaining('175,00'), findsOneWidget);
+      expect(find.text('3 dépense(s) en attente'), findsOneWidget);
+      expect(find.textContaining('175,00'), findsOneWidget);
 
-    expect(find.text('Juin 2026'), findsOneWidget);
-    expect(find.text('Juillet 2026'), findsOneWidget);
-    expect(find.text('Août 2026'), findsOneWidget);
+      expect(find.text('Juin 2026'), findsOneWidget);
+      expect(find.text('Juillet 2026'), findsOneWidget);
+      expect(find.text('Août 2026'), findsOneWidget);
 
-    expect(find.text('1 juin 2026'), findsOneWidget);
-    expect(find.text('10 juillet 2026'), findsOneWidget);
-    expect(find.text('20 août 2026'), findsOneWidget);
+      expect(find.text('1 juin 2026'), findsOneWidget);
+      expect(find.text('10 juillet 2026'), findsOneWidget);
+      expect(find.text('20 août 2026'), findsOneWidget);
 
-    final juinY = tester.getTopLeft(find.text('Juin 2026')).dy;
-    final juilletY = tester.getTopLeft(find.text('Juillet 2026')).dy;
-    final aoutY = tester.getTopLeft(find.text('Août 2026')).dy;
-    expect(juinY, lessThan(juilletY));
-    expect(juilletY, lessThan(aoutY));
-  });
+      final juinY = tester.getTopLeft(find.text('Juin 2026')).dy;
+      final juilletY = tester.getTopLeft(find.text('Juillet 2026')).dy;
+      final aoutY = tester.getTopLeft(find.text('Août 2026')).dy;
+      expect(juinY, lessThan(juilletY));
+      expect(juilletY, lessThan(aoutY));
+    },
+  );
 
   testWidgets('filters occurrences by the selected account', (tester) async {
-    final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+    await _buildLoadedViewModel(
       accounts: [
         _account('account-1', 'Compte courant'),
         _account('account-2', 'Compte épargne'),
       ],
       expensesByAccount: {
         'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          _expense(
+            id: 'e1',
+            accountId: 'account-1',
+            name: 'Loyer',
+            amount: 850,
+            debitDate: DateTime(2026, 8, 5),
+          ),
         ],
         'account-2': [
-          _expense(id: 'e2', accountId: 'account-2', name: 'Internet', amount: 30, debitDate: DateTime(2026, 7, 10)),
+          _expense(
+            id: 'e2',
+            accountId: 'account-2',
+            name: 'Internet',
+            amount: 30,
+            debitDate: DateTime(2026, 7, 10),
+          ),
         ],
       },
     );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-      size: const Size(400, 1200),
-    );
+    await pumpApp(tester, _page(), size: const Size(400, 1200));
 
     expect(find.text('Loyer'), findsOneWidget);
     expect(find.text('Internet'), findsOneWidget);
@@ -308,19 +406,22 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     'swiping right blocks the card and opens a sheet naming the current '
     'period for both actions',
     (tester) async {
-      final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+      await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
 
       // The old per-card buttons are gone; nothing is tappable until the
       // user swipes.
@@ -333,10 +434,14 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
       expect(find.text('Loyer'), findsOneWidget);
       // The swipe background previews the same two actions as the sheet, so
       // the assertions target the sheet's buttons to disambiguate.
-      expect(find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
-          findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
-          findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
+        findsOneWidget,
+      );
       expect(find.text('Choisir une action'), findsOneWidget);
     },
   );
@@ -345,78 +450,93 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     'swiping right then choosing "report" carries the occurrence to the '
     'current period',
     (tester) async {
-      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+      final (
+        viewModel: viewModel,
+        expenses: expenses,
+      ) = await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
       await _swipeRight(tester, 'Loyer');
       await tester.tap(
         find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
       );
       await tester.pumpAndSettle();
 
-      expect(viewModel.occurrences, isEmpty);
+      expect(viewModel.state.displayed, isEmpty);
       expect(expenses.moves, hasLength(1));
       expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
       expect(expenses.moves.single.$4, isFalse);
     },
   );
 
-  testWidgets(
-    'swiping right then choosing "debit now" moves and debits the '
-    'occurrence on the current period',
-    (tester) async {
-      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
-        accounts: [_account('account-1', 'Compte courant')],
-        expensesByAccount: {
-          'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-          ],
-        },
-      );
+  testWidgets('swiping right then choosing "debit now" moves and debits the '
+      'occurrence on the current period', (tester) async {
+    final (
+      viewModel: viewModel,
+      expenses: expenses,
+    ) = await _buildLoadedViewModel(
+      accounts: [_account('account-1', 'Compte courant')],
+      expensesByAccount: {
+        'account-1': [
+          _expense(
+            id: 'e1',
+            accountId: 'account-1',
+            name: 'Loyer',
+            amount: 850,
+            debitDate: DateTime(2026, 8, 5),
+          ),
+        ],
+      },
+    );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
-      await _swipeRight(tester, 'Loyer');
-      await tester.tap(
-        find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
-      );
-      await tester.pumpAndSettle();
+    await pumpApp(tester, _page());
+    await _swipeRight(tester, 'Loyer');
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
+    );
+    await tester.pumpAndSettle();
 
-      expect(expenses.moves, hasLength(1));
-      expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
-      expect(expenses.moves.single.$4, isTrue);
-    },
-  );
+    expect(expenses.moves, hasLength(1));
+    expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
+    expect(expenses.moves.single.$4, isTrue);
+  });
 
   testWidgets(
     'swiping right and dismissing the sheet without a choice leaves the '
     'occurrence untouched',
     (tester) async {
-      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+      final (
+        viewModel: viewModel,
+        expenses: expenses,
+      ) = await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
       await _swipeRight(tester, 'Loyer');
       // Tap outside the sheet to dismiss it without picking an action.
       await tester.tapAt(const Offset(20, 20));
@@ -432,19 +552,25 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     'swiping left immediately debits the occurrence on its original period, '
     'with no sheet involved',
     (tester) async {
-      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+      final (
+        viewModel: viewModel,
+        expenses: expenses,
+      ) = await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
       await _swipeLeft(tester, 'Loyer');
 
       expect(find.text('Choisir une action'), findsNothing);
@@ -456,22 +582,28 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
   testWidgets(
     'swipe is disabled in selection mode; tapping a card toggles it instead',
     (tester) async {
-      final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+      final (
+        viewModel: viewModel,
+        expenses: expenses,
+      ) = await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
       await tester.longPress(find.text('Loyer'));
       await tester.pumpAndSettle();
-      expect(viewModel.isSelectionMode, isTrue);
+      expect(viewModel.state.selectionMode, isTrue);
 
       final dismissible = tester.widget<Dismissible>(_cardFor('Loyer'));
       expect(dismissible.direction, DismissDirection.none);
@@ -484,45 +616,63 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
       // ...but a plain tap toggles the card out of the selection.
       await tester.tap(find.text('Loyer'));
       await tester.pumpAndSettle();
-      expect(viewModel.isSelected(viewModel.occurrences.single), isFalse);
+      expect(
+        viewModel.state.selected.contains(viewModel.state.displayed.single.key),
+        isFalse,
+      );
     },
   );
 
-  testWidgets('sheet amounts always honor the profile decimal places', (tester) async {
-    final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+  testWidgets('sheet amounts always honor the profile decimal places', (
+    tester,
+  ) async {
+    await _buildLoadedViewModel(
       accounts: [_account('account-1', 'Compte courant')],
       expensesByAccount: {
         'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+          _expense(
+            id: 'e1',
+            accountId: 'account-1',
+            name: 'Loyer',
+            amount: 850,
+            debitDate: DateTime(2026, 8, 5),
+          ),
         ],
       },
     );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-    );
+    await pumpApp(tester, _page());
 
     // Even whole amounts are shown with the configured decimals.
     expect(find.textContaining('850,00'), findsWidgets);
   });
 
-  testWidgets('long press enters selection mode and hides individual actions', (tester) async {
-    final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+  testWidgets('long press enters selection mode and hides individual actions', (
+    tester,
+  ) async {
+    await _buildLoadedViewModel(
       accounts: [_account('account-1', 'Compte courant')],
       expensesByAccount: {
         'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-          _expense(id: 'e2', accountId: 'account-1', name: 'Internet', amount: 30, debitDate: DateTime(2026, 8, 10)),
+          _expense(
+            id: 'e1',
+            accountId: 'account-1',
+            name: 'Loyer',
+            amount: 850,
+            debitDate: DateTime(2026, 8, 5),
+          ),
+          _expense(
+            id: 'e2',
+            accountId: 'account-1',
+            name: 'Internet',
+            amount: 30,
+            debitDate: DateTime(2026, 8, 10),
+          ),
         ],
       },
     );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-      size: const Size(400, 1400),
-    );
+    await pumpApp(tester, _page(), size: const Size(400, 1400));
     await tester.longPress(find.text('Loyer'));
     await tester.pumpAndSettle();
 
@@ -536,66 +686,75 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     expect(find.byType(FilledButton), findsNWidgets(3));
   });
 
-  testWidgets('bulk action processes only selected expenses and exits selection mode', (tester) async {
-    final (viewModel: viewModel, expenses: expenses) = await _buildLoadedViewModel(
+  testWidgets(
+    'bulk action processes only selected expenses and exits selection mode',
+    (tester) async {
+      final (
+        viewModel: viewModel,
+        expenses: expenses,
+      ) = await _buildLoadedViewModel(
+        accounts: [_account('account-1', 'Compte courant')],
+        expensesByAccount: {
+          'account-1': [
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
+            _expense(
+              id: 'e2',
+              accountId: 'account-1',
+              name: 'Internet',
+              amount: 30,
+              debitDate: DateTime(2026, 8, 10),
+            ),
+          ],
+        },
+      );
+
+      await _openReportPage(tester, size: const Size(400, 1400));
+      await tester.longPress(find.text('Loyer'));
+      await tester.pump();
+      await tester.tap(find.text('Internet'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('sélectionnées'), findsOneWidget);
+      await tester.tap(find.text('Reporter vers Septembre 2026'));
+      await tester.pumpAndSettle();
+
+      expect(expenses.moves, hasLength(2));
+      expect(
+        expenses.moves.map((move) => move.$1.id),
+        containsAll(<String?>['e1', 'e2']),
+      );
+      // Handling every undebited expense closes the report page.
+      expect(find.text('Dépenses à traiter'), findsNothing);
+      expect(find.byType(Placeholder), findsOneWidget);
+    },
+  );
+
+  testWidgets('handling the last occurrence closes the report page', (
+    tester,
+  ) async {
+    await _buildLoadedViewModel(
       accounts: [_account('account-1', 'Compte courant')],
       expensesByAccount: {
         'account-1': [
-          _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-          _expense(id: 'e2', accountId: 'account-1', name: 'Internet', amount: 30, debitDate: DateTime(2026, 8, 10)),
+          _expense(
+            id: 'e1',
+            accountId: 'account-1',
+            name: 'Loyer',
+            amount: 850,
+            debitDate: DateTime(2026, 8, 5),
+          ),
         ],
       },
     );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-      size: const Size(400, 1400),
-    );
-    await tester.longPress(find.text('Loyer'));
-    await tester.pump();
-    await tester.tap(find.text('Internet'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('2'), findsOneWidget);
-    expect(find.text('sélectionnées'), findsOneWidget);
-    await tester.tap(find.text('Reporter vers Septembre 2026'));
-    await tester.pumpAndSettle();
-
-    expect(expenses.moves, hasLength(2));
-    expect(
-      expenses.moves.map((move) => move.$1.id),
-      containsAll(<String?>['e1', 'e2']),
-    );
-    expect(find.text('Aucune dépense non débitée'), findsOneWidget);
-  });
-
-  testWidgets('handling the last occurrence closes the report page', (tester) async {
-    clearAllTestStores();
-    seedAccounts([_account('account-1', 'Compte courant')]);
-    seedExpenses('account-1', [
-      _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
-    ]);
-
-    final navigatorKey = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      MaterialApp(
-        navigatorKey: navigatorKey,
-        locale: const Locale('fr'),
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('en'), Locale('fr')],
-        home: const Scaffold(body: Placeholder()),
-      ),
-    );
-    navigatorKey.currentState!.push(
-      MaterialPageRoute<void>(builder: (_) => const UndebitedExpensesPage()),
-    );
-    await tester.pumpAndSettle();
+    await _openReportPage(tester);
 
     expect(find.text('Dépenses à traiter'), findsOneWidget);
     await tester.longPress(find.text('Loyer'));
@@ -607,15 +766,14 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
     expect(find.byType(Placeholder), findsOneWidget);
   });
 
-  testWidgets('shows an empty state when nothing is left to process', (tester) async {
-    final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+  testWidgets('shows an empty state when nothing is left to process', (
+    tester,
+  ) async {
+    await _buildLoadedViewModel(
       accounts: [_account('account-1', 'Compte courant')],
     );
 
-    await pumpApp(
-      tester,
-      UndebitedExpensesPage(injectedViewModel: viewModel),
-    );
+    await pumpApp(tester, _page());
 
     expect(find.text('0 dépense(s) en attente'), findsOneWidget);
     expect(find.text('Aucune dépense non débitée'), findsOneWidget);
@@ -624,19 +782,22 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
   testWidgets(
     'the gesture hint mentions swiping now that per-card buttons are gone',
     (tester) async {
-      final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+      await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
 
       expect(
         find.text(
@@ -651,19 +812,22 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
   testWidgets(
     'selection mode shows a dedicated hint explaining swipe is disabled',
     (tester) async {
-      final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
+      await _buildLoadedViewModel(
         accounts: [_account('account-1', 'Compte courant')],
         expensesByAccount: {
           'account-1': [
-            _expense(id: 'e1', accountId: 'account-1', name: 'Loyer', amount: 850, debitDate: DateTime(2026, 8, 5)),
+            _expense(
+              id: 'e1',
+              accountId: 'account-1',
+              name: 'Loyer',
+              amount: 850,
+              debitDate: DateTime(2026, 8, 5),
+            ),
           ],
         },
       );
 
-      await pumpApp(
-        tester,
-        UndebitedExpensesPage(injectedViewModel: viewModel),
-      );
+      await pumpApp(tester, _page());
 
       await tester.longPress(find.text('Loyer'));
       await tester.pumpAndSettle();
@@ -675,6 +839,33 @@ final (viewModel: viewModel, expenses: _) = await _buildLoadedViewModel(
         ),
         findsOneWidget,
       );
+    },
+  );
+
+  test(
+    'dismiss persists through the shared LocalCache, not a private instance',
+    () async {
+      final cache = _RecordingLocalCache();
+      final previous = Period.fromDate(DateTime.now()).previous;
+      final built = await _buildLoadedViewModel(
+        accounts: [_account('a1', 'Main')],
+        expensesByAccount: {
+          'a1': [
+            _expense(
+              id: 'e1',
+              accountId: 'a1',
+              name: 'Rent',
+              amount: 10,
+              debitDate: DateTime(previous.year, previous.month, 5),
+            ),
+          ],
+        },
+        localCache: cache,
+      );
+
+      await built.viewModel.dismiss();
+
+      expect(cache.dismissedAccountIds, ['a1']);
     },
   );
 }

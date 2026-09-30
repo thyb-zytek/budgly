@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers/pump_app.dart';
 
 void main() {
-  testWidgets('VerifyEmail cancels its periodic reload timer on dispose', (tester) async {
+  testWidgets('VerifyEmail cancels its periodic reload timer on dispose', (
+    tester,
+  ) async {
     var reloads = 0;
 
     await pumpApp(

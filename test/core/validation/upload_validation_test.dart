@@ -6,40 +6,29 @@ void main() {
   group('validateUploadConstraints', () {
     test('accepts a file within the size limit and an allowed extension', () {
       expect(
-        () => validateUploadConstraints(
-          sizeBytes: 1024,
-          fileExtension: 'jpg',
-        ),
+        () => validateUploadConstraints(sizeBytes: 1024, fileExtension: 'jpg'),
         returnsNormally,
       );
     });
 
     test('accepts extensions regardless of case', () {
       expect(
-        () => validateUploadConstraints(
-          sizeBytes: 1024,
-          fileExtension: 'PNG',
-        ),
+        () => validateUploadConstraints(sizeBytes: 1024, fileExtension: 'PNG'),
         returnsNormally,
       );
     });
 
     test('accepts a leading dot in the extension', () {
       expect(
-        () => validateUploadConstraints(
-          sizeBytes: 1024,
-          fileExtension: '.webp',
-        ),
+        () =>
+            validateUploadConstraints(sizeBytes: 1024, fileExtension: '.webp'),
         returnsNormally,
       );
     });
 
     test('rejects an unsupported extension', () {
       expect(
-        () => validateUploadConstraints(
-          sizeBytes: 1024,
-          fileExtension: 'exe',
-        ),
+        () => validateUploadConstraints(sizeBytes: 1024, fileExtension: 'exe'),
         throwsA(isA<UploadValidationException>()),
       );
     });
@@ -66,20 +55,14 @@ void main() {
 
     test('rejects an empty file', () {
       expect(
-        () => validateUploadConstraints(
-          sizeBytes: 0,
-          fileExtension: 'jpg',
-        ),
+        () => validateUploadConstraints(sizeBytes: 0, fileExtension: 'jpg'),
         throwsA(isA<UploadValidationException>()),
       );
     });
 
     test('rejects a negative size', () {
       expect(
-        () => validateUploadConstraints(
-          sizeBytes: -1,
-          fileExtension: 'jpg',
-        ),
+        () => validateUploadConstraints(sizeBytes: -1, fileExtension: 'jpg'),
         throwsA(isA<UploadValidationException>()),
       );
     });

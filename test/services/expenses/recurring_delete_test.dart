@@ -1,6 +1,7 @@
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -37,13 +38,15 @@ void main() {
 
   setUp(() {
     firestore = FakeExpenseFirestore();
-    service = ExpensesService(expenseFirestore: firestore);
+    service = ExpensesService(
+      expenseFirestore: firestore,
+      analytics: AnalyticsService(),
+    );
     service.invalidateCache();
   });
 
-  tearDown(() => service.dispose());
-
-  Expense monthly(String id, DateTime debitDate, {DateTime? endDate}) => Expense(
+  Expense monthly(String id, DateTime debitDate, {DateTime? endDate}) =>
+      Expense(
         id: id,
         accountId: 'a1',
         categoryId: 'c1',
@@ -93,16 +96,19 @@ void main() {
     expect(firestore.lastCreatedNext, isNull);
   });
 
-  test('deleteSingleOccurrence middle creates an exception without a split', () async {
-    final expense = monthly('e1', DateTime(2026, 1, 15));
-    final result = await service.deleteSingleOccurrence(
-      expense: expense,
-      occurrenceDate: DateTime(2026, 2, 15),
-    );
-    expect(result, isTrue);
-    expect(firestore.lastCreatedNext, isNull);
-    expect(firestore.lastUpdatedPrevious, isNull);
-  });
+  test(
+    'deleteSingleOccurrence middle creates an exception without a split',
+    () async {
+      final expense = monthly('e1', DateTime(2026, 1, 15));
+      final result = await service.deleteSingleOccurrence(
+        expense: expense,
+        occurrenceDate: DateTime(2026, 2, 15),
+      );
+      expect(result, isTrue);
+      expect(firestore.lastCreatedNext, isNull);
+      expect(firestore.lastUpdatedPrevious, isNull);
+    },
+  );
 
   test('deleteSingleOccurrence non-recurring deletes', () async {
     final expense = Expense(

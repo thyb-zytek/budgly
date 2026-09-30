@@ -67,10 +67,7 @@ void main() {
         auth: MockFirebaseAuth(signedIn: false),
       );
 
-      expect(
-        () => anonymous.listByAccountId(accountId),
-        throwsStateError,
-      );
+      expect(() => anonymous.listByAccountId(accountId), throwsStateError);
     });
   });
 
@@ -138,10 +135,7 @@ void main() {
     });
 
     test('returns false when the document does not exist', () async {
-      expect(
-        await provider.update(expense(id: 'missing')),
-        isFalse,
-      );
+      expect(await provider.update(expense(id: 'missing')), isFalse);
     });
   });
 
@@ -164,60 +158,72 @@ void main() {
   });
 
   group('splitRecurringExpense', () {
-    test('updates the previous version and creates the next version atomically',
-        () async {
-      await seed(
-        expense(
+    test(
+      'updates the previous version and creates the next version atomically',
+      () async {
+        await seed(
+          expense(
+            id: 'previous',
+            name: 'Ancienne version',
+            amount: 50,
+            recurrence: RecurrenceType.monthly,
+          ),
+        );
+
+        final previous = expense(
           id: 'previous',
           name: 'Ancienne version',
           amount: 50,
           recurrence: RecurrenceType.monthly,
-        ),
-      );
+          endDate: DateTime(2026, 8, 31),
+        );
+        final next = expense(
+          id: null,
+          name: 'Nouvelle version',
+          amount: 60,
+          debitDate: DateTime(2026, 9, 1),
+          recurrence: RecurrenceType.monthly,
+        );
 
-      final previous = expense(
-        id: 'previous',
-        name: 'Ancienne version',
-        amount: 50,
-        recurrence: RecurrenceType.monthly,
-        endDate: DateTime(2026, 8, 31),
-      );
-      final next = expense(
-        id: null,
-        name: 'Nouvelle version',
-        amount: 60,
-        debitDate: DateTime(2026, 9, 1),
-        recurrence: RecurrenceType.monthly,
-      );
+        final createdNext = await provider.splitRecurringExpense(
+          previous: previous,
+          next: next,
+        );
 
-      final createdNext = await provider.splitRecurringExpense(
-        previous: previous,
-        next: next,
-      );
+        expect(createdNext?.id, isNotNull);
+        expect(createdNext!.id, isNot('previous'));
+        expect(next.id, isNull);
 
-      expect(createdNext?.id, isNotNull);
-      expect(createdNext!.id, isNot('previous'));
+        // A retry of the same logical split must target the same document id.
+        // The provider returns that id so the persistence layer can queue an
+        // identical create if the batch response is lost.
+        final retry = await provider.splitRecurringExpense(
+          previous: previous,
+          next: createdNext,
+        );
+        expect(retry?.id, createdNext.id);
 
-      final previousSnapshot = await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('expenses')
-          .doc('previous')
-          .get();
-      expect(
-        (previousSnapshot.data()?['endDate'] as Timestamp).toDate(),
-        DateTime(2026, 8, 31),
-      );
+        final previousSnapshot = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('expenses')
+            .doc('previous')
+            .get();
+        expect(
+          (previousSnapshot.data()?['endDate'] as Timestamp).toDate(),
+          DateTime(2026, 8, 31),
+        );
 
-      final nextSnapshot = await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('expenses')
-          .doc(createdNext.id)
-          .get();
-      expect(nextSnapshot.data()?['name'], 'Nouvelle version');
-      expect(nextSnapshot.data()?['amount'], 60);
-    });
+        final nextSnapshot = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('expenses')
+            .doc(createdNext.id)
+            .get();
+        expect(nextSnapshot.data()?['name'], 'Nouvelle version');
+        expect(nextSnapshot.data()?['amount'], 60);
+      },
+    );
 
     test('returns null when the previous expense has no id', () async {
       final result = await provider.splitRecurringExpense(
@@ -250,7 +256,9 @@ void main() {
   group('listByAccountAndPeriod', () {
     test('filters one-off expenses to the requested period', () async {
       await seed(expense(id: 'in-period', debitDate: DateTime(2026, 8, 10)));
-      await seed(expense(id: 'before', debitDate: DateTime(2026, 7, 31, 23, 59)));
+      await seed(
+        expense(id: 'before', debitDate: DateTime(2026, 7, 31, 23, 59)),
+      );
       await seed(expense(id: 'after', debitDate: DateTime(2026, 9, 1)));
 
       final result = await provider.listByAccountAndPeriod(accountId, period);
@@ -270,6 +278,30 @@ void main() {
 
       expect(result.map((item) => item.id), ['matching']);
     });
+
+    test(
+      'does not fetch recurring series that start after the period',
+      () async {
+        await seed(
+          expense(
+            id: 'future-recurring',
+            debitDate: DateTime(2026, 10, 1),
+            recurrence: RecurrenceType.monthly,
+          ),
+        );
+        await seed(
+          expense(
+            id: 'past-recurring',
+            debitDate: DateTime(2026, 7, 1),
+            recurrence: RecurrenceType.monthly,
+          ),
+        );
+
+        final result = await provider.listByAccountAndPeriod(accountId, period);
+
+        expect(result.map((item) => item.id).toSet(), {'past-recurring'});
+      },
+    );
 
     test('keeps recurring expenses overlapping the period', () async {
       await seed(
@@ -310,12 +342,7 @@ void main() {
 
     test('includes recurring expenses by default', () async {
       await seed(expense(id: 'one-off'));
-      await seed(
-        expense(
-          id: 'recurring',
-          recurrence: RecurrenceType.monthly,
-        ),
-      );
+      await seed(expense(id: 'recurring', recurrence: RecurrenceType.monthly));
 
       final result = await provider.listByAccountAndPeriod(accountId, period);
 
@@ -323,34 +350,48 @@ void main() {
     });
   });
 
-  group('listByCategoryAndPeriodPage', () {
-    test('returns one-off and active recurring expenses for the category',
-        () async {
-      await seed(expense(id: 'one-off', debitDate: DateTime(2026, 8, 20)));
-      await seed(
-        expense(
-          id: 'recurring',
-          debitDate: DateTime(2026, 6, 20),
-          recurrence: RecurrenceType.monthly,
-        ),
-      );
-      await seed(expense(id: 'other-category', category: otherCategoryId));
+  group('listByAccountBefore', () {
+    test('pushes the historical cutoff into Firestore', () async {
+      await seed(expense(id: 'past', debitDate: DateTime(2026, 7, 31)));
+      await seed(expense(id: 'future', debitDate: DateTime(2026, 9, 1)));
 
-      final page = await provider.listByCategoryAndPeriodPage(
+      final result = await provider.listByAccountBefore(
         accountId,
-        categoryId,
-        period,
+        DateTime(2026, 9, 1),
       );
 
-      expect(page.expenses.map((item) => item.id), ['one-off', 'recurring']);
-      expect(page.hasMore, isFalse);
+      expect(result.map((item) => item.id), ['past']);
     });
+  });
+
+  group('listByCategoryAndPeriodPage', () {
+    test(
+      'returns one-off and active recurring expenses for the category',
+      () async {
+        await seed(expense(id: 'one-off', debitDate: DateTime(2026, 8, 20)));
+        await seed(
+          expense(
+            id: 'recurring',
+            debitDate: DateTime(2026, 6, 20),
+            recurrence: RecurrenceType.monthly,
+          ),
+        );
+        await seed(expense(id: 'other-category', category: otherCategoryId));
+
+        final page = await provider.listByCategoryAndPeriodPage(
+          accountId,
+          categoryId,
+          period,
+        );
+
+        expect(page.expenses.map((item) => item.id), ['one-off', 'recurring']);
+        expect(page.hasMore, isFalse);
+      },
+    );
 
     test('can exclude recurring expenses from the page', () async {
       await seed(expense(id: 'one-off'));
-      await seed(
-        expense(id: 'recurring', recurrence: RecurrenceType.monthly),
-      );
+      await seed(expense(id: 'recurring', recurrence: RecurrenceType.monthly));
 
       final page = await provider.listByCategoryAndPeriodPage(
         accountId,
@@ -391,35 +432,39 @@ void main() {
   });
 
   group('cached bulk deletion', () {
-    test('deleteByAccountId removes only cached expenses for the account',
-        () async {
-      await seed(expense(id: 'account-1-a'));
-      await seed(expense(id: 'account-1-b'));
-      await seed(expense(id: 'account-2', account: 'account-2'));
+    test(
+      'deleteByAccountId removes only cached expenses for the account',
+      () async {
+        await seed(expense(id: 'account-1-a'));
+        await seed(expense(id: 'account-1-b'));
+        await seed(expense(id: 'account-2', account: 'account-2'));
 
-      await provider.deleteByAccountId(accountId);
+        await provider.deleteByAccountId(accountId);
 
-      final remaining = await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('expenses')
-          .get();
-      expect(remaining.docs.map((doc) => doc.id), ['account-2']);
-    });
+        final remaining = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('expenses')
+            .get();
+        expect(remaining.docs.map((doc) => doc.id), ['account-2']);
+      },
+    );
 
-    test('deleteByCategoryId removes only cached expenses for the category',
-        () async {
-      await seed(expense(id: 'category-1-a'));
-      await seed(expense(id: 'category-2', category: otherCategoryId));
+    test(
+      'deleteByCategoryId removes only cached expenses for the category',
+      () async {
+        await seed(expense(id: 'category-1-a'));
+        await seed(expense(id: 'category-2', category: otherCategoryId));
 
-      await provider.deleteByCategoryId(categoryId);
+        await provider.deleteByCategoryId(categoryId);
 
-      final remaining = await firestore
-          .collection('users')
-          .doc(uid)
-          .collection('expenses')
-          .get();
-      expect(remaining.docs.map((doc) => doc.id), ['category-2']);
-    });
+        final remaining = await firestore
+            .collection('users')
+            .doc(uid)
+            .collection('expenses')
+            .get();
+        expect(remaining.docs.map((doc) => doc.id), ['category-2']);
+      },
+    );
   });
 }

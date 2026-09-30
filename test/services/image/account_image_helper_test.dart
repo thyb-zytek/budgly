@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/image/account_image_helper.dart';
+import 'package:budgly/src/services/analytics/analytics_service.dart';
+import 'package:budgly/src/services/offline/sync_manager.dart';
+import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
@@ -25,6 +28,16 @@ class _FakeAccountsService extends AccountsService {
   Account? queuedAccount;
   File? queuedFile;
 
+  _FakeAccountsService()
+    : super(
+        analytics: AnalyticsService(),
+        syncManager: SyncManager(
+          queue: SyncQueue(),
+          analytics: AnalyticsService(),
+        ),
+        syncQueue: SyncQueue(),
+      );
+
   @override
   Future<String?> uploadPicture(
     File file,
@@ -36,7 +49,8 @@ class _FakeAccountsService extends AccountsService {
   }
 
   @override
-  Future<String?> getSignedUrl(String path, String accountId) async => signedUrl;
+  Future<String?> getSignedUrl(String path, String accountId) async =>
+      signedUrl;
 
   @override
   Future<void> queuePictureUpload(Account account, File file) async {
@@ -83,18 +97,21 @@ void main() {
       );
     });
 
-    test('copies a local picture into the documents folder with a timestamped name', () async {
-      final file = File('${sourceDir.path}/avatar.png');
-      await file.writeAsString('png-bytes');
+    test(
+      'copies a local picture into the documents folder with a timestamped name',
+      () async {
+        final file = File('${sourceDir.path}/avatar.png');
+        await file.writeAsString('png-bytes');
 
-      final result = await AccountImageHelper.prepareImage(file.path);
+        final result = await AccountImageHelper.prepareImage(file.path);
 
-      expect(result, isNotNull);
-      expect(result!.fileName, endsWith('_avatar.png'));
-      expect(result.fileName, isNot(equals('avatar.png')));
-      expect(result.file.path, startsWith(docsDir.path));
-      expect(await File(result.file.path).readAsString(), 'png-bytes');
-    });
+        expect(result, isNotNull);
+        expect(result!.fileName, endsWith('_avatar.png'));
+        expect(result.fileName, isNot(equals('avatar.png')));
+        expect(result.file.path, startsWith(docsDir.path));
+        expect(await File(result.file.path).readAsString(), 'png-bytes');
+      },
+    );
   });
 
   group('AccountImageHelper.uploadAndLinkImage', () {
@@ -118,26 +135,28 @@ void main() {
       expect(service.queueCalls, 0);
     });
 
-    test('falls back to the local file and queues the upload when storage fails',
-        () async {
-      final service = _FakeAccountsService()
-        ..uploadError = StateError('offline');
-      final sourceFile = File('${sourceDir.path}/avatar.png');
-      await sourceFile.writeAsString('png-bytes');
-      final image = ImageProcessResult('avatar.png', sourceFile);
-      final account = Fixtures.account(id: 'a1');
+    test(
+      'falls back to the local file and queues the upload when storage fails',
+      () async {
+        final service = _FakeAccountsService()
+          ..uploadError = StateError('offline');
+        final sourceFile = File('${sourceDir.path}/avatar.png');
+        await sourceFile.writeAsString('png-bytes');
+        final image = ImageProcessResult('avatar.png', sourceFile);
+        final account = Fixtures.account(id: 'a1');
 
-      final updated = await AccountImageHelper.uploadAndLinkImage(
-        service,
-        account,
-        image,
-      );
-      await Future<void>.delayed(Duration.zero);
+        final updated = await AccountImageHelper.uploadAndLinkImage(
+          service,
+          account,
+          image,
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      expect(updated.pictureUrl, sourceFile.path);
-      expect(service.queueCalls, 1);
-      expect(service.queuedAccount?.id, 'a1');
-      expect(service.queuedFile, same(sourceFile));
-    });
+        expect(updated.pictureUrl, sourceFile.path);
+        expect(service.queueCalls, 1);
+        expect(service.queuedAccount?.id, 'a1');
+        expect(service.queuedFile, same(sourceFile));
+      },
+    );
   });
 }

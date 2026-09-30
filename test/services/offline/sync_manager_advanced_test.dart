@@ -1,8 +1,15 @@
+import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+final testSyncQueue = SyncQueue();
+final testSyncManager = SyncManager(
+  queue: testSyncQueue,
+  analytics: AnalyticsService(),
+);
 
 void main() {
   late SyncManager manager;
@@ -14,8 +21,8 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    manager = SyncManager.instance;
-    queue = SyncQueue.instance;
+    manager = testSyncManager;
+    queue = testSyncQueue;
     await manager.resetForTest();
     await queue.clear();
 
@@ -27,94 +34,103 @@ void main() {
     await manager.resetForTest();
   });
 
-  test('flush processes user_profiles between accounts and categories', () async {
-    await queue.enqueue(
-      id: 'user_profiles:create:1',
-      type: 'user_profiles',
-      operation: 'create',
-      payload: {'id': 'u1'},
-    );
-    await queue.enqueue(
-      id: 'accounts:create:1',
-      type: 'accounts',
-      operation: 'create',
-      payload: {'id': 'a1'},
-    );
-    await queue.enqueue(
-      id: 'categories:create:1',
-      type: 'categories',
-      operation: 'create',
-      payload: {'id': 'c1'},
-    );
+  test(
+    'flush processes user_profiles between accounts and categories',
+    () async {
+      await queue.enqueue(
+        id: 'user_profiles:create:1',
+        type: 'user_profiles',
+        operation: 'create',
+        payload: {'id': 'u1'},
+      );
+      await queue.enqueue(
+        id: 'accounts:create:1',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'a1'},
+      );
+      await queue.enqueue(
+        id: 'categories:create:1',
+        type: 'categories',
+        operation: 'create',
+        payload: {'id': 'c1'},
+      );
 
-    final callOrder = <String>[];
-    manager.registerHandler('accounts', (op) async {
-      callOrder.add('accounts');
-    });
-    manager.registerHandler('user_profiles', (op) async {
-      callOrder.add('user_profiles');
-    });
-    manager.registerHandler('categories', (op) async {
-      callOrder.add('categories');
-    });
+      final callOrder = <String>[];
+      manager.registerHandler('accounts', (op) async {
+        callOrder.add('accounts');
+      });
+      manager.registerHandler('user_profiles', (op) async {
+        callOrder.add('user_profiles');
+      });
+      manager.registerHandler('categories', (op) async {
+        callOrder.add('categories');
+      });
 
-    await manager.flush();
+      await manager.flush();
 
-    expect(callOrder, ['accounts', 'user_profiles', 'categories']);
-  });
+      expect(callOrder, ['accounts', 'user_profiles', 'categories']);
+    },
+  );
 
-  test('categories are blocked when account operation is pending (not ready)', () async {
-    await queue.enqueue(
-      id: 'accounts:create:1',
-      type: 'accounts',
-      operation: 'create',
-      payload: {'id': 'a1'},
-    );
-    await queue.enqueue(
-      id: 'categories:create:1',
-      type: 'categories',
-      operation: 'create',
-      payload: {'id': 'c1'},
-    );
+  test(
+    'categories are blocked when account operation is pending (not ready)',
+    () async {
+      await queue.enqueue(
+        id: 'accounts:create:1',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'a1'},
+      );
+      await queue.enqueue(
+        id: 'categories:create:1',
+        type: 'categories',
+        operation: 'create',
+        payload: {'id': 'c1', 'account_id': 'a1'},
+      );
 
-    // Mark accounts as failed so it has a backoff delay (not ready)
-    await queue.markFailed('accounts:create:1');
+      // Mark accounts as failed so it has a backoff delay (not ready)
+      await queue.markFailed('accounts:create:1');
 
-    var categoriesCalled = false;
-    manager.registerHandler('accounts', (op) async {});
-    manager.registerHandler('categories', (op) async {
-      categoriesCalled = true;
-    });
+      var categoriesCalled = false;
+      manager.registerHandler('accounts', (op) async {});
+      manager.registerHandler('categories', (op) async {
+        categoriesCalled = true;
+      });
 
-    await manager.flush();
+      await manager.flush();
 
-    expect(categoriesCalled, isFalse);
-  });
+      expect(categoriesCalled, isFalse);
+    },
+  );
 
-  test('categories are processed when all account operations are ready', () async {
-    await queue.enqueue(
-      id: 'accounts:create:1',
-      type: 'accounts',
-      operation: 'create',
-      payload: {'id': 'a1'},
-    );
-    await queue.enqueue(
-      id: 'categories:create:1',
-      type: 'categories',
-      operation: 'create',
-      payload: {'id': 'c1'},
-    );
+  test(
+    'categories are processed when all account operations are ready',
+    () async {
+      await queue.enqueue(
+        id: 'accounts:create:1',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'a1'},
+      );
+      await queue.enqueue(
+        id: 'categories:create:1',
+        type: 'categories',
+        operation: 'create',
+        payload: {'id': 'c1'},
+      );
 
-    var categoriesCalled = false;
-    manager.registerHandler('accounts', (op) async {});
-    manager.registerHandler('categories', (op) async {
-      categoriesCalled = true;
-    });
+      var categoriesCalled = false;
+      manager.registerHandler('accounts', (op) async {});
+      manager.registerHandler('categories', (op) async {
+        categoriesCalled = true;
+      });
 
-    await manager.flush();
+      await manager.flush();
 
-    expect(categoriesCalled, isTrue);
-  });
+      expect(categoriesCalled, isTrue);
+    },
+  );
 
   test('flush is a no-op when already syncing', () async {
     await queue.enqueue(
@@ -201,24 +217,27 @@ void main() {
     await manager.resetForTest(); // Should not throw
   });
 
-  test('registering a handler after start triggers a pending operation flush', () async {
-    await queue.enqueue(
-      id: 'accounts:create:after-start',
-      type: 'accounts',
-      operation: 'create',
-      payload: {'id': 'a1'},
-    );
+  test(
+    'registering a handler after start triggers a pending operation flush',
+    () async {
+      await queue.enqueue(
+        id: 'accounts:create:after-start',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'a1'},
+      );
 
-    var calls = 0;
-    manager.start();
-    manager.registerHandler('accounts', (op) async {
-      calls++;
-    });
+      var calls = 0;
+      manager.start();
+      manager.registerHandler('accounts', (op) async {
+        calls++;
+      });
 
-    await Future<void>.delayed(Duration.zero);
-    expect(calls, 1);
-    expect(await queue.all(), isEmpty);
-  });
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, 1);
+      expect(await queue.all(), isEmpty);
+    },
+  );
 
   test('resuming the app triggers a sync flush', () async {
     await queue.enqueue(
