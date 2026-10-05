@@ -78,7 +78,7 @@ class _OverviewPageState extends ConsumerState<OverviewPage>
         validate: (tr) =>
             _expenseForm.validate(tr, requireAccountAndCategory: true),
         onSubmit: () => overview.createExpense(
-          form: ExpenseFormData(
+          form: ExpenseCreationFormData(
             name: _expenseForm.data.nameController.text,
             amount: _expenseForm.data.amountController.text,
             account: _expenseForm.data.account,

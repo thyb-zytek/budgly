@@ -362,7 +362,7 @@ void main() {
         final ok = await container
             .read(overviewProvider.notifier)
             .createExpense(
-              form: ExpenseFormData(
+              form: ExpenseCreationFormData(
                 name: 'Loyer',
                 amount: '10',
                 account: null,
@@ -382,7 +382,7 @@ void main() {
       final ok = await container
           .read(overviewProvider.notifier)
           .createExpense(
-            form: ExpenseFormData(
+            form: ExpenseCreationFormData(
               name: 'Loyer',
               amount: '10',
               account: Fixtures.account(id: 'a1'),
@@ -401,7 +401,7 @@ void main() {
       final ok = await container
           .read(overviewProvider.notifier)
           .createExpense(
-            form: ExpenseFormData(
+            form: ExpenseCreationFormData(
               name: 'Loyer',
               amount: 'not-a-number',
               account: Fixtures.account(id: 'a1'),
@@ -424,7 +424,7 @@ void main() {
       final ok = await container
           .read(overviewProvider.notifier)
           .createExpense(
-            form: ExpenseFormData(
+            form: ExpenseCreationFormData(
               name: '  Loyer  ',
               amount: '800',
               account: Fixtures.account(id: 'a1'),
@@ -449,7 +449,7 @@ void main() {
     addTearDown(container.dispose);
     final notifier = container.read(overviewProvider.notifier);
     await notifier.createExpense(
-      form: ExpenseFormData(
+      form: ExpenseCreationFormData(
         name: 'Loyer',
         amount: '800',
         account: Fixtures.account(id: 'a1'),
