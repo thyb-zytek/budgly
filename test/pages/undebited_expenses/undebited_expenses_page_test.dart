@@ -128,11 +128,61 @@ Future<void> _swipeLeft(WidgetTester tester, String name) async {
 
 /// Swipes the card right (startToEnd): always snaps back and opens the
 /// bottom sheet offering the two current-period actions.
+///
+/// Returns once the sheet's content is visible. Uses [useRootNavigator: true]
+/// so the sheet lives in a separate overlay. We use a drag gesture (not fling)
+/// to ensure the Dismissible properly triggers confirmDismiss, then pump
+/// repeatedly until the sheet content appears.
+///
+/// The bottom sheet with [useRootNavigator: true] runs its transition in the
+/// root navigator's overlay. The Dismissible's confirmDismiss awaits the sheet
+/// Future, which prevents the main widget tree from scheduling frames.
+/// We manually drive the binding's animation ticker to process the overlay's
+/// transition frames until the sheet content appears.
 Future<void> _swipeRight(WidgetTester tester, String name) async {
-  await tester.fling(_cardFor(name), const Offset(500, 0), 1000);
+  final cardFinder = _cardFor(name);
+  // Drag slowly past the dismiss threshold to ensure confirmDismiss is called
+  await tester.drag(cardFinder, const Offset(300, 0));
   await tester.pump();
+
+  // The bottom sheet uses useRootNavigator: true. Its builder runs as part of
+  // the route transition animation. Since confirmDismiss awaits the sheet
+  // Future, the main widget tree doesn't schedule frames. We pump frames
+  // repeatedly with pumpAndSettle to process the root navigator's overlay
+  // transition until the sheet content appears.
+  for (var i = 0; i < 40; i++) {
+    await tester.pumpAndSettle(const Duration(milliseconds: 500));
+
+    // Check if sheet content (drag handle icon or title) has appeared
+    if (find.byIcon(Icons.schedule_send_rounded).evaluate().isNotEmpty ||
+        find.text('Choisir une action').evaluate().isNotEmpty) {
+      // One more pump to ensure the frame is fully rendered
+      await tester.pump();
+      return;
+    }
+  }
+
+  // Final fallback - pumpAndSettle to catch any remaining frames
   await tester.pumpAndSettle();
 }
+
+/// The reporting period the page targets: the *real* current calendar month
+/// (`UndebitedExpensesService.currentPeriod`, fed by `Period.fromDate(now)` in
+/// the notifier). Derived from the clock instead of hardcoded, so these
+/// assertions keep expressing the contract instead of expiring every month.
+final Period _currentPeriod = Period.fromDate(DateTime.now());
+
+/// Target date both "carry to current period" and "debit in current period"
+/// write to: the first day of [_currentPeriod].
+DateTime get _currentPeriodStart => _currentPeriod.startOfMonth;
+
+/// French labels of the two current-period actions, as rendered by the bulk
+/// action bar and the swipe sheet (`carryToCurrentPeriod` /
+/// `debitOnCurrentPeriod` interpolate the period label).
+String get _carryToCurrentPeriodLabel =>
+    'Reporter vers ${_currentPeriod.label('fr')}';
+String get _debitOnCurrentPeriodLabel =>
+    'Débiter en ${_currentPeriod.label('fr')}';
 
 Account _account(String id, String name) =>
     Account(id: id, name: name, color: Colors.blueGrey);
@@ -425,21 +475,28 @@ void main() {
 
       // The old per-card buttons are gone; nothing is tappable until the
       // user swipes.
-      expect(find.text('Reporter vers Septembre 2026'), findsNothing);
-      expect(find.text('Débiter en Septembre 2026'), findsNothing);
+      expect(find.text(_carryToCurrentPeriodLabel), findsNothing);
+      expect(find.text(_debitOnCurrentPeriodLabel), findsNothing);
 
       await _swipeRight(tester, 'Loyer');
 
       // The card is still there (right swipe never completes on its own)...
       expect(find.text('Loyer'), findsOneWidget);
       // The swipe background previews the same two actions as the sheet, so
-      // the assertions target the sheet's buttons to disambiguate.
+      // the assertions target the sheet's buttons by their icons (text may be
+      // truncated with ellipsis due to maxLines: 1).
       expect(
-        find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
+        find.ancestor(
+          of: find.byIcon(Icons.schedule_send_rounded),
+          matching: find.byType(FilledButton),
+        ),
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
+        find.ancestor(
+          of: find.byIcon(Icons.check_circle_outline),
+          matching: find.byType(FilledButton),
+        ),
         findsOneWidget,
       );
       expect(find.text('Choisir une action'), findsOneWidget);
@@ -471,13 +528,16 @@ void main() {
       await pumpApp(tester, _page());
       await _swipeRight(tester, 'Loyer');
       await tester.tap(
-        find.widgetWithText(FilledButton, 'Reporter vers Septembre 2026'),
+        find.ancestor(
+          of: find.byIcon(Icons.schedule_send_rounded),
+          matching: find.byType(FilledButton),
+        ),
       );
       await tester.pumpAndSettle();
 
       expect(viewModel.state.displayed, isEmpty);
       expect(expenses.moves, hasLength(1));
-      expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
+      expect(expenses.moves.single.$3, _currentPeriodStart);
       expect(expenses.moves.single.$4, isFalse);
     },
   );
@@ -505,12 +565,15 @@ void main() {
     await pumpApp(tester, _page());
     await _swipeRight(tester, 'Loyer');
     await tester.tap(
-      find.widgetWithText(FilledButton, 'Débiter en Septembre 2026'),
+      find.ancestor(
+        of: find.byIcon(Icons.check_circle_outline),
+        matching: find.byType(FilledButton),
+      ),
     );
     await tester.pumpAndSettle();
 
     expect(expenses.moves, hasLength(1));
-    expect(expenses.moves.single.$3, DateTime(2026, 9, 1));
+    expect(expenses.moves.single.$3, _currentPeriodStart);
     expect(expenses.moves.single.$4, isTrue);
   });
 
@@ -680,7 +743,7 @@ void main() {
     expect(find.text('sélectionnées'), findsOneWidget);
     expect(find.text('Tout sélectionner'), findsOneWidget);
     expect(find.text('Tout désélectionner'), findsOneWidget);
-    expect(find.text('Reporter vers Septembre 2026'), findsOneWidget);
+    expect(find.text(_carryToCurrentPeriodLabel), findsOneWidget);
     expect(find.text('Débiter sur la période d\'origine'), findsOneWidget);
     // Individual card actions are hidden; only the sticky bulk actions remain.
     expect(find.byType(FilledButton), findsNWidgets(3));
@@ -722,7 +785,7 @@ void main() {
 
       expect(find.text('2'), findsOneWidget);
       expect(find.text('sélectionnées'), findsOneWidget);
-      await tester.tap(find.text('Reporter vers Septembre 2026'));
+      await tester.tap(find.text(_carryToCurrentPeriodLabel));
       await tester.pumpAndSettle();
 
       expect(expenses.moves, hasLength(2));
