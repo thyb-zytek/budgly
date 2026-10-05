@@ -317,3 +317,83 @@ Puis vérifier manuellement le parcours principal sur l'appareil cible lorsque n
 ## 12. Principe directeur
 
 > **Une fonctionnalité est terminée lorsqu'elle est fiable pour l'utilisateur, testée sur ses comportements importants et cohérente avec l'architecture — pas lorsqu'un chiffre de couverture atteint une cible arbitraire.**
+
+---
+
+## 13. Annexe — Google Sign-In Android
+
+La connexion Google sur Android repose sur **Credential Manager**, pas sur le SDK web. Trois paramètres
+doivent être alignés dans la console Google Cloud. Une erreur de configuration se manifeste par un
+retour silencieux vers la page de connexion.
+
+### 13.1 Les trois paramètres
+
+| Paramètre | Où | Rôle |
+|---|---|---|
+| `GOOGLE_SERVER_CLIENT_ID` | `assets/.env` | ID client OAuth **Web** (`client_type: 3`) passé à `GoogleSignIn.instance.initialize(serverClientId:)`. C'est lui qui est échangé contre un jeton de session Firebase. |
+| SHA-1 du keystore | `google-services.json` → `oauth_client[].android_info.certificate_sha1` | Doivent être déclarés **pour chaque variant** signé (défaut et release). |
+| `package_name` + `android/app/build.gradle.kts` | `google-services.json` → `client_info` | Doit correspondre à `fr.budgly` / `applicationId`. |
+
+Le `serverClientId` n'est plus codé en dur dans le Dart : il est lu depuis `assets/.env` et validé au
+démarrage par `GoogleSignInInitializer.resolveServerClientId()` (voir `lib/src/core/auth/google_sign_in.dart`).
+`readServerClientId(Map<String, String>)` est une fonction pure, testée dans
+`test/core/auth/google_sign_in_test.dart`.
+
+> `build.gradle.kts` ne déclare que la config `budgly`. Le variant **debug** retombe sur le keystore de
+> debug Android par défaut : son empreinte est **différente** de celle du keystore release. Il faut donc
+> enregistrer les empreintes des deux, sinon le debug échoue alors que la release fonctionne.
+
+### 13.2 Diagnostic — symptômes et causes
+
+Toujours capturer les logs avant de conclure :
+
+```bash
+adb logcat -c && adb logcat -s Auth.Api.Credentials Auth:I GoogleSignIn:* flutter:I
+```
+
+| Log / symptôme | Cause réelle |
+|---|---|
+| `ctsx: [16] Account reauth failed.` puis retour silencieux sur le login | SHA-1 du variant non déclaré dans la console. **Credential Manager rapporte les erreurs de configuration comme `canceled`**, ce qui produit un écran vide. |
+| `ctsx: [28444] Developer console is not set up correctly` (code `unknownError`) | Le `serverClientId` n'est pas un client OAuth de type **Web** (cf. 13.4), ou il est absent. |
+| `Server returned error: Invalid audience value: server:client_id:<id>.apps.googleusercontent.com` | Le client Web n'existe pas côté console (supprimé), ou l'ID dans `.env` ne correspond à aucun client vivant. |
+| `Error 401: deleted_client` (sur `accounts.google.com/o/oauth2/v2/auth`) | Client **supprimé** dans la console. |
+
+`GoogleSignInExceptionCode.canceled` est volontairement rendu sans message côté UI
+(`_translateErrorMessage` renvoie `null`) car c'est le comportement correct pour une annulation réelle de
+l'utilisateur. Les diagnostics détaillés sont donc émis dans `AuthService.signInWithGoogle()`.
+
+### 13.3 Le `serverClientId` doit être un client de type Web
+
+`serverClientId` **doit** être l'ID d'un client OAuth de type **Web application** (`client_type: 3`).
+Un client Android, iOS ou Desktop renvoie `28444 Developer console is not set up correctly` — le sélecteur
+de compte s'affiche, la sélection aboutit, puis l'échange de jeton échoue.
+
+Ne pas deviner le type : le repérer sans ambiguïté avec un appel public, dont la charge utile `authError`
+(base64) diffère selon le type.
+
+```bash
+curl -s -D - -o NUL "https://accounts.google.com/o/oauth2/v2/auth\
+?client_id=<ID>.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fexample.com\
+&response_type=code&scope=openid"
+```
+
+| Réponse | Signification |
+|---|---|
+| `redirect_uri_mismatch` + « enregistrez l'URI de redirection dans la console Google » | Client **Web** vivant. C'est le bon type. |
+| `deleted_client` / « The OAuth client was deleted. » | Client supprimé. |
+| `redirect_uri_mismatch` avec un message court, sans consigne d'enregistrement d'URI | Client **non-Web** (Android/iOS/Desktop). Inutilisable comme `serverClientId`. |
+
+Le bon client est en général **déjà présent** dans `google-services.json`, sous
+`oauth_client` sans `android_info` — ne pas créer un nouveau client avant d'avoir vérifié celui-ci.
+
+### 13.4 Procédure de remise en état
+
+1. Relever dans `android/app/google-services.json` l'entrée `oauth_client` **sans** `android_info`
+   (c'est le client Web), et vérifier son type avec la sonde ci-dessus.
+2. Reporter cet ID dans `assets/.env` sous `GOOGLE_SERVER_CLIENT_ID`.
+3. Si cette entrée est `deleted_client`, créer un client OAuth de type **Web** dans Google Cloud Console
+   pour le projet Firebase `budgly-3f1b1`, puis re-télécharger `google-services.json`.
+4. Ajouter les SHA-1 de chaque keystore utilisé (défaut **et** release) dans le client Android
+   `oauth_client` correspondant.
+5. Vérifier avec `adb logcat` : `GetCredentialResponse returned from framework` (et non `... error returned`),
+   puis `FirebaseAuth: Notifying idToken listeners about user`.
