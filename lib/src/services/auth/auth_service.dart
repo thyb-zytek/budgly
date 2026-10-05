@@ -5,6 +5,7 @@ import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:budgly/src/services/analytics/analytics_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show
         GoogleSignIn,
@@ -261,12 +262,24 @@ class AuthService {
       _analytics.track('google_signin_completed');
       return user;
     } on fb.FirebaseAuthException catch (e) {
+      debugPrint(
+        '[auth] Google sign-in refused by Firebase: code=${e.code} '
+        'message=${e.message}',
+      );
       _analytics.track('google_signin_failed', {'error_code': e.code});
       throw AuthenticationException(
         code: e.code,
         message: e.message ?? 'Google Sign-In Error',
       );
     } on GoogleSignInException catch (e) {
+      // `code` alone is not actionable: the Android Credential Manager also
+      // reports configuration failures (unregistered signing SHA-1, wrong
+      // package name, wrong serverClientId) as `canceled` after the account
+      // chooser, so the platform description must be logged too.
+      debugPrint(
+        '[auth] GoogleSignInException code=${e.code.name} '
+        'description=${e.description}',
+      );
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthenticationException(
           code: 'canceled',
@@ -276,8 +289,9 @@ class AuthService {
       _analytics.track('google_signin_failed', {'error_code': e.code.name});
       throw AuthenticationException(code: e.code.name, message: e.toString());
     } catch (e) {
+      debugPrint('[auth] Google sign-in failed: $e');
+      _analytics.track('google_signin_failed', {'error_code': e.toString()});
       if (e is AuthenticationException) rethrow;
-      _analytics.track('google_signin_failed', {'error_code': 'unknown'});
       throw AuthenticationException(
         code: 'google-sign-in-failed',
         message: 'Failed to sign in with Google: $e',
