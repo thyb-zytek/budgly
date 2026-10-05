@@ -361,7 +361,7 @@ class CategoryExpenses extends _$CategoryExpenses {
 
   void setRecurringEditScope(RecurringEditScope scope) => _editScope = scope;
 
-  Future<bool> saveEditing(ExpenseFormData data) async {
+  Future<bool> saveEditing(ExpenseEditFormData data) async {
     final occurrence = state.editingOccurrence;
     if (state.isSaving || occurrence == null) return false;
     state = state.copyWith(isSaving: true);
@@ -635,8 +635,10 @@ class CategoryExpenses extends _$CategoryExpenses {
   }
 }
 
-class ExpenseFormData {
-  const ExpenseFormData({
+/// Form data for editing an existing expense within a category.
+/// Contains parsed double amount and categoryId reference.
+class ExpenseEditFormData {
+  const ExpenseEditFormData({
     required this.name,
     required this.amount,
     required this.categoryId,

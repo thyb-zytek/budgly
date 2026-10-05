@@ -147,7 +147,7 @@ class _CategoryExpensesPageState extends ConsumerState<CategoryExpensesPage> {
           final amount = _expenseForm.parseEnteredAmount();
           if (amount == null) return Future.value(false);
           return _notifier.saveEditing(
-            ExpenseFormData(
+            ExpenseEditFormData(
               name: _expenseForm.data.nameController.text.trim(),
               amount: amount,
               categoryId: _expenseForm.data.category?.id,

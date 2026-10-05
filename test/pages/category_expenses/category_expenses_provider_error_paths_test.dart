@@ -330,7 +330,7 @@ void main() {
           categoryExpensesProvider('a1', 'c1', period).notifier,
         );
         final success = await notifier.saveEditing(
-          ExpenseFormData(
+          ExpenseEditFormData(
             name: 'Renamed',
             amount: 20,
             categoryId: 'c1',
@@ -368,7 +368,7 @@ void main() {
           categoryExpensesProvider('a1', 'c1', period).notifier,
         );
         final success = await notifier.saveEditing(
-          ExpenseFormData(
+          ExpenseEditFormData(
             name: 'Renamed',
             amount: 20,
             categoryId: 'c2', // different category
@@ -406,7 +406,7 @@ void main() {
           categoryExpensesProvider('a1', 'c1', period).notifier,
         );
         final success = await notifier.saveEditing(
-          ExpenseFormData(
+          ExpenseEditFormData(
             name: 'Renamed',
             amount: 20,
             categoryId: 'c1',
