@@ -164,7 +164,7 @@ class Overview extends _$Overview {
     );
   }
 
-  Future<bool> createExpense({required ExpenseFormData form}) async {
+  Future<bool> createExpense({required ExpenseCreationFormData form}) async {
     if (state.status.isLoading) return false;
     final account = form.account;
     final category = form.category;
@@ -202,8 +202,10 @@ class Overview extends _$Overview {
 }
 
 @immutable
-class ExpenseFormData {
-  const ExpenseFormData({
+/// Form data for creating a new expense from the overview page.
+/// Contains unparsed string amount and full Account/Category objects.
+class ExpenseCreationFormData {
+  const ExpenseCreationFormData({
     required this.name,
     required this.amount,
     required this.account,
