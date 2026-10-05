@@ -1,13 +1,12 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
 }
+
+import java.util.Properties
+import java.io.FileInputStream
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -38,7 +37,7 @@ android {
 
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
-            create("upload") {
+            create("budgly") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
                 storeFile = keystoreProperties["storeFile"]?.let { file(it) }
@@ -48,12 +47,9 @@ android {
     }
 
     buildTypes {
-        debug {
-            isMinifyEnabled = false
-        }
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("upload")
+                signingConfigs.getByName("budgly")
             } else {
                 signingConfigs.getByName("debug")
             }
