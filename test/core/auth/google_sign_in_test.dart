@@ -2,6 +2,51 @@ import 'package:budgly/src/core/auth/google_sign_in.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('GoogleSignInInitializer.readServerClientId', () {
+    test('returns the configured Web OAuth client ID', () {
+      const clientId = '123.apps.googleusercontent.com';
+
+      expect(
+        GoogleSignInInitializer.readServerClientId({
+          GoogleSignInInitializer.serverClientIdKey: clientId,
+        }),
+        clientId,
+      );
+    });
+
+    test('trims surrounding whitespace', () {
+      expect(
+        GoogleSignInInitializer.readServerClientId({
+          GoogleSignInInitializer.serverClientIdKey:
+              '  123.apps.googleusercontent.com\n',
+        }),
+        '123.apps.googleusercontent.com',
+      );
+    });
+
+    test('throws when the key is absent', () {
+      expect(
+        () => GoogleSignInInitializer.readServerClientId(const {}),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains(GoogleSignInInitializer.serverClientIdKey),
+          ),
+        ),
+      );
+    });
+
+    test('throws when the key is blank', () {
+      expect(
+        () => GoogleSignInInitializer.readServerClientId({
+          GoogleSignInInitializer.serverClientIdKey: '   ',
+        }),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
+
   group('GoogleSignInInitializer', () {
     test('ensureInitialized memoizes the same future across calls', () {
       final future = Future<void>.value();
