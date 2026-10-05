@@ -63,7 +63,7 @@ class Avatar extends StatelessWidget {
     final foregroundImage = picture == null
         ? null
         : isFilePicture
-        ? FileImage(pictureFile!)
+        ? (pictureFile != null ? FileImage(pictureFile) : null)
         : NetworkImage(picture!) as ImageProvider;
     Widget avatar = CircleAvatar(
       radius: innerRadius,
