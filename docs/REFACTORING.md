@@ -115,6 +115,15 @@ Chaque nouveau checkpoint doit mettre à jour `REFACTORING.md`, `STATUS.md` et `
 - **2026-09-20** — Checkpoint — recurrence matrix and startup audit
 - **2026-09-20** — Checkpoint — recurrence lower-bound correction
 
+## 2026-10-06 — Static audit hardening
+
+- Added a forward Supabase migration enabling RLS on `user_profiles`, `accounts`, and `categories`.
+- Reworked RLS architecture tests to inspect migration contents rather than tautological literal assertions.
+- Hardened audited `Overview` and `Tutorial` async state writes with lifecycle guards.
+- Moved Flutter `TextEditingController` ownership from `ExpenseEditingData` to `ExpenseFormController`.
+- Switched undebited expense rendering to a lazy list and category summary resolution to O(1) ID lookup.
+- Added a CI guard rejecting tracked signing credentials, `.env`, Google Services and certificate material while preserving ignored local secret files.
+
 ## 2026-09-20 — Test failure remediation checkpoint
 
 The latest local `tests_all.log` was audited failure-by-failure. The remediation distinguishes test-contract drift from production defects instead of weakening assertions indiscriminately.
@@ -391,3 +400,18 @@ environment.
   sequentially, while preserving the same all-account scope.
 - Added a regression test ensuring an Overview account change triggers a
   period-expense load for the newly selected account.
+
+## 2026-10-06 — Audit hardening: W6/W7 UI decomposition
+
+- `006_rls_security.sql` was renamed to `006_storage_rls.sql` to make its
+  storage-only scope explicit. The migration content is unchanged; core table
+  RLS remains enabled by `008_enable_core_rls.sql`.
+- W6: the large `build()` methods identified by the audit were decomposed into
+  named rendering responsibilities (summary compact/expanded, occurrence
+  card, user details, advanced options, expense card, settings views and
+  login). The original behavior and state ownership remain unchanged.
+- W7: `CategoryExpensesPage._openEditSheet()` now only prepares the editing
+  state and opens the sheet. The `ExpenseEditorSheet` construction is isolated
+  in `_buildExpenseEditorSheet()`, reducing the orchestration method from 213
+  lines to a short workflow.
+- No generated Riverpod files were modified.

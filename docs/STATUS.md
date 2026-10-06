@@ -11,11 +11,11 @@ Dernière mise à jour : 2026-09-29
 |---|---|---|
 | Format | `dart format --output=none --set-exit-if-changed lib test integration_test tool` | ✅ 0 fichier à reformater |
 | Analyse | `flutter analyze` | ✅ 0 problème |
-| Tests unitaires + widgets | `flutter test` | ✅ 1180 / 1180 |
+| Tests unitaires + widgets | `flutter test` | Dernier artefact local : 1 180 tests ; exécution non vérifiée par l’audit statique |
 | Tests d'intégration | `flutter test integration_test -d emulator-5554` | ✅ 12 / 12 |
-| Couverture | `dart run tool/test_pyramid.dart full` | **68,8 %** (6 988+ lignes couvertes) |
+| Couverture | `coverage_report.json` / `coverage_report.log` (2026-10-05) | **69,6 %** (7 632 / 10 961 lignes) |
 
-Ces chiffres sont mesurés, pas estimés. La CI GitHub exécute les mêmes étapes (voir `.github/workflows/main.yml`,
+Les chiffres de couverture ci-dessus proviennent du dernier artefact local présent dans l’archive. Ils ne sont pas une exécution réalisée pendant l’audit du 2026-10-06. La CI GitHub exécute les mêmes étapes (voir `.github/workflows/main.yml`,
 job `test` + job `integration` sur émulateur Android API 36).
 
 ## Offline-first — état après l'audit du 2026-09-24
@@ -143,3 +143,11 @@ Runtime validation for this change was performed on 2026-09-29: the category-ses
   comptes.
 - Un test de régression couvre le rechargement des dépenses lors d'un
   changement de compte.
+
+## Latest checkpoint — 2026-10-06 — W6/W7 UI decomposition
+
+The W6/W7 audit findings were addressed without changing application behavior:
+large widget builds were split into named rendering responsibilities, and the
+category-expense edit-sheet orchestration was separated from the editor widget
+construction. The storage migration `006_rls_security.sql` was renamed to
+`006_storage_rls.sql` to reflect that it contains storage RLS policies only.
