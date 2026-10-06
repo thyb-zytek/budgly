@@ -103,5 +103,11 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant CollapsingSummaryHeader oldDelegate) =>
       oldDelegate.theme != theme ||
       oldDelegate.revision != revision ||
-      oldDelegate.slideDirection != slideDirection;
+      oldDelegate.slideDirection != slideDirection ||
+      // Formatting inputs: the same raw amounts render differently once the
+      // currency, locale or precision changes, so a value-only `revision`
+      // comparison would keep the previous formatted strings on screen.
+      oldDelegate.currencyCode != currencyCode ||
+      oldDelegate.localeName != localeName ||
+      oldDelegate.amountDecimalPlaces != amountDecimalPlaces;
 }
