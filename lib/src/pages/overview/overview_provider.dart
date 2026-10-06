@@ -86,10 +86,12 @@ class Overview extends _$Overview {
       if (!ref.mounted) return;
       state = state.copyWith(status: state.status.failure(e));
     } finally {
-      state = state.copyWith(
-        status: state.status.doneLoading(),
-        hasLoaded: true,
-      );
+      if (ref.mounted) {
+        state = state.copyWith(
+          status: state.status.doneLoading(),
+          hasLoaded: true,
+        );
+      }
     }
   }
 
@@ -122,10 +124,12 @@ class Overview extends _$Overview {
       if (!ref.mounted) return;
       state = state.copyWith(status: state.status.failure(e));
     } finally {
-      state = state.copyWith(
-        status: state.status.doneLoading(),
-        hasLoaded: true,
-      );
+      if (ref.mounted) {
+        state = state.copyWith(
+          status: state.status.doneLoading(),
+          hasLoaded: true,
+        );
+      }
     }
   }
 
@@ -183,6 +187,7 @@ class Overview extends _$Overview {
         recurrence: form.recurrence,
       );
       await ref.read(expensesSessionProvider.notifier).create(expense);
+      if (!ref.mounted) return false;
       state = state.copyWith(
         status: state.status.success(
           const AppUserMessage.success(AppMessageKey.expenseSaved),
@@ -190,10 +195,13 @@ class Overview extends _$Overview {
       );
       return true;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(status: state.status.failure(e));
       return false;
     } finally {
-      state = state.copyWith(status: state.status.doneLoading());
+      if (ref.mounted) {
+        state = state.copyWith(status: state.status.doneLoading());
+      }
     }
   }
 
