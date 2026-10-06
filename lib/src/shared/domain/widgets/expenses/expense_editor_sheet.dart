@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 class ExpenseEditorSheet extends StatefulWidget {
   final Listenable listenable;
   final ExpenseEditingData editingData;
+  final TextEditingController nameController;
+  final TextEditingController amountController;
   final String title;
   final String currencyCode;
   final String localeName;
@@ -37,6 +39,8 @@ class ExpenseEditorSheet extends StatefulWidget {
     super.key,
     required this.listenable,
     required this.editingData,
+    required this.nameController,
+    required this.amountController,
     required this.title,
     required this.currencyCode,
     required this.localeName,
@@ -150,6 +154,8 @@ class _ExpenseEditorSheetState extends State<ExpenseEditorSheet> {
                     widget.preFieldsBuilder!(context),
                   ExpenseFormFields(
                     editingData: widget.editingData,
+                    nameController: widget.nameController,
+                    amountController: widget.amountController,
                     currencyCode: widget.currencyCode,
                     localeName: widget.localeName,
                     onToggleAdvanced: widget.onToggleAdvanced,

@@ -72,6 +72,8 @@ class _OverviewPageState extends ConsumerState<OverviewPage>
       builder: (context) => ExpenseEditorSheet(
         listenable: _expenseForm,
         editingData: _expenseForm.data,
+        nameController: _expenseForm.nameController,
+        amountController: _expenseForm.amountController,
         title: tr.newExpense,
         currencyCode: profile.currency,
         localeName: profile.locale.languageCode,
@@ -79,8 +81,8 @@ class _OverviewPageState extends ConsumerState<OverviewPage>
             _expenseForm.validate(tr, requireAccountAndCategory: true),
         onSubmit: () => overview.createExpense(
           form: ExpenseCreationFormData(
-            name: _expenseForm.data.nameController.text,
-            amount: _expenseForm.data.amountController.text,
+            name: _expenseForm.nameController.text,
+            amount: _expenseForm.amountController.text,
             account: _expenseForm.data.account,
             category: _expenseForm.data.category,
             debitDate: _expenseForm.data.debitDate,

@@ -1,6 +1,5 @@
 import 'package:budgly/src/models/expense/expense_editing_data.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -10,8 +9,6 @@ void main() {
     RecurrenceType recurrence = RecurrenceType.none,
   }) {
     return ExpenseEditingData(
-      nameController: TextEditingController(),
-      amountController: TextEditingController(),
       debitDate: debitDate,
       endDate: endDate,
       recurrence: recurrence,
@@ -100,19 +97,13 @@ void main() {
   group('ExpenseEditingData constructor', () {
     test('defaults debitDate to now when not provided', () {
       final now = DateTime.now();
-      final data = ExpenseEditingData(
-        nameController: TextEditingController(),
-        amountController: TextEditingController(),
-      );
+      final data = ExpenseEditingData();
 
       expect(data.debitDate, DateTime(now.year, now.month, now.day));
     });
 
     test('defaults recurrence to none and showAdvancedOptions to false', () {
-      final data = ExpenseEditingData(
-        nameController: TextEditingController(),
-        amountController: TextEditingController(),
-      );
+      final data = ExpenseEditingData();
       expect(data.recurrence, RecurrenceType.none);
       expect(data.showAdvancedOptions, isFalse);
     });

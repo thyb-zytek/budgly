@@ -26,8 +26,8 @@ void main() {
 
     expect(controller.data.account, account);
     expect(controller.data.category, category);
-    expect(controller.data.nameController.text, isEmpty);
-    expect(controller.data.amountController.text, isEmpty);
+    expect(controller.nameController.text, isEmpty);
+    expect(controller.amountController.text, isEmpty);
     expect(controller.data.recurrence, RecurrenceType.none);
     expect(controller.data.showAdvancedOptions, isFalse);
     expect(controller.data.endDate, isNull);
@@ -52,8 +52,8 @@ void main() {
 
     controller.loadFromOccurrence(occurrence);
 
-    expect(controller.data.nameController.text, 'Courses');
-    expect(controller.data.amountController.text, '42');
+    expect(controller.nameController.text, 'Courses');
+    expect(controller.amountController.text, '42');
     expect(controller.data.debitDate, DateTime(2026, 8, 10));
     expect(controller.data.endDate, DateTime(2026, 12, 10));
     expect(controller.data.recurrence, RecurrenceType.monthly);
@@ -141,8 +141,8 @@ void main() {
     const category = Category(id: 'c1', accountId: 'a1', name: 'Courses');
 
     controller.resetForCreation(account: account, category: category);
-    controller.data.nameController.text = 'Courses';
-    controller.data.amountController.text = '42';
+    controller.nameController.text = 'Courses';
+    controller.amountController.text = '42';
 
     expect(
       controller.validate(tr, requireAccountAndCategory: true),
