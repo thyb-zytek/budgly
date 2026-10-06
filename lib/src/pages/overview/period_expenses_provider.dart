@@ -3,6 +3,7 @@ import 'package:budgly/src/state/action_status.dart';
 import 'package:budgly/src/state/categories_provider.dart';
 import 'package:budgly/src/state/expenses_provider.dart';
 import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
@@ -134,14 +135,13 @@ class PeriodExpenses extends _$PeriodExpenses {
     final categories =
         ref.read(categoriesSessionProvider).categoriesByAccount[accountId] ??
         const [];
+    final categoriesById = <String, Category>{
+      for (final category in categories)
+        if (category.id != null) category.id!: category,
+    };
     final summaries = _summaryCalculator.summarizeByCategory(
       occurrences: occurrences,
-      resolveCategory: (id) {
-        for (final category in categories) {
-          if (category.id == id) return category;
-        }
-        return null;
-      },
+      resolveCategory: (id) => categoriesById[id],
     );
     return PeriodExpensesState(
       expenses: List.unmodifiable(expenses),
