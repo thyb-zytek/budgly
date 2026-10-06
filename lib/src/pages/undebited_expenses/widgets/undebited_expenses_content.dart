@@ -2,6 +2,8 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/pages/undebited_expenses/undebited_expenses_provider.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/bulk_action_bar.dart';
 import 'package:budgly/src/pages/undebited_expenses/widgets/expense_occurrence_card.dart';
@@ -225,44 +227,49 @@ class UndebitedExpensesContent extends StatelessWidget {
       );
     }
     var isFirstCard = true;
-    final children = <Widget>[];
+    final items = <({Period? period, ExpenseOccurrence? occurrence})>[];
     for (final group in state.grouped) {
-      children.add(
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: BudglySpacing.xs),
-          child: Text(
-            group.period.label(state.localeName),
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      );
+      items.add((period: group.period, occurrence: null));
       for (final occurrence in group.occurrences) {
-        final card = UndebitedExpenseCard(
-          state: state,
-          notifier: notifier,
-          occurrence: occurrence,
-          onUserInteracted: () => swipeHintKey.currentState?.stop(),
-        );
-        children.add(
-          isFirstCard
-              ? UndebitedSwipeHintWrapper(key: swipeHintKey, child: card)
-              : card,
-        );
-        isFirstCard = false;
+        items.add((period: null, occurrence: occurrence));
       }
     }
 
-    return ListView(
+    return ListView.builder(
       padding: EdgeInsets.fromLTRB(
         BudglySpacing.lg,
         BudglySpacing.xs,
         BudglySpacing.lg,
         BudglySpacing.lg,
       ),
-      children: children,
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final period = item.period;
+        if (period != null) {
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: BudglySpacing.xs),
+            child: Text(
+              period.label(state.localeName),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          );
+        }
+
+        final occurrence = item.occurrence!;
+        final card = UndebitedExpenseCard(
+          state: state,
+          notifier: notifier,
+          occurrence: occurrence,
+          onUserInteracted: () => swipeHintKey.currentState?.stop(),
+        );
+        if (!isFirstCard) return card;
+        isFirstCard = false;
+        return UndebitedSwipeHintWrapper(key: swipeHintKey, child: card);
+      },
     );
   }
 }
