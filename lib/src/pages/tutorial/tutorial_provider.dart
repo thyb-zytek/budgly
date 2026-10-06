@@ -370,6 +370,7 @@ class Tutorial extends _$Tutorial {
               accountId: state.createdAccount!.id!,
             ),
           );
+      if (!ref.mounted) return false;
       state = state.copyWith(
         createdCategories: [...state.createdCategories, category],
       );
@@ -380,7 +381,9 @@ class Tutorial extends _$Tutorial {
       AppLogger.error('Failed to create category in tutorial', e, stackTrace);
       return false;
     } finally {
-      state = state.copyWith(isAddingCategory: false);
+      if (ref.mounted) {
+        state = state.copyWith(isAddingCategory: false);
+      }
     }
   }
 
