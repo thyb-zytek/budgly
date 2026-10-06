@@ -11,9 +11,7 @@ void main() {
     test('Device A offline: creates expense, goes offline', () async {
       var deviceAUserId = 'user123';
 
-      final queueA = SyncQueue(
-        ownerUserIdProvider: () => deviceAUserId,
-      );
+      final queueA = SyncQueue(ownerUserIdProvider: () => deviceAUserId);
 
       // Device A creates expense while online
       await queueA.enqueue(
@@ -32,7 +30,6 @@ void main() {
 
       // Device A goes offline
 
-
       // Verify operation is persisted
       final allOps = await queueA.all();
       expect(allOps, hasLength(1));
@@ -42,9 +39,7 @@ void main() {
     test('Device B concurrent: same user, creates different expense', () async {
       var deviceBUserId = 'user123';
 
-      final queueB = SyncQueue(
-        ownerUserIdProvider: () => deviceBUserId,
-      );
+      final queueB = SyncQueue(ownerUserIdProvider: () => deviceBUserId);
 
       // Device B creates different expense
       await queueB.enqueue(
@@ -66,47 +61,40 @@ void main() {
       expect(allOps.first.id, 'expense:e2');
     });
 
-    test('Merge: both devices sync, operations coexist with same owner', () async {
-      // In production: Device A comes online first, syncs e1
-      // Then Device B syncs e2
-      // Queue should contain both operations with same ownerUserId
+    test(
+      'Merge: both devices sync, operations coexist with same owner',
+      () async {
+        // In production: Device A comes online first, syncs e1
+        // Then Device B syncs e2
+        // Queue should contain both operations with same ownerUserId
 
-      final queue = SyncQueue(
-        ownerUserIdProvider: () => 'user123',
-      );
+        final queue = SyncQueue(ownerUserIdProvider: () => 'user123');
 
-      // Simulate both operations in queue
-      await queue.enqueue(
-        id: 'expense:e1',
-        type: 'expenses',
-        operation: 'create',
-        payload: {'id': 'e1', 'name': 'Loyer'},
-      );
+        // Simulate both operations in queue
+        await queue.enqueue(
+          id: 'expense:e1',
+          type: 'expenses',
+          operation: 'create',
+          payload: {'id': 'e1', 'name': 'Loyer'},
+        );
 
-      await queue.enqueue(
-        id: 'expense:e2',
-        type: 'expenses',
-        operation: 'create',
-        payload: {'id': 'e2', 'name': 'Courses'},
-      );
+        await queue.enqueue(
+          id: 'expense:e2',
+          type: 'expenses',
+          operation: 'create',
+          payload: {'id': 'e2', 'name': 'Courses'},
+        );
 
-      final allOps = await queue.all();
-      expect(allOps, hasLength(2));
-      expect(
-        allOps.every((op) => op.ownerUserId == 'user123'),
-        true,
-      );
-    });
+        final allOps = await queue.all();
+        expect(allOps, hasLength(2));
+        expect(allOps.every((op) => op.ownerUserId == 'user123'), true);
+      },
+    );
 
     test('SyncManager processes owned operations in order', () async {
-      final queue = SyncQueue(
-        ownerUserIdProvider: () => 'user123',
-      );
+      final queue = SyncQueue(ownerUserIdProvider: () => 'user123');
 
-      final manager = SyncManager(
-        queue: queue,
-        analytics: AnalyticsService(),
-      );
+      final manager = SyncManager(queue: queue, analytics: AnalyticsService());
 
       // Add operations
       await queue.enqueue(
@@ -133,9 +121,7 @@ void main() {
 
     test('Session switch: user2 cannot see user1 pending operations', () async {
       var currentUserId = 'user1';
-      final queue = SyncQueue(
-        ownerUserIdProvider: () => currentUserId,
-      );
+      final queue = SyncQueue(ownerUserIdProvider: () => currentUserId);
 
       // User1 enqueues operations
       await queue.enqueue(
@@ -163,9 +149,7 @@ void main() {
 
     test('Same entity, different owners: operations do not coalesce', () async {
       var currentUserId = 'user1';
-      final queue = SyncQueue(
-        ownerUserIdProvider: () => currentUserId,
-      );
+      final queue = SyncQueue(ownerUserIdProvider: () => currentUserId);
 
       // User1 creates account 'a1'
       await queue.enqueue(
