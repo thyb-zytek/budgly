@@ -38,7 +38,7 @@ void main() {
 
     test('User identification can be tracked', () {
       const testUserId = 'firebase_uid_12345';
-      
+
       expect(
         () => analytics.identify(testUserId),
         returnsNormally,
@@ -48,9 +48,12 @@ void main() {
 
     test('Error tracking with context properties', () {
       const errorEvent = 'account_load_failed';
-      
+
       expect(
-        () => analytics.track(errorEvent, {'error': 'Network timeout', 'retry': 1}),
+        () => analytics.track(errorEvent, {
+          'error': 'Network timeout',
+          'retry': 1,
+        }),
         returnsNormally,
         reason: 'Error tracking with context should succeed',
       );

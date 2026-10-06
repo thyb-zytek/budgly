@@ -40,7 +40,9 @@ void main() {
 
     final providersStart = DateTime.now();
     await tester.pumpAndSettle();
-    timeline['providers_initialized'] = DateTime.now().difference(providersStart);
+    timeline['providers_initialized'] = DateTime.now().difference(
+      providersStart,
+    );
 
     debugPrint('=== STARTUP PERFORMANCE (debug build, diagnostics only) ===');
     timeline.forEach((stage, duration) {
