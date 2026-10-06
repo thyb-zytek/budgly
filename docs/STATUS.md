@@ -1,6 +1,6 @@
 # Budgly — État des lieux
 
-Dernière mise à jour : 2026-09-29
+Dernière mise à jour : 2026-10-06
 
 ## Statut global
 
@@ -11,11 +11,18 @@ Dernière mise à jour : 2026-09-29
 |---|---|---|
 | Format | `dart format --output=none --set-exit-if-changed lib test integration_test tool` | ✅ 0 fichier à reformater |
 | Analyse | `flutter analyze` | ✅ 0 problème |
-| Tests unitaires + widgets | `flutter test` | Dernier artefact local : 1 180 tests ; exécution non vérifiée par l’audit statique |
-| Tests d'intégration | `flutter test integration_test -d emulator-5554` | ✅ 12 / 12 |
+| Tests unitaires + widgets | `flutter test` | ✅ 1 224 / 1 224 |
+| Tests d'intégration | `flutter test integration_test -d emulator-5554` | ✅ 12 / 12 (2026-09-29, non relancé depuis) |
 | Couverture | `coverage_report.json` / `coverage_report.log` (2026-10-05) | **69,6 %** (7 632 / 10 961 lignes) |
 
-Les chiffres de couverture ci-dessus proviennent du dernier artefact local présent dans l’archive. Ils ne sont pas une exécution réalisée pendant l’audit du 2026-10-06. La CI GitHub exécute les mêmes étapes (voir `.github/workflows/main.yml`,
+Format, analyse et tests unitaires/widgets ont été relancés le **2026-10-06** sur le checkpoint W6/W7 :
+0 fichier à reformater, 0 problème d'analyse, **1 224 tests verts** (les 1 180 du 2026-09-29 plus les tests
+ajoutés depuis). La suite d'intégration n'a pas été relancée ce jour-là (émulateur requis) ; son dernier
+résultat connu reste celui du 2026-09-29.
+
+Les chiffres de couverture ci-dessus proviennent du dernier artefact local présent dans l’archive
+(`coverage_report.json` / `.log`, tous deux ignorés par git). Ils n'ont pas été remesurés le 2026-10-06.
+La CI GitHub exécute les mêmes étapes (voir `.github/workflows/main.yml`,
 job `test` + job `integration` sur émulateur Android API 36).
 
 ## Offline-first — état après l'audit du 2026-09-24
