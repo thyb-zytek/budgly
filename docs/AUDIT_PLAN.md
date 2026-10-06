@@ -3,6 +3,8 @@
 > Fichier de suivi. Mis à jour à la fin de chaque étape.
 > **Validé par exécution le 2026-09-29** (Flutter 3.47.5) : `dart format` ✅ 0 écart, `flutter analyze` ✅ 0 problème,
 > `flutter test` ✅ 1180/1180, `flutter test integration_test -d emulator-5554` ✅ 12/12, couverture **68,8 %**.
+> **Ré-exécution le 2026-10-06** (checkpoint W6/W7) : `dart format` ✅ 0 écart, `flutter analyze` ✅ 0 problème,
+> `flutter test` ✅ 1224/1224 ; intégration non relancée (émulateur requis).
 > Une étape « ✅ » signifie désormais *code + tests + docs modifiés **et** validés par exécution*.
 
 Légende : ⬜ à faire · 🔧 en cours · ✅ fait et validé par exécution · ⏸ reporté (raison indiquée) · ❌ abandonné

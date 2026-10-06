@@ -24,6 +24,9 @@ couverture de tests :
 > Mesures du 2026-09-29 (Flutter 3.47.5, `dart run tool/test_pyramid.dart full`) :
 > **La métrique de couverture de référence est celle de `coverage_report.json` : 69,6 % de lignes (7 632 / 10 961). Les résultats d'exécution ne sont pas certifiés par cet audit statique.**
 > Le rapport `coverage_report.log` généré le 2026-10-05 et `coverage_report.json` concordent sur 69,6 % (7 632 / 10 961). Les valeurs 68,8 % présentes plus bas correspondent à un artefact historique du 2026-09-29 et sont conservées comme historique.
+> La suite a été **relancée le 2026-10-06** (checkpoint W6/W7) : `dart format` 0 écart, `flutter analyze` 0 problème,
+> `flutter test` 1 224 / 1 224 verts. La couverture, elle, n'a pas été remesurée ce jour-là et reste celle de
+> l'artefact du 2026-10-05 (`coverage_report.json` / `.log`, ignorés par git).
 > Répartition mesurée de la couverture : `lib/src/models` ≈ 95 %, `lib/src/services/offline` ≈ 94 %,
 > `lib/src/state` ≈ 85 %, `lib/src/pages` ≈ 53 % (le déficit est dans les `view.dart` de présentation,
 > pas dans la logique métier).
