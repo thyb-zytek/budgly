@@ -37,6 +37,10 @@ class OverviewSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _buildSummaryView(context);
+  }
+
+  Widget _buildSummaryView(BuildContext context) {
     final theme = Theme.of(context);
     final totalExpenses = categorySummaries.fold<double>(
       0,
@@ -56,80 +60,87 @@ class OverviewSummaryCard extends StatelessWidget {
       onEditRevenue: onEditRevenue,
     );
 
-    if (compact) {
-      return Card(
-        margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: BudglySpacing.md,
-            vertical: BudglySpacing.sm,
-          ),
-          child: Row(
-            spacing: BudglySpacing.md,
-            children: [
-              if (accounts.isNotEmpty)
-                AccountSelector(
-                  compact: true,
-                  accounts: accounts,
-                  selectedAccount: account,
-                  onSelect: onSelectAccount,
-                ),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: BudglySpacing.sm,
-                  children: [
-                    Row(
-                      spacing: BudglySpacing.xxs,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: OverviewStat(
-                            item: stats.revenue,
-                            compact: true,
-                          ),
+    return compact
+        ? _buildCompactSummary(stats)
+        : _buildExpandedSummary(context, theme, stats);
+  }
+
+  Widget _buildCompactSummary(OverviewSummaryStats stats) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: BudglySpacing.md,
+          vertical: BudglySpacing.sm,
+        ),
+        child: Row(
+          spacing: BudglySpacing.md,
+          children: [
+            if (accounts.isNotEmpty)
+              AccountSelector(
+                compact: true,
+                accounts: accounts,
+                selectedAccount: account,
+                onSelect: onSelectAccount,
+              ),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: BudglySpacing.sm,
+                children: [
+                  Row(
+                    spacing: BudglySpacing.xxs,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: OverviewStat(item: stats.revenue, compact: true),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: OverviewStat(
+                          item: stats.expenses,
+                          compact: true,
                         ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    spacing: BudglySpacing.xxs,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: OverviewStat(
+                          item: stats.remaining,
+                          compact: true,
+                        ),
+                      ),
+                      if (stats.weekly != null)
                         Expanded(
                           flex: 4,
                           child: OverviewStat(
-                            item: stats.expenses,
+                            item: stats.weekly!,
                             compact: true,
                           ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      spacing: BudglySpacing.xxs,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: OverviewStat(
-                            item: stats.remaining,
-                            compact: true,
-                          ),
-                        ),
-                        if (stats.weekly != null)
-                          Expanded(
-                            flex: 4,
-                            child: OverviewStat(
-                              item: stats.weekly!,
-                              compact: true,
-                            ),
-                          )
-                        else
-                          const Spacer(),
-                      ],
-                    ),
-                  ],
-                ),
+                        )
+                      else
+                        const Spacer(),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  Widget _buildExpandedSummary(
+    BuildContext context,
+    ThemeData theme,
+    OverviewSummaryStats stats,
+  ) {
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,

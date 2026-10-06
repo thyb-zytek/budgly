@@ -44,6 +44,10 @@ class UndebitedExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _buildOccurrenceView(context);
+  }
+
+  Widget _buildOccurrenceView(BuildContext context) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
     final locale = state.localeName;
@@ -75,7 +79,88 @@ class UndebitedExpenseCard extends StatelessWidget {
       }
     }
 
-    final card = GestureDetector(
+    return AnimatedSize(
+      duration: UndebitedExpenses.removalDuration,
+      curve: Curves.easeOut,
+      child: removing
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: EdgeInsets.only(bottom: BudglySpacing.sm),
+              child: Semantics(
+                // Swipe gestures aren't discoverable for assistive tech, so
+                // the two actions they trigger are also exposed as custom
+                // accessibility actions on the card itself.
+                customSemanticsActions: canSwipe
+                    ? {
+                        CustomSemanticsAction(
+                          label: tr.debitOnOriginalPeriod(origin.label(locale)),
+                        ): () =>
+                            handleSwipe(DismissDirection.endToStart),
+                        CustomSemanticsAction(
+                          label: tr.undebitedSwipeSheetTitle,
+                        ): () =>
+                            handleSwipe(DismissDirection.startToEnd),
+                      }
+                    : const {},
+                child: Dismissible(
+                  key: ValueKey(occurrence.key),
+                  direction: canSwipe
+                      ? DismissDirection.horizontal
+                      : DismissDirection.none,
+                  confirmDismiss: (direction) async {
+                    await handleSwipe(direction);
+                    // The list only removes a card once the underlying
+                    // mutation resolves (see [state.isRemoving]); the
+                    // swipe gesture itself never completes the dismissal.
+                    return false;
+                  },
+                  background: UndebitedSwipeActionBackground(
+                    alignment: Alignment.centerLeft,
+                    color: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    actions: [
+                      UndebitedSwipeBackgroundAction(
+                        icon: Icons.schedule_send_rounded,
+                        label: tr.carryToCurrentPeriod(current.label(locale)),
+                      ),
+                      UndebitedSwipeBackgroundAction(
+                        icon: Icons.check_circle_outline,
+                        label: tr.debitOnCurrentPeriod(current.label(locale)),
+                      ),
+                    ],
+                  ),
+                  secondaryBackground: UndebitedSwipeActionBackground(
+                    alignment: Alignment.centerRight,
+                    color: tertiary.background.withAlpha(144),
+                    foregroundColor: tertiary.foreground,
+                    actions: [
+                      UndebitedSwipeBackgroundAction(
+                        icon: Icons.history_rounded,
+                        label: tr.debitOnOriginalPeriod(origin.label(locale)),
+                      ),
+                    ],
+                  ),
+                  child: _buildOccurrenceCard(
+                    context,
+                    theme,
+                    locale,
+                    selected,
+                    busy,
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildOccurrenceCard(
+    BuildContext context,
+    ThemeData theme,
+    String locale,
+    bool selected,
+    bool busy,
+  ) {
+    return GestureDetector(
       onLongPress: state.isInteractive
           ? () {
               onUserInteracted?.call();
@@ -169,73 +254,6 @@ class UndebitedExpenseCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-
-    return AnimatedSize(
-      duration: UndebitedExpenses.removalDuration,
-      curve: Curves.easeOut,
-      child: removing
-          ? const SizedBox.shrink()
-          : Padding(
-              padding: EdgeInsets.only(bottom: BudglySpacing.sm),
-              child: Semantics(
-                // Swipe gestures aren't discoverable for assistive tech, so
-                // the two actions they trigger are also exposed as custom
-                // accessibility actions on the card itself.
-                customSemanticsActions: canSwipe
-                    ? {
-                        CustomSemanticsAction(
-                          label: tr.debitOnOriginalPeriod(origin.label(locale)),
-                        ): () =>
-                            handleSwipe(DismissDirection.endToStart),
-                        CustomSemanticsAction(
-                          label: tr.undebitedSwipeSheetTitle,
-                        ): () =>
-                            handleSwipe(DismissDirection.startToEnd),
-                      }
-                    : const {},
-                child: Dismissible(
-                  key: ValueKey(occurrence.key),
-                  direction: canSwipe
-                      ? DismissDirection.horizontal
-                      : DismissDirection.none,
-                  confirmDismiss: (direction) async {
-                    await handleSwipe(direction);
-                    // The list only removes a card once the underlying
-                    // mutation resolves (see [state.isRemoving]); the
-                    // swipe gesture itself never completes the dismissal.
-                    return false;
-                  },
-                  background: UndebitedSwipeActionBackground(
-                    alignment: Alignment.centerLeft,
-                    color: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    actions: [
-                      UndebitedSwipeBackgroundAction(
-                        icon: Icons.schedule_send_rounded,
-                        label: tr.carryToCurrentPeriod(current.label(locale)),
-                      ),
-                      UndebitedSwipeBackgroundAction(
-                        icon: Icons.check_circle_outline,
-                        label: tr.debitOnCurrentPeriod(current.label(locale)),
-                      ),
-                    ],
-                  ),
-                  secondaryBackground: UndebitedSwipeActionBackground(
-                    alignment: Alignment.centerRight,
-                    color: tertiary.background.withAlpha(144),
-                    foregroundColor: tertiary.foreground,
-                    actions: [
-                      UndebitedSwipeBackgroundAction(
-                        icon: Icons.history_rounded,
-                        label: tr.debitOnOriginalPeriod(origin.label(locale)),
-                      ),
-                    ],
-                  ),
-                  child: card,
-                ),
-              ),
-            ),
     );
   }
 }
