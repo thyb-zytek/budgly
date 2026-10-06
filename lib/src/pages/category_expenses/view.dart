@@ -138,6 +138,8 @@ class _CategoryExpensesPageState extends ConsumerState<CategoryExpensesPage> {
       builder: (context) => ExpenseEditorSheet(
         listenable: _expenseForm,
         editingData: _expenseForm.data,
+        nameController: _expenseForm.nameController,
+        amountController: _expenseForm.amountController,
         title: tr.editExpense,
         currencyCode: _state.currencyCode,
         localeName: _state.localeName,
@@ -148,7 +150,7 @@ class _CategoryExpensesPageState extends ConsumerState<CategoryExpensesPage> {
           if (amount == null) return Future.value(false);
           return _notifier.saveEditing(
             ExpenseEditFormData(
-              name: _expenseForm.data.nameController.text.trim(),
+              name: _expenseForm.nameController.text.trim(),
               amount: amount,
               categoryId: _expenseForm.data.category?.id,
               debitDate: _expenseForm.data.debitDate,

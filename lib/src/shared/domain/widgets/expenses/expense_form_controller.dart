@@ -9,17 +9,19 @@ import 'package:flutter/material.dart';
 
 /// Shared state and behavior for the expense creation/editing form.
 ///
-/// It deliberately contains form concerns only. Creating, updating or
-/// deleting an expense remains the responsibility of the owning ViewModel.
+/// Flutter text controllers belong to this UI controller rather than the
+/// domain model. Creating, updating or deleting an expense remains the
+/// responsibility of the owning ViewModel.
 class ExpenseFormController extends ChangeNotifier {
-  late final ExpenseEditingData data = ExpenseEditingData(
-    nameController: TextEditingController(),
-    amountController: TextEditingController(),
-  );
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+  final ExpenseEditingData _data = ExpenseEditingData();
+
+  ExpenseEditingData get data => _data;
 
   void resetForCreation({Account? account, Category? category}) {
-    data.nameController.clear();
-    data.amountController.clear();
+    nameController.clear();
+    amountController.clear();
     data.account = account;
     data.category = category;
     final today = DateTime.now();
@@ -35,8 +37,8 @@ class ExpenseFormController extends ChangeNotifier {
     Category? category,
     Account? account,
   }) {
-    data.nameController.text = occurrence.name;
-    data.amountController.text = _formatAmount(occurrence.amount);
+    nameController.text = occurrence.name;
+    amountController.text = _formatAmount(occurrence.amount);
     data.account = account;
     data.category = category;
     data.debitDate = occurrence.expense.debitDate;
@@ -123,16 +125,16 @@ class ExpenseFormController extends ChangeNotifier {
     if (requireAccountAndCategory && data.category == null) {
       return tr.categoryRequired;
     }
-    if (data.nameController.text.trim().isEmpty) return tr.nameRequired;
+    if (nameController.text.trim().isEmpty) return tr.nameRequired;
 
-    if (parseAmount(data.amountController.text) == null) {
+    if (parseAmount(amountController.text) == null) {
       return tr.amountInvalid;
     }
     if (data.hasEndDateBeforeDebitDate) return tr.endDateBeforeDebitDate;
     return null;
   }
 
-  double? parseEnteredAmount() => parseAmount(data.amountController.text);
+  double? parseEnteredAmount() => parseAmount(amountController.text);
 
   static String _formatAmount(double value) {
     final text = value.toString();
@@ -141,8 +143,8 @@ class ExpenseFormController extends ChangeNotifier {
 
   @override
   void dispose() {
-    data.nameController.dispose();
-    data.amountController.dispose();
+    nameController.dispose();
+    amountController.dispose();
     super.dispose();
   }
 }

@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 
 class ExpenseFormFields extends StatelessWidget {
   final ExpenseEditingData editingData;
+  final TextEditingController nameController;
+  final TextEditingController amountController;
   final String currencyCode;
   final String localeName;
   final VoidCallback onToggleAdvanced;
@@ -19,6 +21,8 @@ class ExpenseFormFields extends StatelessWidget {
   const ExpenseFormFields({
     super.key,
     required this.editingData,
+    required this.nameController,
+    required this.amountController,
     required this.currencyCode,
     required this.localeName,
     required this.onToggleAdvanced,
@@ -43,7 +47,7 @@ class ExpenseFormFields extends StatelessWidget {
             Expanded(
               flex: 4,
               child: TextInput(
-                controller: editingData.nameController,
+                controller: nameController,
                 labelText: tr.activity,
                 hotValidating: (v) =>
                     v == null || v.trim().isEmpty ? tr.nameRequired : null,
@@ -52,7 +56,7 @@ class ExpenseFormFields extends StatelessWidget {
             Expanded(
               flex: 3,
               child: CurrencyInput(
-                controller: editingData.amountController,
+                controller: amountController,
                 currencyCode: currencyCode,
                 labelText: tr.amount,
               ),
