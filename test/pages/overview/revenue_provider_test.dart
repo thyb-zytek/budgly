@@ -152,7 +152,80 @@ void main() {
       expect(state.hasRevenue, isFalse);
       expect(state.isEstimated, isTrue);
       expect(state.effectiveRevenue, 1500);
-      expect(state.showEditor, isTrue);
+      // Manual-test contract: the form is only offered when the period has
+      // neither its own revenue nor a propagated one, so an existing
+      // estimate hides it (it stays reachable through the summary edit tap).
+      expect(state.showEditor, isFalse);
+    },
+  );
+
+  test('editor visibility: offered with no revenue at all, hidden by a '
+      'propagated estimate, still openable on demand', () async {
+    final service = _FakeAccountBudgetsService({'a1_2026_3': null});
+    final container = _makeContainer(service);
+    addTearDown(container.dispose);
+    final sub = container.listen(revenueProvider('a1', period), (_, _) {});
+    addTearDown(sub.close);
+
+    final notifier = container.read(revenueProvider('a1', period).notifier);
+    await notifier.load();
+    expect(
+      container.read(revenueProvider('a1', period)).showEditor,
+      isTrue,
+      reason: 'no own revenue and no earlier period to inherit from',
+    );
+
+    service.mostRecentRevenue = 1500;
+    await notifier.loadInherited();
+    expect(
+      container.read(revenueProvider('a1', period)).showEditor,
+      isFalse,
+      reason: 'a propagated revenue must hide the form',
+    );
+
+    notifier.openEditor();
+    expect(
+      container.read(revenueProvider('a1', period)).showEditor,
+      isTrue,
+      reason: 'the summary edit action must still open the form',
+    );
+  });
+
+  test(
+    'changing amountDecimalPlaces re-normalizes the inherited estimate',
+    () async {
+      final service = _FakeAccountBudgetsService({
+        'a1_2026_3': null,
+      }, mostRecentRevenue: 1000.75);
+      final container = _makeContainer(service);
+      addTearDown(container.dispose);
+      final sub = container.listen(revenueProvider('a1', period), (_, _) {});
+      addTearDown(sub.close);
+
+      final profile = container.read(profileSessionProvider.notifier);
+      await profile.savePreferences(amountDecimalPlaces: 2);
+
+      final notifier = container.read(revenueProvider('a1', period).notifier);
+      await notifier.load();
+      // Let ProfileSession's local-preferences bootstrap settle before
+      // pinning the precision, so it cannot overwrite it afterwards.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(container.read(profileSessionProvider).amountDecimalPlaces, 2);
+      expect(
+        container.read(revenueProvider('a1', period)).inheritedRevenue,
+        1000.75,
+      );
+
+      await profile.savePreferences(amountDecimalPlaces: 0);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(
+        container.read(revenueProvider('a1', period)).inheritedRevenue,
+        1001,
+        reason:
+            'the estimate must follow the profile precision (upward '
+            'rounding)',
+      );
     },
   );
 
