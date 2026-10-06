@@ -148,8 +148,10 @@ class _CategoriesTabState extends ConsumerState<CategoriesTab>
       (_, next) => _syncAccount(next),
     );
 
-    final selectedAccount = state.account == null
-        ? (accounts.isEmpty ? null : accounts.first)
+    final selectedAccount = accounts.isEmpty
+        ? null // e.g. right after sign-out, when the accounts session cleared.
+        : state.account == null
+        ? accounts.first
         : accounts.firstWhere(
             (account) => account.id == state.account!.id,
             orElse: () => accounts.first,
