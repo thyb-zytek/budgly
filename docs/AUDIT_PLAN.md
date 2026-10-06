@@ -62,7 +62,7 @@ Légende : ⬜ à faire · 🔧 en cours · ✅ fait et validé par exécution �
 
 | ID | Audit | Tâche | Statut |
 |---|---|---|---|
-| R1 | Riverpod | Garde `ref.mounted` après chaque `await` dans les 5 notifiers concernés | ✅ |
+| R1 | Riverpod | Garde `ref.mounted` après chaque `await` dans les 5 notifiers concernés | ✅ (ré-audité le 2026-10-06) |
 | R2 | Riverpod | `CategoryExpenses._syncFromExternalChanges` : ne plus dépendre du `==` par id | ✅ |
 | R3 | Riverpod | `AccountsSession.load` : tri cohérent avec `setAccounts` | ✅ |
 | R4 | MVVM | `ProfileService` : ne plus construire ses dépendances par défaut | ✅ |
@@ -163,11 +163,13 @@ Chaque affirmation a été vérifiée contre le code réel, pas reprise telle qu
 - **Affirmation erronée du rapport 2** : « cache des dépenses répliqué dans `LocalCache` » — `LocalCache` ne contient
   ni dépenses ni budgets (vérifié).
 - **Déjà satisfait** : personne hors de `services/expenses/` ne connaît `ExpensePeriodCache`.
-- **Non vérifiable ici** : RLS, `ENABLE ROW LEVEL SECURITY`, claim `sub`, dossier `supabase_migrations/` — l'archive
-  fournie ne contient aucun `.sql`. Les rapports ont analysé une autre archive. Le test cross-utilisateur proposé
-  reste pertinent mais exige un projet Supabase de test.
-- **Confirmé, non traité (faible valeur ou risque sans compilateur)** : `TextEditingController` dans
-  `ExpenseEditingData` ; `profileServiceProvider` dans `state/` (32 fichiers importent ce fichier) ;
+- **Mis à jour le 2026-10-06** : l'archive courante contient `supabase_migrations/` ; une migration dédiée
+  `008_enable_core_rls.sql` active désormais RLS sur `user_profiles`, `accounts` et `categories`. Les tests
+  d'architecture RLS lisent les migrations au lieu de vérifier uniquement des chaînes littérales. Un test cross-user
+  contre une vraie instance Supabase reste nécessaire pour valider le comportement distant.
+- **Confirmé, corrigé le 2026-10-06** : `TextEditingController` a été retiré de `ExpenseEditingData` et reste
+  désormais détenu par `ExpenseFormController` ; `profileServiceProvider` dans `state/` (32 fichiers importent ce
+  fichier) ;
   `getExpenseById` en O(n) ; client id Google en dur (configuration, pas un secret) ; fallbacks `?? X.instance`
   optionnels restants (`AccountsService`, `AuthService`, providers Supabase, `Supabase.instance.client`) ;
   `CategoryExpenses`/`UndebitedExpenses` volumineux.

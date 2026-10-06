@@ -22,7 +22,8 @@ couverture de tests :
 ## 1. Stratégie de tests
 
 > Mesures du 2026-09-29 (Flutter 3.47.5, `dart run tool/test_pyramid.dart full`) :
-> **1 180 tests unitaires/widgets + 12 tests d'intégration, tous verts, 68,8 % de couverture lignes.**
+> **La métrique de couverture de référence est celle de `coverage_report.json` : 69,6 % de lignes (7 632 / 10 961). Les résultats d'exécution ne sont pas certifiés par cet audit statique.**
+> Le rapport `coverage_report.log` généré le 2026-10-05 et `coverage_report.json` concordent sur 69,6 % (7 632 / 10 961). Les valeurs 68,8 % présentes plus bas correspondent à un artefact historique du 2026-09-29 et sont conservées comme historique.
 > Répartition mesurée de la couverture : `lib/src/models` ≈ 95 %, `lib/src/services/offline` ≈ 94 %,
 > `lib/src/state` ≈ 85 %, `lib/src/pages` ≈ 53 % (le déficit est dans les `view.dart` de présentation,
 > pas dans la logique métier).
