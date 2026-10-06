@@ -65,6 +65,10 @@ class ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _buildExpenseCardView(context);
+  }
+
+  Widget _buildExpenseCardView(BuildContext context) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
     final isDebited = occurrence.isDebited;
@@ -114,87 +118,107 @@ class ExpenseCard extends StatelessWidget {
               ? theme.colorScheme.onSecondary
               : theme.colorScheme.onPrimaryContainer,
         ),
-        child: InkWell(
-          onTap: () {
-            onUserInteracted?.call();
-            onTap();
-          },
+        child: _buildExpenseCardContent(
+          context,
+          theme,
+          tr,
+          isDebited,
+          isRecurring,
+          accent,
+          displayDate,
+          dateLabel,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpenseCardContent(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations tr,
+    bool isDebited,
+    bool isRecurring,
+    Color accent,
+    DateTime displayDate,
+    String dateLabel,
+  ) {
+    return InkWell(
+      onTap: () {
+        onUserInteracted?.call();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDebited
+              ? accent.withValues(alpha: 0.08)
+              : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(18),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: isDebited
-                  ? accent.withValues(alpha: 0.08)
-                  : theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isDebited
-                    ? accent.withValues(alpha: 0.25)
-                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              spacing: BudglySpacing.md,
-              children: [
-                ExpenseStatusAvatar(color: accountColor, isDebited: isDebited),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: BudglySpacing.xs,
+          border: Border.all(
+            color: isDebited
+                ? accent.withValues(alpha: 0.25)
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          spacing: BudglySpacing.md,
+          children: [
+            ExpenseStatusAvatar(color: accountColor, isDebited: isDebited),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: BudglySpacing.xs,
+                children: [
+                  Text(
+                    occurrence.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  Row(
+                    spacing: 6,
                     children: [
-                      Text(
-                        occurrence.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                      Icon(
+                        Icons.event_outlined,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      Row(
-                        spacing: 6,
-                        children: [
-                          Icon(
-                            Icons.event_outlined,
-                            size: 14,
+                      Flexible(
+                        child: Text(
+                          '$dateLabel ${_formatDate(displayDate)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
-                          Flexible(
-                            child: Text(
-                              '$dateLabel ${_formatDate(displayDate)}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                          if (occurrence.isException)
-                            RecurrenceBadge(
-                              label: tr.occurrenceCarriedOverBadge,
-                            )
-                          else if (isRecurring)
-                            RecurrenceBadge(
-                              label: recurrenceLabel(tr, occurrence.recurrence),
-                            ),
-                        ],
+                        ),
                       ),
+                      if (occurrence.isException)
+                        RecurrenceBadge(label: tr.occurrenceCarriedOverBadge)
+                      else if (isRecurring)
+                        RecurrenceBadge(
+                          label: recurrenceLabel(tr, occurrence.recurrence),
+                        ),
                     ],
                   ),
-                ),
-                Text(
-                  _formatAmount(occurrence.amount),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: isDebited
-                        ? theme.colorScheme.onSurfaceVariant
-                        : theme.colorScheme.onSurface,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            Text(
+              _formatAmount(occurrence.amount),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDebited
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
         ),
       ),
     );

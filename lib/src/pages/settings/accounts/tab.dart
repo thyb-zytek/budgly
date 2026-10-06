@@ -84,6 +84,10 @@ class _AccountsTabState extends ConsumerState<AccountsTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    return _buildAccountsView(context);
+  }
+
+  Widget _buildAccountsView(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
 
     ref.listen(accountsSettingsProvider.select((s) => s.editingAccount), (
@@ -112,6 +116,22 @@ class _AccountsTabState extends ConsumerState<AccountsTab>
       accountsSettingsProvider.select((s) => s.isCreatingAccount),
     );
 
+    return _buildAccountsFeedback(
+      tr,
+      accounts,
+      isLoading,
+      editingAccountId,
+      isCreatingAccount,
+    );
+  }
+
+  Widget _buildAccountsFeedback(
+    AppLocalizations tr,
+    List<Account> accounts,
+    bool isLoading,
+    String? editingAccountId,
+    bool isCreatingAccount,
+  ) {
     return RiverpodFeedback(
       messageListenable: accountsSettingsProvider.select(
         (s) => s.status.pendingMessage,

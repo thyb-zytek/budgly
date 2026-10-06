@@ -135,197 +135,202 @@ class _CategoryExpensesPageState extends ConsumerState<CategoryExpensesPage> {
     );
     showAppBottomSheet(
       context,
-      builder: (context) => ExpenseEditorSheet(
-        listenable: _expenseForm,
-        editingData: _expenseForm.data,
-        nameController: _expenseForm.nameController,
-        amountController: _expenseForm.amountController,
-        title: tr.editExpense,
-        currencyCode: _state.currencyCode,
-        localeName: _state.localeName,
-        validate: (tr) =>
-            _expenseForm.validate(tr, requireAccountAndCategory: true),
-        onSubmit: () {
-          final amount = _expenseForm.parseEnteredAmount();
-          if (amount == null) return Future.value(false);
-          return _notifier.saveEditing(
-            ExpenseEditFormData(
-              name: _expenseForm.nameController.text.trim(),
-              amount: amount,
-              categoryId: _expenseForm.data.category?.id,
-              debitDate: _expenseForm.data.debitDate,
-              endDate: _expenseForm.data.effectiveEndDate,
-              recurrence: _expenseForm.data.recurrence,
-            ),
-          );
-        },
-        onBeforeSubmit: occurrence.recurrence.isRecurring
-            ? () async {
-                final choice = await showRecurringEditOptions(
-                  context,
-                  expenseName: occurrence.name,
-                  dateLabel: DateFormat.yMMMMd(
-                    _state.localeName,
-                  ).format(occurrence.date),
-                );
-                if (!mounted || choice == null) return false;
-                _notifier.setRecurringEditScope(
-                  choice == RecurringEditChoice.single
-                      ? RecurringEditScope.single
-                      : RecurringEditScope.future,
-                );
-                return true;
-              }
-            : null,
-        submitFailureMessage: tr.expenseUpdateFailed,
-        onToggleAdvanced: _expenseForm.toggleAdvancedOptions,
-        onDateChanged: _expenseForm.setDebitDate,
-        onRecurrenceChanged: _expenseForm.setRecurrence,
-        onEndDateChanged: _expenseForm.setEndDate,
-        onEndDateCleared: _expenseForm.clearEndDate,
-        isSubmitEnabled: () =>
-            _formCategories.isNotEmpty &&
-            _expenseForm.data.account != null &&
-            _expenseForm.data.category != null,
-        titleLeadingBuilder: (context) {
-          final occ = _state.editingOccurrence;
-          if (occ == null) return const SizedBox(width: 40);
-          final theme = Theme.of(context);
-          return IconButton.filled(
-            style: ButtonType.error.iconFilledStyle(theme),
-            onPressed: _state.isSaving ? null : _deleteEditingExpense,
-            icon: const Icon(Icons.delete_outline, size: 20),
-            tooltip: tr.delete,
-          );
-        },
-        titleTrailingBuilder: (context) {
-          final occ = _state.editingOccurrence;
-          if (occ == null) return const SizedBox(width: 40);
-          final theme = Theme.of(context);
-          final isDebited = occ.isDebited;
-          return IconButton.filled(
-            style: (isDebited ? ButtonType.secondary : ButtonType.success)
-                .iconFilledStyle(theme),
-            onPressed: _state.isSaving ? null : _toggleEditingDebited,
-            icon: Icon(
-              isDebited
-                  ? Icons.remove_circle_outline
-                  : Icons.check_circle_outline,
-              size: 20,
-            ),
-            tooltip: isDebited ? tr.expenseMarkedAsPending : tr.markAsDebited,
-          );
-        },
-        preFieldsBuilder: (context) {
-          final theme = Theme.of(context);
-          final occ = _state.editingOccurrence;
-          final categories = _formCategories;
-          final accounts = _formAccounts;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 16,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  SectionLabel(tr.account),
-                  FramedContainer(
-                    child: AccountSelector(
-                      accounts: accounts,
-                      selectedAccount: _expenseForm.data.account,
-                      backgroundColor: theme.colorScheme.surface,
-                      onSelect: _selectFormAccount,
-                    ),
+      builder: (context) => _buildExpenseEditorSheet(context, occurrence, tr),
+    );
+  }
+
+  Widget _buildExpenseEditorSheet(
+    BuildContext context,
+    ExpenseOccurrence occurrence,
+    AppLocalizations tr,
+  ) {
+    return ExpenseEditorSheet(
+      listenable: _expenseForm,
+      editingData: _expenseForm.data,
+      nameController: _expenseForm.nameController,
+      amountController: _expenseForm.amountController,
+      title: tr.editExpense,
+      currencyCode: _state.currencyCode,
+      localeName: _state.localeName,
+      validate: (tr) =>
+          _expenseForm.validate(tr, requireAccountAndCategory: true),
+      onSubmit: () {
+        final amount = _expenseForm.parseEnteredAmount();
+        if (amount == null) return Future.value(false);
+        return _notifier.saveEditing(
+          ExpenseEditFormData(
+            name: _expenseForm.nameController.text.trim(),
+            amount: amount,
+            categoryId: _expenseForm.data.category?.id,
+            debitDate: _expenseForm.data.debitDate,
+            endDate: _expenseForm.data.effectiveEndDate,
+            recurrence: _expenseForm.data.recurrence,
+          ),
+        );
+      },
+      onBeforeSubmit: occurrence.recurrence.isRecurring
+          ? () async {
+              final choice = await showRecurringEditOptions(
+                context,
+                expenseName: occurrence.name,
+                dateLabel: DateFormat.yMMMMd(
+                  _state.localeName,
+                ).format(occurrence.date),
+              );
+              if (!mounted || choice == null) return false;
+              _notifier.setRecurringEditScope(
+                choice == RecurringEditChoice.single
+                    ? RecurringEditScope.single
+                    : RecurringEditScope.future,
+              );
+              return true;
+            }
+          : null,
+      submitFailureMessage: tr.expenseUpdateFailed,
+      onToggleAdvanced: _expenseForm.toggleAdvancedOptions,
+      onDateChanged: _expenseForm.setDebitDate,
+      onRecurrenceChanged: _expenseForm.setRecurrence,
+      onEndDateChanged: _expenseForm.setEndDate,
+      onEndDateCleared: _expenseForm.clearEndDate,
+      isSubmitEnabled: () =>
+          _formCategories.isNotEmpty &&
+          _expenseForm.data.account != null &&
+          _expenseForm.data.category != null,
+      titleLeadingBuilder: (context) {
+        final occ = _state.editingOccurrence;
+        if (occ == null) return const SizedBox(width: 40);
+        final theme = Theme.of(context);
+        return IconButton.filled(
+          style: ButtonType.error.iconFilledStyle(theme),
+          onPressed: _state.isSaving ? null : _deleteEditingExpense,
+          icon: const Icon(Icons.delete_outline, size: 20),
+          tooltip: tr.delete,
+        );
+      },
+      titleTrailingBuilder: (context) {
+        final occ = _state.editingOccurrence;
+        if (occ == null) return const SizedBox(width: 40);
+        final theme = Theme.of(context);
+        final isDebited = occ.isDebited;
+        return IconButton.filled(
+          style: (isDebited ? ButtonType.secondary : ButtonType.success)
+              .iconFilledStyle(theme),
+          onPressed: _state.isSaving ? null : _toggleEditingDebited,
+          icon: Icon(
+            isDebited
+                ? Icons.remove_circle_outline
+                : Icons.check_circle_outline,
+            size: 20,
+          ),
+          tooltip: isDebited ? tr.expenseMarkedAsPending : tr.markAsDebited,
+        );
+      },
+      preFieldsBuilder: (context) {
+        final theme = Theme.of(context);
+        final occ = _state.editingOccurrence;
+        final categories = _formCategories;
+        final accounts = _formAccounts;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: [
+                SectionLabel(tr.account),
+                FramedContainer(
+                  child: AccountSelector(
+                    accounts: accounts,
+                    selectedAccount: _expenseForm.data.account,
+                    backgroundColor: theme.colorScheme.surface,
+                    onSelect: _selectFormAccount,
                   ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
-                children: [
-                  SectionLabel(tr.category),
-                  categories.isEmpty
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: [
+                SectionLabel(tr.category),
+                categories.isEmpty
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer.withValues(
+                            alpha: 0.6,
                           ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.errorContainer.withValues(
-                              alpha: 0.6,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.error.withValues(
+                              alpha: 0.5,
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.colorScheme.error.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            spacing: 8,
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 18,
-                                color: theme.colorScheme.error,
-                              ),
-                              Expanded(
-                                child: Text(
-                                  tr.noCategoryForAccount,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.error,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : FramedContainer(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: CategorySelector(
-                            categories: categories,
-                            selectedCategory: _expenseForm.data.category,
-                            onSelect: _expenseForm.setCategory,
                           ),
                         ),
-                ],
-              ),
-              if (occ != null && occ.recurrence.isRecurring)
-                Text(
-                  tr.recurringEditFromDate(
-                    DateFormat.yMMMMd(_state.localeName).format(occ.date),
-                  ),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              if (occ != null && occ.recurrence.isRecurring)
-                Text(
-                  tr.markDebitedOccurrence(
-                    DateFormat.yMMMMd(_state.localeName).format(occ.date),
-                  ),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
-          );
-        },
-        onSubmitSuccess: () {
-          final messenger = ScaffoldMessenger.of(context);
-          Navigator.pop(context);
-          messenger.showSnackBar(
-            buildAppSnackBar(
-              tr.expenseUpdatedSuccessfully,
-              SnackBarType.success,
+                        child: Row(
+                          spacing: 8,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 18,
+                              color: theme.colorScheme.error,
+                            ),
+                            Expanded(
+                              child: Text(
+                                tr.noCategoryForAccount,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : FramedContainer(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: CategorySelector(
+                          categories: categories,
+                          selectedCategory: _expenseForm.data.category,
+                          onSelect: _expenseForm.setCategory,
+                        ),
+                      ),
+              ],
             ),
-          );
-        },
-      ),
+            if (occ != null && occ.recurrence.isRecurring)
+              Text(
+                tr.recurringEditFromDate(
+                  DateFormat.yMMMMd(_state.localeName).format(occ.date),
+                ),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            if (occ != null && occ.recurrence.isRecurring)
+              Text(
+                tr.markDebitedOccurrence(
+                  DateFormat.yMMMMd(_state.localeName).format(occ.date),
+                ),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        );
+      },
+      onSubmitSuccess: () {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        messenger.showSnackBar(
+          buildAppSnackBar(tr.expenseUpdatedSuccessfully, SnackBarType.success),
+        );
+      },
     );
   }
 

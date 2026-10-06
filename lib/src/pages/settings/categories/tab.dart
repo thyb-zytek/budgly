@@ -121,6 +121,10 @@ class _CategoriesTabState extends ConsumerState<CategoriesTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    return _buildCategoriesView(context);
+  }
+
+  Widget _buildCategoriesView(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final accounts = ref.watch(
@@ -162,6 +166,26 @@ class _CategoriesTabState extends ConsumerState<CategoriesTab>
               const <Category>[]);
     final categories = [...persistedCategories, ...state.localCategories];
 
+    return _buildCategoriesFeedback(
+      context,
+      tr,
+      theme,
+      accounts,
+      state,
+      selectedAccount,
+      categories,
+    );
+  }
+
+  Widget _buildCategoriesFeedback(
+    BuildContext context,
+    AppLocalizations tr,
+    ThemeData theme,
+    List<Account> accounts,
+    CategoriesSettingsState state,
+    Account? selectedAccount,
+    List<Category> categories,
+  ) {
     return RiverpodFeedback(
       messageListenable: categoriesSettingsProvider.select(
         (s) => s.status.pendingMessage,
