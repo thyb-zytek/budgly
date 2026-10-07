@@ -93,6 +93,7 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
           echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
           echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
+          echo "GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }}" >> assets/.env
 
       - name: Analyze
         run: dart analyze
@@ -149,6 +150,7 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
           echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
           echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
+          echo "GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }}" >> assets/.env
 
       - name: Create google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
@@ -209,6 +211,7 @@ jobs:
           echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
           echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
           echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
+          echo "GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }}" >> assets/.env
 
       - name: Create google-services.json
         run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
