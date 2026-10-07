@@ -19,14 +19,6 @@ import 'package:integration_test/integration_test.dart';
 /// validate the release-build baseline documented in AGENTS.md §10. A numeric
 /// threshold here would be an arbitrary threshold asserting a debug artifact.
 /// Performance regression detection belongs in a profile/release benchmark.
-///
-/// The settle step deliberately avoids `tester.pumpAndSettle`: the real app
-/// schedules work after the first frame (sync bootstrap/replay, analytics,
-/// deferred Firebase calls — see `main.dart`), so the live integration binding
-/// keeps scheduling frames while `pumpAndSettle` pumps. That races the end of
-/// the test body and throws `'inTest': is not true` from
-/// `LiveTestWidgetsFlutterBinding.pump`. A bounded pump loop keeps the test
-/// deterministic on any runner.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -47,15 +39,7 @@ void main() {
     expect(find.byType(MaterialApp), findsWidgets);
 
     final providersStart = DateTime.now();
-    // Bounded settle: pump explicit frames while the tree still schedules
-    // more, up to a fixed budget. See the doc comment above for why
-    // `pumpAndSettle` cannot be used here.
-    const settleBudget = Duration(seconds: 5);
-    final settleStart = DateTime.now();
-    while (DateTime.now().difference(settleStart) < settleBudget &&
-        tester.binding.hasScheduledFrame) {
-      await tester.pump(const Duration(milliseconds: 100));
-    }
+    await tester.pumpAndSettle();
     timeline['providers_initialized'] = DateTime.now().difference(
       providersStart,
     );
