@@ -1,5 +1,9 @@
 name: test-build-apk
 
+env:
+  FLUTTER_VERSION: "3.47.5"
+  DART_VERSION: "3.13.4"
+
 on:
   push:
     branches:
@@ -68,9 +72,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Verify pinned Flutter/Dart toolchain
+        run: bash tool/verify_toolchain.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -81,19 +88,28 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Verify generated code is up to date
-        run: git diff --exit-code -- lib
+      # Generated .g.dart files are intentionally gitignored; build_runner
+      # is the source of truth in CI, so there is no meaningful git diff check.
 
       - name: Format check
         run: dart format --output=none --set-exit-if-changed lib test integration_test tool
 
       - name: Create .env file
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > assets/.env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
-          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
-          echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
-          echo "GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }}" >> assets/.env
+          set -euo pipefail
+          : "${SUPABASE_URL:?Missing SUPABASE_URL secret}"
+          : "${SUPABASE_KEY:?Missing SUPABASE_KEY secret}"
+          printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL" > assets/.env
+          printf 'SUPABASE_KEY=%s\n' "$SUPABASE_KEY" >> assets/.env
+          printf 'POSTHOG_API_KEY=%s\n' "$POSTHOG_API_KEY" >> assets/.env
+          printf 'POSTHOG_HOST=%s\n' "$POSTHOG_HOST" >> assets/.env
+          printf 'GOOGLE_SERVER_CLIENT_ID=%s\n' "$GOOGLE_SERVER_CLIENT_ID" >> assets/.env
 
       - name: Analyze
         run: dart analyze
@@ -120,9 +136,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Verify pinned Flutter/Dart toolchain
+        run: bash tool/verify_toolchain.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -145,15 +164,30 @@ jobs:
       # the Gradle daemon, which otherwise races the test run and fails
       # `assembleDebug` intermittently.
       - name: Create .env file
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > assets/.env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
-          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
-          echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
-          echo "GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }}" >> assets/.env
+          set -euo pipefail
+          : "${SUPABASE_URL:?Missing SUPABASE_URL secret}"
+          : "${SUPABASE_KEY:?Missing SUPABASE_KEY secret}"
+          printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL" > assets/.env
+          printf 'SUPABASE_KEY=%s\n' "$SUPABASE_KEY" >> assets/.env
+          printf 'POSTHOG_API_KEY=%s\n' "$POSTHOG_API_KEY" >> assets/.env
+          printf 'POSTHOG_HOST=%s\n' "$POSTHOG_HOST" >> assets/.env
+          printf 'GOOGLE_SERVER_CLIENT_ID=%s\n' "$GOOGLE_SERVER_CLIENT_ID" >> assets/.env
 
       - name: Create google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          : "${GOOGLE_SERVICES_JSON_BASE64:?Missing GOOGLE_SERVICES_JSON secret}"
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          test -s android/app/google-services.json
 
       - name: Warm the Gradle build
         run: flutter build apk --debug
@@ -189,9 +223,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Verify pinned Flutter/Dart toolchain
+        run: bash tool/verify_toolchain.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -199,22 +236,37 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Verify generated code is up to date
-        run: git diff --exit-code -- lib
+      # Generated .g.dart files are intentionally gitignored; build_runner
+      # is the source of truth in CI, so there is no meaningful git diff check.
 
       - name: Format check
         run: dart format --output=none --set-exit-if-changed lib test integration_test tool
 
       - name: Create .env file
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
+          GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
         run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > assets/.env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> assets/.env
-          echo "POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> assets/.env
-          echo "POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}" >> assets/.env
-          echo "GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }}" >> assets/.env
+          set -euo pipefail
+          : "${SUPABASE_URL:?Missing SUPABASE_URL secret}"
+          : "${SUPABASE_KEY:?Missing SUPABASE_KEY secret}"
+          printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL" > assets/.env
+          printf 'SUPABASE_KEY=%s\n' "$SUPABASE_KEY" >> assets/.env
+          printf 'POSTHOG_API_KEY=%s\n' "$POSTHOG_API_KEY" >> assets/.env
+          printf 'POSTHOG_HOST=%s\n' "$POSTHOG_HOST" >> assets/.env
+          printf 'GOOGLE_SERVER_CLIENT_ID=%s\n' "$GOOGLE_SERVER_CLIENT_ID" >> assets/.env
 
       - name: Create google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          : "${GOOGLE_SERVICES_JSON_BASE64:?Missing GOOGLE_SERVICES_JSON secret}"
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          test -s android/app/google-services.json
 
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons

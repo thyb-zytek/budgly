@@ -303,10 +303,14 @@ void writeFailureReports(List<SuiteRunReport> reports) {
   // Crash / timeout / erreur de build sans test identifié
   for (final r in reports) {
     if (r.exitCode != 0 && r.failures.isEmpty) {
+      final integrationHint = r.label == 'integration_tests' && r.total == 0
+          ? ' Aucun test n’a été rapporté : vérifier la sortie de build et le device. '
+                'Relancer avec --device-id <id> si nécessaire.'
+          : '';
       b.writeln(
         '⚠ Suite "${r.label}" terminée avec exit=${r.exitCode} sans test en '
         'échec identifié (${r.exitCode == 124 ? 'TIMEOUT' : 'crash ou erreur de build'}). '
-        'Voir la sortie console et ${r.reportFile}.',
+        'Voir la sortie console et ${r.reportFile}.$integrationHint',
       );
       b.writeln();
     }
@@ -521,7 +525,7 @@ void _deleteIfExists(String path) {
 /// FULL : lance test/ puis integration_test/ avec coverage, sortie console
 /// normale. Les échecs sont extraits dans `test_failures.log/json`. S'il n'y
 /// en a aucun, le tableau de coverage est écrit dans `coverage_report.log`.
-Future<void> _runFull() async {
+Future<void> _runFull({String? deviceId}) async {
   final reports = <SuiteRunReport>[];
   final partialFiles = <String>[];
 
@@ -529,7 +533,11 @@ Future<void> _runFull() async {
     ('unit_widget_tests', ['--coverage', 'test'], _defaultTimeout),
     (
       'integration_tests',
-      ['--coverage', 'integration_test'],
+      [
+        '--coverage',
+        'integration_test',
+        if (deviceId != null) ...['-d', deviceId],
+      ],
       const Duration(minutes: 18),
     ),
   ];
@@ -586,12 +594,42 @@ Future<void> _runFull() async {
 // main
 // ---------------------------------------------------------------------------
 
+String? _deviceIdFromArgs(List<String> args) {
+  for (var index = 1; index < args.length; index++) {
+    final argument = args[index];
+    if (argument.startsWith('--device-id=')) {
+      final value = argument.substring('--device-id='.length).trim();
+      if (value.isNotEmpty) return value;
+    }
+    if (argument == '--device-id') {
+      if (index + 1 >= args.length || args[index + 1].startsWith('--')) {
+        throw ArgumentError(
+          '--device-id requires a device id, e.g. emulator-5554',
+        );
+      }
+      return args[index + 1];
+    }
+  }
+  return null;
+}
+
 Future<void> main(List<String> args) async {
   final mode = args.isEmpty ? 'all' : args.first;
+  final deviceId = _deviceIdFromArgs(args);
+
+  if (deviceId != null) {
+    stdout.writeln('Integration device: $deviceId');
+  } else if (mode == 'integration' || mode == 'full') {
+    stdout.writeln(
+      'No --device-id supplied; Flutter will use its default connected device. '
+      'To select one explicitly, append --device-id <id>.',
+    );
+  }
 
   if (mode == 'integration') {
     exitCode = await runFlutterTest([
       'integration_test',
+      if (deviceId != null) ...['-d', deviceId],
     ], timeout: const Duration(minutes: 12));
     return;
   }
@@ -600,7 +638,7 @@ Future<void> main(List<String> args) async {
   Directory('coverage/partials').createSync(recursive: true);
 
   if (mode == 'full') {
-    await _runFull();
+    await _runFull(deviceId: deviceId);
     return;
   }
 
