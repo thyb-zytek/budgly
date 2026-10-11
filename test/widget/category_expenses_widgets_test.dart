@@ -9,6 +9,7 @@ import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/categories/selector.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_selector.dart';
 import 'package:budgly/src/shared/domain/widgets/expenses/recurrence_badge.dart';
+import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -137,6 +138,24 @@ void main() {
       expect(find.text('Mensuel'), findsOneWidget);
       expect(find.text('Hebdomadaire'), findsOneWidget);
       expect(find.text('Tout les 2 mois'), findsOneWidget);
+
+      // The closed field matches the sibling date fields' footprint:
+      // 16px padding, content inset at 16px.
+      final selector = tester.widget<Selector<RecurrenceType>>(
+        find.byType(Selector<RecurrenceType>),
+      );
+      expect(
+        selector.contentPadding,
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      );
+      expect(selector.itemPadding, EdgeInsets.zero);
+
+      // Menu content is clipped to the rounded container so the active
+      // item's highlight never overflows the corners.
+      final button = tester.widget<PopupMenuButton<RecurrenceType>>(
+        find.byType(PopupMenuButton<RecurrenceType>),
+      );
+      expect(button.clipBehavior, Clip.antiAlias);
 
       final weekly = find.text('Hebdomadaire').last;
       await tester.ensureVisible(weekly);

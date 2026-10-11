@@ -1,5 +1,4 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/shared/ui/widgets/selector.dart';
 import 'package:flutter/material.dart';
@@ -48,16 +47,12 @@ class RecurrenceSelector extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       maxHeight: 300,
       onSelect: onRecurrenceChanged,
+      // Match the footprint of the sibling date fields in the advanced
+      // options section (16px padding, content inset at 16px).
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      itemPadding: EdgeInsets.zero,
       itemBuilder: (context, recurrence) {
-        return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: BudglySpacing.sm,
-            // Keep each menu row compact so the first option stays within
-            // the popup's constrained viewport on smaller screens.
-            vertical: BudglySpacing.sm,
-          ),
-          child: Text(recurrenceLabel(tr, recurrence)),
-        );
+        return Text(recurrenceLabel(tr, recurrence));
       },
     );
   }
