@@ -1,8 +1,46 @@
 # Budgly — État des lieux
 
-Dernière mise à jour : 2026-10-06
+Dernière mise à jour : 2026-10-11
+
+## Checkpoint Groupe 1 — issue #34 — validé par exécution le 2026-10-11
+
+Le **Groupe 1** de l'issue #34 (A8, A11, A14, A17 + un seul formulaire actif dans les onglets Settings) a été
+implémenté et **validé localement** (Flutter 3.47.7 / Dart 3.13.5) :
+
+| Porte | Commande | Résultat |
+|---|---|---|
+| Format | `dart format --output=none --set-exit-if-changed lib test integration_test tool` | ✅ 0 fichier à reformater |
+| Analyse | `flutter analyze` | ✅ 0 problème (repo entier, état final) |
+| Tests unitaires + widgets | `flutter test` | ✅ **1 253 / 1 253** |
+| Suites du périmètre (re-lancées après formatage final) | `flutter test test/pages/{overview,category_expenses,undebited_expenses,settings}` | ✅ overview 12/12 · category_expenses 24/24 · undebited 18/18 · settings 61/61 |
+| Tests d'intégration | `flutter test integration_test -d emulator-5554` | ⏳ non relancé (émulateur requis) ; dernier résultat connu : 12/12 (2026-09-29) |
+
+Contenu du checkpoint :
+
+- **A8** — dépenses débitées : suppression bloquée côté service (`deleteOccurrence`,
+  `deleteSingleOccurrence`, `deleteFutureOccurrences` rejettent les occurrences débitées) et dans l'UI
+  (bouton « Supprimer » masqué, menu long limité à « Remise en attente »). Changement de compte depuis
+  l'éditeur : non récurrente → déplacement via `updateExpense` (`account_id`), récurrente → toute la série
+  change de compte ; la page quitte l'expense et la session la reparente.
+- **A11** — getter `isCarriedOver` (report réel uniquement) et badge « Reporté ».
+- **A14** — page dépenses non débitées : refresh du service avant `loadAccount` et garde de génération
+  `_recomputeGen` + `await _recompute()` (pas de recompute obsolète après une mise à jour plus récente).
+- **A17** — Overview restauré à froid : `_initialLoadSkippedForMissingAccount` + écoute de
+  `accountSelectionProvider` dans `build()` relancent `loadInitialData()` dès qu'un compte apparaît ;
+  test de reproduction ajouté (12/12).
+- **Onglets Settings** — un seul formulaire actif : l'édition d'un compte/catégorie remet le brouillon à
+  zéro, `cancelEdit` vide brouillon + édition, et l'ajout (ou le changement d'onglet) ferme l'édition en
+  cours (dossier `test/pages/settings/`, 61/61).
+
+Point de transparence sur les preuves : le run complet 1 253/1 253 a été exécuté sur la logique finale ;
+cinq fichiers (2 prod, 2 tests, 1 outil) ont ensuite été reformatés et les infos de lint restantes du
+helper `tool/clean_manual_test_user.dart` ont été corrigées. Ces changements sont mécaniques et ont été
+re-vérifiés : format 0 écart, analyse 0 problème, suites du périmètre vertes (chiffres du tableau).
 
 ## Statut global
+
+> Le tableau ci-dessous décrit la baseline historique. La révision courante (travail du 2026-10-08 au
+> 2026-10-11 inclus) a depuis été validée par exécution : voir « Checkpoint Groupe 1 — issue #34 » ci-dessus.
 
 **Base technique validée par exécution.** Le plan de correction de l'audit offline-first / Riverpod / MVVM du
 2026-09-24 (`AUDIT_PLAN.md`) a été validé localement le 2026-09-29 avec le SDK Flutter 3.47.5 :
@@ -11,9 +49,9 @@ Dernière mise à jour : 2026-10-06
 |---|---|---|
 | Format | `dart format --output=none --set-exit-if-changed lib test integration_test tool` | ✅ 0 fichier à reformater |
 | Analyse | `flutter analyze` | ✅ 0 problème |
-| Tests unitaires + widgets | `flutter test` | ✅ 1 224 / 1 224 |
+| Tests unitaires + widgets — baseline du 2026-10-06 | `flutter test` | ✅ 1 224 / 1 224 (historique) |
 | Tests d'intégration | `flutter test integration_test -d emulator-5554` | ✅ 12 / 12 (2026-09-29, non relancé depuis) |
-| Couverture | `coverage_report.json` / `coverage_report.log` (2026-10-05) | **69,6 %** (7 632 / 10 961 lignes) |
+| Couverture | `coverage_report.json` / `coverage_report.log` (2026-10-06) | **70,6 %** (7 773 / 11 015 lignes) |
 
 Format, analyse et tests unitaires/widgets ont été relancés le **2026-10-06** sur le checkpoint W6/W7 :
 0 fichier à reformater, 0 problème d'analyse, **1 224 tests verts** (les 1 180 du 2026-09-29 plus les tests
@@ -21,9 +59,20 @@ ajoutés depuis). La suite d'intégration n'a pas été relancée ce jour-là (�
 résultat connu reste celui du 2026-09-29.
 
 Les chiffres de couverture ci-dessus proviennent du dernier artefact local présent dans l’archive
-(`coverage_report.json` / `.log`, tous deux ignorés par git). Ils n'ont pas été remesurés le 2026-10-06.
+(`coverage_report.json` / `.log`, tous deux ignorés par git), généré le 2026-10-06.
 La CI GitHub exécute les mêmes étapes (voir `.github/workflows/main.yml`,
 job `test` + job `integration` sur émulateur Android API 36).
+
+## Dernier résultat de tests fourni — 2026-10-10 12:33
+
+Le run du checkpoint lots 6/7 fourni par l'utilisateur a rapporté **1 202 / 1 239 tests unitaires/widgets réussis et 37 échecs**. La suite d'intégration a quitté avec le code 1 mais **0 test rapporté** : ce n'est pas un résultat vert et le JSON ne contient pas la sortie console qui permet d'identifier précisément l'échec préalable à l'exécution.
+
+Les correctifs préparés après cette exécution concernent les doubles `AuthService.authStateChanges`, les clients backend de test injectés dans les tests de services et le harnais widget, le `ProviderScope` du harnais widget, les fixtures auth de `ProfileSession`, le test de navigation initiale et la sélection ciblée de préférences de `CategoryView`. Ils n'ont pas été ré-exécutés dans l'environnement d'édition. Voir [`TEST_FAILURE_ANALYSIS_2026-10-10.md`](TEST_FAILURE_ANALYSIS_2026-10-10.md).
+
+**À la date du 2026-10-10 : validation en attente.** Cette phrase décrit l'état du checkpoint lots 6/7 à sa
+date. Elle ne décrit plus la révision courante : le run local du 2026-10-11 (1 253 / 1 253, voir le
+checkpoint Groupe 1 en tête de document) couvre désormais l'ensemble de la révision. Ne pas présenter la
+baseline historique 1 224/1 224 du 6 octobre comme le résultat du checkpoint actuel.
 
 ## Offline-first — état après l'audit du 2026-09-24
 
@@ -81,7 +130,10 @@ La roadmap actuelle est regroupée dans `docs/PRODUCT.md`. Elle couvre notamment
 
 ## Validation
 
-Les tests, l'analyse et le formatage **ont été exécutés et passent** (tableau « Statut global »).
+La baseline du 2026-09-29 et le checkpoint W6/W7 du 2026-10-06 ont été exécutés avec succès à leur date.
+Le checkpoint lots 6/7 (2026-10-10) était en attente de validation locale à sa date ; il est couvert par
+le run du 2026-10-11 (**1 253 / 1 253**, `flutter analyze` 0 problème) décrit dans le checkpoint Groupe 1
+ci-dessus.
 Le refactor du 2026-09-29 a été validé après correction de trois défauts : un import `AppLogger` manquant dans
 `state/profile_providers.dart` (erreur de production), 21 erreurs de compilation dans deux fichiers de test
 suite au changement de contrat de `ExpenseFormData` (`debitDate` devenu non-nullable), et un helper de test qui
@@ -158,3 +210,59 @@ large widget builds were split into named rendering responsibilities, and the
 category-expense edit-sheet orchestration was separated from the editor widget
 construction. The storage migration `006_rls_security.sql` was renamed to
 `006_storage_rls.sql` to reflect that it contains storage RLS policies only.
+
+## Dernier checkpoint — 2026-10-08 — Auth/session + SyncManager hardening
+
+Le chantier de durcissement a supprimé les deux bridges `ChangeNotifier` qui n'avaient plus de raison de rester dans le socle réactif :
+- `AuthSessionNotifier` / `AuthSessionRevision` ont été retirés. Firebase `authStateChanges` est désormais la source observée par `ProfileSession`, tandis que `AppRouter` écoute le même flux pour déclencher `GoRouter.refresh()`.
+- `SyncManager` n'expose plus d'état réactif via `ChangeNotifier`. Son statut UI est exposé par un `Stream<SyncStatus>` et relayé par `SyncStatusNotifier` (Riverpod).
+
+`ProfileSession` réinitialise désormais toutes les sessions métier lors d'une déconnexion Firebase externe ou d'un changement d'identité, tout en conservant `_sessionRevision` comme garde de concurrence jusqu'à la refonte complète du cycle `load/refresh`.
+
+`ProfileService.refreshFromServer()` passe désormais par le chemin de refresh distant protégé contre les mutations `user_profiles` en attente et contre les réponses provenant d'une ancienne session. Le chemin manuel peut continuer à propager les erreurs, tandis que le refresh background reste tolérant aux erreurs réseau.
+
+Des tests de régression ont été ajoutés pour la déconnexion externe, le refresh du routeur, le flux de statut du sync manager et les courses/erreurs de refresh du profil.
+
+Les optimisations UI évidentes ont aussi commencé : `Overview` et `CategoryView` utilisent des dépendances Riverpod plus granulaires et les `MediaQuery` ciblés utilisent désormais les accesseurs spécialisés.
+
+Le minimum Dart déclaré est maintenant `^3.13.0` et la CI est alignée sur Flutter 3.47.5 / Dart 3.13.4. `.metadata` n'a pas été édité manuellement.
+
+**Validation :** Flutter/Dart n'est pas disponible dans l'environnement d'édition actuel. Cette révision n'a donc pas encore été validée par `dart format`, `flutter analyze`, `flutter test` ou les tests d'intégration. La dernière baseline verte documentée est antérieure à ces changements.
+
+### Lot 3 — Login/profile initialization
+
+Le polling `_waitForProfileLoaded()` (50 tentatives de 100 ms) a été supprimé. `ProfileSession.load()` constitue désormais explicitement la barrière d'attente : lorsqu'il se termine après un chargement valide, le profil est appliqué et les comptes/catégories de référence sont déjà préchargés. Les tests de login utilisent maintenant une identité Firebase simulée afin d'exercer réellement la garde d'UID de `ProfileSession`, et une régression dédiée valide le chargement sans délai arbitraire. `_sessionRevision` reste volontairement en place jusqu'à la refonte complète du cycle de vie.
+
+
+## Dernier checkpoint — 2026-10-08 — Lot 5 UI/Riverpod hotspots
+
+Le lot 5 a poursuivi le durcissement structurel sans modifier les contrats métier :
+- `CategoryExpensesPage` ne construit plus directement son long edit-sheet. L’éditeur est devenu un `ConsumerWidget` dédié qui lit localement les dépendances Riverpod nécessaires et conserve `ExpenseFormController` comme état de formulaire local.
+- `CategoriesTab` et `AccountsTab` délèguent désormais leur contenu à des widgets Riverpod dédiés ; les parents conservent uniquement le cycle de vie des contrôleurs/framework et les listeners de synchronisation avec le formulaire.
+- `TutorialPage` observe uniquement l’état de navigation (`currentStep`, `totalSteps`, `canGoBack`, `isInitializing`), tandis que `AccountStep` et `CategoryStep` utilisent des sélections ciblées de `TutorialState`.
+- `Overview`/`Preferences` ont été resserrés sur les dépendances réellement utilisées, et le résumé Overview sélectionne les champs nécessaires des providers compte/dépenses/revenu.
+
+**Validation :** Flutter/Dart n’est pas disponible dans l’environnement d’édition actuel. Ce checkpoint doit encore être validé avec `dart format`, `flutter analyze`, `flutter test` et les tests d’intégration dans l’environnement de développement/CI.
+
+
+## Lot 4 — Toolchain / CI determinism (2026-10-09)
+
+- The project baseline is pinned to Flutter 3.47.5 / Dart 3.13.4. `pubspec.yaml` declares Dart `^3.13.0`, and `pubspec.lock` records a Dart lower bound of `3.13.0-0`. Flutter 3.47.5 ships Dart 3.13.4 (official Flutter release metadata).
+- Added `tool/verify_toolchain.sh`; the test, integration, and APK-build jobs all fail early if the actual SDK versions or the repository's SDK constraints drift. The workflow has a single version pair in its top-level `env`.
+- The CI `.env` and `google-services.json` generation steps pass secret values through step environment variables and `printf`, rather than interpolating secret contents into shell source. Required Supabase/Google service configuration is checked before use.
+- Removed the misleading generated-source `git diff` requirement from the quality documentation. Generated Riverpod files remain Git-ignored and are rebuilt in each job.
+- `.metadata` was deliberately left tool-managed: its platform `create_revision` / `base_revision` fields are migration history, not a CI SDK pin, and the file explicitly must not be edited by hand. The exact CI/local baseline is enforced by the workflow and verification script instead.
+
+**Validation in this environment:** the version-check script passed against test doubles reporting Flutter 3.47.5 / Dart 3.13.4 and correctly rejected a Dart 3.12.2 mismatch. The GitHub Actions YAML parsed successfully. Flutter/Dart themselves are not installed here, so application formatting, analysis, unit/widget tests, integration tests, and APK build still require local/CI execution.
+
+## 2026-10-10 — Lots 6/7: DI, async races, queue ownership, dependency strategy
+
+- Added `core/dependencies/backend_clients_provider.dart` and wired production service providers to injected Firebase Auth, Firestore, Supabase and Google Sign-In clients. Constructor fallbacks remain for direct tests/isolated usage.
+- Profile-cache remote revalidation now uses per-user mutation revisions and a serialized cache-write path, including mutations made while a remote request is in flight. `savePreferences` marks the revision before its first `await`.
+- Profile loading futures are keyed by Firebase UID so an in-flight load for one user is not reused for another identity. `ProfileSession` also observes initial Firebase auth restoration separately from a true identity switch.
+- Accounts/Categories/Expenses/AccountBudgets guard in-flight loads and revalidation callbacks after `clear()` or account invalidation.
+- Legacy SyncQueue entries without `owner_user_id` remain untouched while signed out. The first authenticated queue read assigns them to the current user and persists that ownership; later users cannot claim/replay those entries. This is the explicit migration policy chosen for this project and is covered by queue tests.
+- Added deterministic regression test cases covering stale completion after session clearing, auth sign-out during reference-data preload, legacy ownerless queue migration (signed-out preservation, first authenticated claim, persisted ownership), and a profile mutation racing a remote refresh.
+- Added `docs/DEPENDENCY_UPGRADE_PLAN.md`. Package constraints/lock versions are intentionally unchanged: compatible upgrades and major migrations are separate checkpoints.
+
+**Validation status:** a lightweight delimiter scan on 21 changed Dart files, YAML parsing and `bash -n tool/verify_toolchain.sh` passed. This is not a Dart compiler. Flutter/Dart are unavailable in this environment; `dart format`, `flutter analyze`, unit/widget/integration tests and APK build remain required locally/CI.

@@ -1,214 +1,120 @@
 # Budgly — Campagne de validation manuelle
 
-> **Statut : à compléter par vous.** Ce fichier est un support de traçage, pas un rapport.
-> Chaque scénario décrit le comportement attendu. Notez ce que vous observez, puis cochez.
-> Date de la campagne : ____________  Appareil : ____________  OS : ____________  Build : ____________
+> **Source de vérité d'exécution : Testiny** (projet **Budgly**, clé `P-2`).
+> Suite pre-release = **2 déroulés** chaînables.
+>
+> | Élément Testiny | Référence |
+> |---|---|
+> | Dossier | `Release Validation` |
+> | Cas | `E2E-FLOW-A` (TC-35), `E2E-FLOW-B` (TC-36) |
+> | Run pre-release | `Pre-release E2E chaînés` (TR-4) — **nouveau run à chaque release** |
+>
+> Date : ____________  Appareil : ____________  OS : ____________  Build : ____________
 
 ## Mode d'emploi
 
-1. Installez l'APK de debug sur un **vrai téléphone** (`flutter run` ou `flutter build apk --debug`).
-2. Parcourez les scénarios dans l'ordre : les P0 conditionnent la validité des P1.
-3. Pour chaque scénario, remplissez la colonne **Observé** : ce que vous avez réellement vu, pas ce qui
-   était attendu. En cas d'échec, copiez le message d'erreur exact et cochez **NON**.
-4. Un scénario marqué **NON** devient soit un test automatisé (si reproductible en `flutter_test`),
-   soit un defect à corriger. Ne le laissez pas en « à voir plus tard ».
+1. Installer l'APK de debug sur un **vrai téléphone**.
+2. Exécuter **FLOW-A** d'une traite. Puis **FLOW-B** (logout ou autre compte Google).
+3. Saisir le résultat dans Testiny (`PASSED` / `FAILED` / `BLOCKED` / `SKIPPED`) + commentaire
+   (appareil, build, **numéro d'étape** en cas d'échec, ex. `A11`).
+4. **Go release** : FLOW-A `PASSED` (ou `SKIPPED`/`BLOCKED` justifié). FLOW-B `PASSED` ou `SKIPPED`
+   si Google Sign-In indisponible sur le build.
 
-**Légende** : ✅ conforme · ❌ non conforme · ⚠️ conforme avec réserve (précisez) · ⏭ non testable ici
+**Hors campagne** : FIFO SyncQueue, coalescence, backoff, goldens, formats devise/locale isolés,
+CRUD offline purement service.
 
 ---
 
-## P0 — Bloquants (à faire avant toute release)
+## FLOW-A — Parcours email (un seul déroulé)
 
-### 1. Première installation → onboarding complet
+**Testiny** : TC-35 · Critical · Acceptance
 
-| Attendu | Observé |
-|---|---|
-| Écran de bienvenue affiché, aucun écran bloqué | |
-| Création du compte, puis de la catégorie, puis du budget : chaque étape persistée | |
-| Redirection vers l'Overview après l'onboarding | |
-| Fermer l'app et rouvrir : l'Overview s'affiche directement (onboarding mémorisé) | |
+**Prérequis** : app désinstallée / données vidées ; réseau au départ ; boîte mail réelle + email neuf ;
+noter témoins (noms/montants) et effectifs comptes/catégories.
 
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
+### Phase Auth
+
+| Étape | Action | Valider |
+|---|---|---|
+| **A1** | Inscription email / mot de passe | Message d'envoi de vérif, adresse correcte |
+| **A2** | Sans cliquer le lien : reconnexion / relance | Bloqué, pas d'Overview |
+| **A3** | Mail reçu ; « Renvoyer… » puis 2ᵉ renvoi rapide | Mail &lt; 2 min ; cooldown/message, pas de crash |
+| **A4** | Clic lien + reconnexion | Accès onboarding ; plus de demande de vérif |
+
+### Phase Onboarding
+
+| Étape | Action | Valider |
+|---|---|---|
+| **A5** | Bienvenue → créer le **compte budgétaire** → **kill** (pas de catégorie) | App tuée après l'étape compte |
+| **A6** | Relance → fin catégorie + budget → « C'est parti ! » | Reprise étape inachevée ; **pas de doublon** ; Overview |
+| **A7** | Kill / relance | Overview directe ; données présentes sans doublon |
+
+### Phase Dépenses
+
+| Étape | Action | Valider |
+|---|---|---|
+| **A8** | Create → update → delete dépense ponctuelle | UI + totaux cohérents ; confirmation delete |
+| **A9** | Recréer dépense **témoin** → kill / relance | Témoin présent, valeurs exactes, pas de doublon |
+
+### Phase Récurrence
+
+| Étape | Action | Valider |
+|---|---|---|
+| **A10** | Créer série mensuelle navigable ≥ 3 mois ; noter M0 / N0 | Occurrences passée / courante / future |
+| **A11** | Occurrence **milieu** → M1 → « Cette échéance uniquement » | Seule la cible change ; passé/futur = M0 |
+| **A12** | **Autre** série, milieu → M2 → « … et les suivantes » | Antérieur intact ; courant+suivants = M2 |
+
+### Phase Non débitées
+
+| Étape | Action | Valider |
+|---|---|---|
+| **A13** | ≥ 3 dépenses mois précédent(s), non débitées (idéalement 2 périodes) | Données prêtes |
+| **A14** | Cold start → bannière → sheet « Dépenses à traiter » | Bannière au démarrage ; compteur + regroupement |
+| **A15** | Reporter ; débiter origine (swipe gauche) ; débiter période courante | Chaque action met à jour liste/compteur/bannière |
+
+### Phase Offline (en dernier)
+
+| Étape | Action | Valider |
+|---|---|---|
+| **A16** | Noter état → couper réseau → mutations compte / catégorie / dépense | Acceptées sans freeze ; UI locale OK |
+| **A17** | Kill offline → rouvrir offline → rétablir réseau (ou « Réessayer ») → kill online | Sync OK ; bandeau disparu ; **aucun doublon** ; rien perdu |
+
+**Résultat FLOW-A** : ☐ PASSED  ☐ FAILED (étape ____)  ☐ BLOCKED  ☐ SKIPPED  
 **Notes** :
 
 ---
 
-### 2. Fermeture forcée pendant l'onboarding, puis relance
+## FLOW-B — Parcours Google (second déroulé)
 
-| Attendu | Observé |
-|---|---|
-| L'app rouvre sur l'étape d'onboarding inachevée (pas l'Overview) | |
-| Aucune donnée dupliquée (un seul compte, une seule catégorie) | |
-| Terminer l'onboarding mène à l'Overview | |
+**Testiny** : TC-36 · High · Acceptance  
+Indépendant de A (logout après A, ou install / utilisateur distinct).
 
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
+**Prérequis** : compte Google de test ; SHA/config Sign-In OK (sinon SKIPPED + motif).
+
+| Étape | Action | Valider |
+|---|---|---|
+| **B1** | Login → Continuer avec Google | Feuille système Google |
+| **B2** | Sélectionner le compte | Retour app sans crash |
+| **B3** | Profil + onboarding si besoin → Overview | Pas de vérif email ; Overview OK |
+| **B4** | Logout → même Google | Mêmes données ; pas de reset silencieux |
+
+**Résultat FLOW-B** : ☐ PASSED  ☐ FAILED (étape ____)  ☐ BLOCKED  ☐ SKIPPED  
 **Notes** :
 
 ---
 
-### 3. Connexion email + vérification email
+## Bilan release
 
-| Attendu | Observé |
-|---|---|
-| Email de vérification reçu, redirection tutorielle puis Overview | |
-| Un compte non vérifié est bloqué sur l'écran de login | |
-| « Renvoyer l'email » fonctionne, cooldown respecté | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 4. CRUD dépense avec réseau réel
-
-| Attendu | Observé |
-|---|---|
-| Créer une dépense : elle apparaît immédiatement dans la liste | |
-| Modifier son montant : la nouvelle valeur s'affiche | |
-| Supprimer : la ligne disparaît, confirmation demandée | |
-| **Force-fermer l'app puis rouvrir** : la dépense est toujours là, valeurs correctes | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 5. Coupure réseau pendant create/update/delete, puis reconnexion
-
-| Attendu | Observé |
-|---|---|
-| **Couper le Wi-Fi et les données mobiles avant l'action** | |
-| Créer/modifier/supprimer fonctionne hors ligne, l'UI reste cohérente | |
-| L'UI affiche un indicateur de synchronisation en attente (bandeau) | |
-| **Rétablir le réseau** : la synchronisation part seule, sans action utilisateur | |
-| Après reconnexion : aucun doublon, aucune donnée perdue | |
-| Le bandeau « problème de synchronisation » disparaît une fois le rejeu réussi | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 6. Occurrence récurrente : modification passée / milieu / future
-
-| Attendu | Observé |
-|---|---|
-| Ouvrir une occurrence récurrente, choisir la portée de modification | |
-| **« Cette occurrence uniquement »** : les autres occurrences sont inchangées | |
-| **« Cette occurrence et les suivantes »** : la série est scindée, l'historique antérieur intact | |
-| Le montant, le nom et la catégorie de la série sont corrects après modification | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 7. Dépenses non débitées au démarrage
-
-| Attendu | Observé |
-|---|---|
-| Créer une dépense le mois dernier, ne pas la débiter | |
-| Relancer l'app : la bannière d'avertissement est visible d��s l'ouverture | |
-| La bottom sheet affiche le **total** et le **regroupement par période d'origine** | |
-| Action « reporter sur la période courante » : la dépense apparaît au bon mois | |
-| Action « débiter sur la période d'origine » : elle disparaît de la liste | |
-| Action « débiter maintenant » : déplacée et marquée débitée | |
-| Le total de la bannière se recalcule après chaque action | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-## P1 — Importants
-
-### 8. Connexion Google réelle
-
-| Attendu | Observé |
-|---|---|
-| La feuille Google s'ouvre, la sélection de compte fonctionne | |
-| Le profil est créé ou récupéré sans erreur | |
-| Aucune demande de vérification email (compte Google considéré vérifié) | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 9. Préférences : devise, décimales, langue, thème
-
-| Attendu | Observé |
-|---|---|
-| Changer la devise : tous les montants sont réaffichés dans la nouvelle devise | |
-| Changer le nombre de décimales : l'affichage suit (0, 1 ou 2 décimales) | |
-| Changer la langue FR/EN : toute l'interface suit, y compris les dates | |
-| Changer le thème clair/sombre : application immédiate | |
-| **Redémarrer l'app** : les 4 préférences sont conservées (pas de retour aux défauts) | |
-| Les préférences ne fuient pas vers un autre compte (déconnexion/reconnexion) | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 10. Photo / avatar
-
-| Attendu | Observé |
-|---|---|
-| Ouvrir la galerie, sélectionner une image, rognage circulaire | |
-| L'aperçu se met à jour, l'image estUploaded et visible après reconnexion | |
-| **Refuser la permission** : message d'erreur clair, pas de crash | |
-| Supprimer la photo : retour à l'initiale du compte | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-### 11. Petits écrans, tablettes, thèmes, polices
-
-| Attendu | Observé |
-|---|---|
-| Écran compact (iPhone SE / petit Android) : aucun débordement, menus accessibles | |
-| Tablette : la mise en page s'adapte, la navigation reste utilisable | |
-| Thème clair ET sombre sur chaque écran | |
-| Police système agrandie (accessibilité) : pas de texte tronqué | |
-| Noms de catégories longs : troncature ou passage à la ligne correct |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-## P2 — Complémentaires (facultatif)
-
-### 12. Déconnexion avec mutations en attente
-
-| Attendu | Observé |
-|---|---|
-| Créer une dépense hors ligne, puis se déconnecter | |
-| La déconnexion **n'est pas bloquée** par la file d'attente | |
-| Se reconnecter : la dépense en attente est synchronisée | |
-
-**Résultat** : ☐ ✅  ☐ ❌  ☐ ⚠️
-**Notes** :
-
----
-
-## Bilan
-
-| Priorité | Scénarios prévus | ✅ | ❌ | ⚠️ | ⏭ |
+| Flow | Testiny | PASSED | FAILED | BLOCKED | SKIPPED |
 |---|---|---|---|---|---|
-| P0 | 7 | | | | |
-| P1 | 4 | | | | |
-| P2 | 1 | | | | |
+| A — Email chaîné | TC-35 | | | | |
+| B — Google | TC-36 | | | | |
 
 **Décision release** : ☐ Oui  ☐ Non — motif : ____________________________
 
-### Anomalies remontées (à transformer en tests ou en tickets)
+### Anomalies
 
-| # | Scénario | Description de l'anomalie | Reproductible ? | Ticket |
+| # | Flow / étape | Description | Reproductible ? | Ticket |
 |---|---|---|---|---|
 | 1 | | | | |
 | 2 | | | | |
-| 3 | | | | |

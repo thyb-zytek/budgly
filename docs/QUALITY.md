@@ -19,14 +19,14 @@ couverture de tests :
 - Ces tests ont été écrits par lecture du code puis **validés par exécution le 2026-09-29**
   (`dart analyze` 0 problème, 1 180 tests unitaires + 12 intégration verts).
 
+## Résultats du checkpoint de hardening — 2026-10-10
+
+Le rapport du run local et les correctifs préparés sont détaillés dans [`TEST_FAILURE_ANALYSIS_2026-10-10.md`](TEST_FAILURE_ANALYSIS_2026-10-10.md). Les résultats 1 202/1 239 sont ceux du code **avant** les corrections de tests et ne certifient pas ce checkpoint. **Mise à jour 2026-10-11 :** le checkpoint Groupe 1 de l'issue #34 (`STATUS.md`) a été validé par exécution locale — `flutter test` **1 253 / 1 253** sur la révision courante, qui couvre aussi les correctifs des lots 6/7, `flutter analyze` 0 problème, `dart format` 0 écart.
+
 ## 1. Stratégie de tests
 
-> Mesures du 2026-09-29 (Flutter 3.47.5, `dart run tool/test_pyramid.dart full`) :
-> **La métrique de couverture de référence est celle de `coverage_report.json` : 69,6 % de lignes (7 632 / 10 961). Les résultats d'exécution ne sont pas certifiés par cet audit statique.**
-> Le rapport `coverage_report.log` généré le 2026-10-05 et `coverage_report.json` concordent sur 69,6 % (7 632 / 10 961). Les valeurs 68,8 % présentes plus bas correspondent à un artefact historique du 2026-09-29 et sont conservées comme historique.
-> La suite a été **relancée le 2026-10-06** (checkpoint W6/W7) : `dart format` 0 écart, `flutter analyze` 0 problème,
-> `flutter test` 1 224 / 1 224 verts. La couverture, elle, n'a pas été remesurée ce jour-là et reste celle de
-> l'artefact du 2026-10-05 (`coverage_report.json` / `.log`, ignorés par git).
+> La suite de tests a été relancée le 2026-10-06 sur Flutter 3.47.5 : `dart format` 0 écart, `flutter analyze` 0 problème et `flutter test` 1 224 / 1 224 verts.
+> **La métrique de couverture de référence de l'archive est celle des artefacts `coverage_report.json` / `.log` générés le 2026-10-06 : 70,6 % de lignes (7 773 / 11 015).** Les résultats d'exécution et cette couverture décrivent des baselines antérieures au checkpoint de hardening du 2026-10-08 et ne certifient donc pas le code modifié depuis.
 > Répartition mesurée de la couverture : `lib/src/models` ≈ 95 %, `lib/src/services/offline` ≈ 94 %,
 > `lib/src/state` ≈ 85 %, `lib/src/pages` ≈ 53 % (le déficit est dans les `view.dart` de présentation,
 > pas dans la logique métier).
@@ -76,10 +76,11 @@ dart run tool/test_pyramid.dart all
 Run the complete `test/` suite once and generate the coverage report.
 
 ```text
-dart run tool/test_pyramid.dart integration
+flutter devices
+dart run tool/test_pyramid.dart integration --device-id emulator-5554
 ```
 
-Run integration tests separately because they have a different runtime/environment contract.
+Run integration tests separately because they have a different runtime/environment contract. Replace `emulator-5554` with the ID shown by `flutter devices`. Without `--device-id`, Flutter chooses its default connected device; `full` mode supports the same option.
 
 ## What deserves high-confidence coverage
 
@@ -100,16 +101,9 @@ Global line coverage is a diagnostic, not a release target. Generated localizati
 
 ## CI gates
 
-CI is expected to enforce, in order:
+CI enforces the pinned Flutter/Dart toolchain, dependency installation, deterministic code generation, Dart formatting, `dart analyze`, the complete `test/` suite, integration tests on an Android emulator (job `integration`, API 36), and release APK generation only after both test jobs succeed.
 
-1. dependency installation;
-2. deterministic code generation with conflicting generated outputs removed when necessary;
-3. generated-source cleanliness (`git diff --exit-code -- lib`);
-4. Dart formatting;
-5. `dart analyze`;
-6. the complete `test/` suite;
-7. the `integration_test/` suite on an Android emulator (job `integration`, API 36);
-8. release APK generation only after both test jobs succeed.
+Generated Riverpod `*.g.dart` files are intentionally Git-ignored. Each CI job regenerates them with `build_runner`; a `git diff --exit-code -- lib` check cannot verify those ignored files and is therefore not used. `tool/verify_toolchain.sh` fails early if the installed Flutter/Dart versions, the declared SDK constraint, or the lockfile's Dart lower bound drift from the supported baseline.
 
 Integration tests run in a separate `integration` job because `flutter test` only walks `test/`. The job uses
 `reactivecircus/android-emulator-runner`; it is **not** merged into the unit/widget suite because it requires a
@@ -124,21 +118,21 @@ device, and a silently-skipped integration suite must never be read as a passing
 
 L'automatisation couvre les invariants métier, la sérialisation, les mutations offline, la queue/reconnexion, le versioning récurrent et la majorité des interactions widgets. La campagne manuelle doit donc rester courte et chercher uniquement les comportements dépendants du vrai appareil, du vrai réseau ou des services externes.
 
-## Passe recommandée — 10 scénarios
+## Passe recommandée — 2 parcours e2e chaînés
 
-| # | Scénario | Vérification | Priorité |
-|---|---|---|---|
-| 1 | Première installation → ouverture → onboarding complet | aucun écran bloqué, création compte/catégorie/budget cohérente | P0 |
-| 2 | Fermeture forcée pendant onboarding puis relance | reprise à l'étape attendue, aucune donnée dupliquée | P0 |
-| 3 | Login email + vérification email | connexion, redirection overview/tutorial correcte | P0 |
-| 4 | Login Google réel | authentification et création/récupération du profil | P1 |
-| 5 | Création/modification/suppression d'une dépense avec réseau réel | données persistées après relance | P0 |
-| 6 | Coupure réseau pendant create/update/delete puis reconnexion | UI reste cohérente, synchronisation finale sans doublon | P0 |
-| 7 | Modifier une occurrence récurrente passée/milieu/future | choisir « uniquement » ou « et les suivantes », vérifier que l'historique reste inchangé | P0 |
-| 8 | Dépenses non débitées des mois précédents au démarrage | bannière d'avertissement visible dès qu'il reste des dépenses antérieures non débitées, total en tête de la bottom sheet, regroupement par période d'origine, actions reporter / débiter sur origine / débiter maintenant cohérentes après traitement | P0 |
-| 9 | Changer devise + nombre de décimales + langue | formats affichés partout, après redémarrage | P1 |
-| 10 | Photo/avatar : prise/sélection, refus permission, suppression | fallback visuel et permissions OS | P1 |
-| 11 | Parcours long sur petit écran + tablette | pas d'overflow, menus/dialogues accessibles, swipe utilisable | P1 |
+Le détail des étapes vit dans `MANUAL_TESTING.md`. L'exécution et le **rapport pre-release**
+se font dans **Testiny** (projet Budgly, dossier `Release Validation`, run `Pre-release E2E chaînés`).
+
+| Flow | Contenu (chaîné) | Priorité |
+|---|---|---|
+| **E2E-FLOW-A** | Email+vérif → kill mid-onboarding → onboarding+kill → CRUD dépense → récurrence (2 portées) → non débitées → offline/sync | P0 |
+| **E2E-FLOW-B** | Google OAuth → profil → reconnexion (indépendant ; SKIPPED OK si config absente) | P1 |
+
+Les modules isolés E2E-01…08 restent dans Testiny `Modules (référence)` pour un rejeu après échec sur une étape du flow.
+
+Vérifications visuelles complémentaires (hors flows, sur appareil réel si besoin) :
+préférences devise/décimales/langue/thème, photo/avatar + permissions OS, petit écran / tablette /
+accessibilité — uniquement ce qui n'est pas déjà couvert par goldens ou widgets.
 
 ## Scénarios à ne pas refaire manuellement
 
@@ -342,4 +336,14 @@ Validation still needs to be rerun locally with `dart analyze` and the test suit
 
 ## Test runner — full mode output
 
-`dart run tool/test_pyramid.dart full` runs the unit/widget and integration suites with coverage. In `full` mode, successful test output is suppressed; when a suite fails, the runner prints only the failure/error sections and stderr. This keeps `tests_all.log` focused on actionable failures while preserving the coverage merge behavior.
+`dart run tool/test_pyramid.dart full --device-id emulator-5554` runs the unit/widget and integration suites with coverage on the selected device. The device ID is optional if Flutter can select a default connected device. In `full` mode, successful test output is suppressed; when a suite fails, the runner prints only the failure/error sections and stderr. This keeps `tests_all.log` focused on actionable failures while preserving the coverage merge behavior.
+
+## 2026-10-10 checkpoint — lots 6/7 (not runtime-verified)
+
+New regression coverage has been added for:
+- stale `AccountsSession`, `CategoriesSession`, `ExpensesSession` and `AccountBudgetsSession` load completions after invalidation;
+- Firebase sign-out while reference data is preloading;
+- a profile preference mutation that starts while the remote profile refresh is awaiting a response;
+- preservation and non-reassignment of queue operations that have no recorded owner.
+
+No test is claimed as passing for this checkpoint because Flutter/Dart were unavailable in the editing environment. Also see `docs/FOUNDATION_REVIEW_2026-10-10.md` for residual staging/runtime work and `docs/DEPENDENCY_UPGRADE_PLAN.md` for the staged dependency strategy. **Update 2026-10-11:** these regressions now pass in the full local run (`flutter test` 1 253/1 253, see `docs/STATUS.md`).

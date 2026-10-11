@@ -283,8 +283,10 @@ flutter test integration_test -d emulator-5554
 ou, pour tout lancer d'un coup (unitaires + intégration + couverture fusionnée) :
 
 ```bash
-dart run tool/test_pyramid.dart full
+dart run tool/test_pyramid.dart full --device-id emulator-5554
 ```
+
+Remplacer `emulator-5554` par l'identifiant retourné par `flutter devices`. Sans `--device-id`, Flutter choisit son appareil par défaut ; si aucun test d'intégration n'est rapporté, consulter la sortie console de la suite avant de conclure qu'elle est passée.
 
 `full` supprime `coverage_report.log/json` si une suite échoue : un rapport de couverture périmé ne doit
 jamais être lu comme un résultat frais.

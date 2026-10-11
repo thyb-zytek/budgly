@@ -103,6 +103,7 @@ Chaque nouveau checkpoint doit mettre à jour `REFACTORING.md`, `STATUS.md` et `
 
 ### Checkpoints historiques
 
+- **2026-10-11** — Checkpoint — Issue #34 Groupe 1 (A8/A11/A14/A17 + formulaires Settings)
 - **2026-09-20** — Checkpoint — Phase 12 ambiguous-outcome idempotence audit
 - **2026-09-20** — Checkpoint — Phase 11 offline queue ownership and session-boundary hardening
 - **2026-09-19** — Checkpoint — Phase 7 static performance audit and rebuild-scope cleanup
@@ -415,3 +416,50 @@ environment.
   in `_buildExpenseEditorSheet()`, reducing the orchestration method from 213
   lines to a short workflow.
 - No generated Riverpod files were modified.
+
+## 2026-10-08 — Auth/session and sync state hardening
+
+- Removed the `AuthSessionNotifier`/`AuthSessionRevision` `ChangeNotifier` bridge entirely. Firebase Auth's `authStateChanges` is now the authentication source observed by Riverpod-owned `ProfileSession`; `AppRouter` subscribes to the same source and calls `GoRouter.refresh()` for redirect re-evaluation. This removes a second mutable auth state holder while preserving the router refresh contract.
+- `ProfileSession` now observes Firebase auth changes without rebuilding itself from the auth stream. An external sign-out or authenticated-user identity change resets the profile plus Accounts/Categories/Expenses/Budgets sessions and bumps the existing `_sessionRevision` so in-flight work from the previous session cannot publish stale state.
+- `SyncManager` no longer extends `ChangeNotifier`. It remains an explicitly constructed lifecycle/queue coordinator and exposes an immutable `SyncStatus` broadcast stream; `SyncStatusNotifier` is the Riverpod reactive source consumed by the UI.
+- `ProfileService.refreshFromServer()` now delegates to the guarded remote refresh path. Pending `user_profiles` mutations, session identity changes, and background error handling are therefore handled consistently. The manual refresh path can still request error propagation.
+- Added regression coverage for external Firebase sign-out, router auth refresh, sync status streaming, pending-profile refresh protection, stale-auth refresh results and invalidating authentication failures.
+- Tightened the obvious UI rebuild scopes in `Overview` and `CategoryView`, and replaced the targeted broad `MediaQuery.of(context)` accesses with `viewInsetsOf`/`sizeOf` while retaining the two code paths that intentionally require the complete `MediaQueryData`.
+- Aligned the declared Dart minimum with the resolved dependency graph (`^3.13.0`) and standardized CI on Flutter 3.47.5 / Dart 3.13.4. The `.metadata` file remains tool-managed and was not edited manually.
+- Generated Riverpod files remain gitignored; the CI step that attempted to verify their freshness via `git diff` was removed because build_runner is the authoritative generation step.
+
+### Validation status
+
+Flutter/Dart execution is not available in the current environment. The changed scope was inspected statically, but `dart format`, `flutter analyze`, `flutter test` and integration tests have not been run after this checkpoint. The previous green local baseline therefore does not certify this new revision. A local run of the project's standard validation commands is required before merging this checkpoint.
+
+
+## 2026-10-09 — Lot 4 toolchain and CI verification
+
+- Added `tool/verify_toolchain.sh` and invoked it from all three Flutter CI jobs (test, Android integration, APK build). It verifies Flutter 3.47.5 / Dart 3.13.4 plus the `pubspec.yaml` / `pubspec.lock` SDK contract.
+- Moved CI secret contents into step environment variables and used `printf` for `.env` and `google-services.json` creation to avoid embedding secret values directly in generated shell scripts.
+- Updated `docs/QUALITY.md`: ignored `.g.dart` files are regenerated, not checked with `git diff`. `.metadata` remains tool-managed.
+- Runtime Flutter validation remains pending; see `docs/STATUS.md`.
+
+## 2026-10-11 — Issue #34, Groupe 1 : A8/A11/A14/A17 + formulaires Settings
+
+Périmètre : uniquement le Groupe 1 de l'issue #34 (Groupes 2 et 3 hors périmètre).
+
+- **A8** — dépenses débitées : `deleteOccurrence`/`deleteSingleOccurrence`/`deleteFutureOccurrences`
+  rejettent désormais les occurrences débitées (défense en profondeur côté service) et l'UI masque le
+  bouton « Supprimer » / ne propose que « Remise en attente » dans le menu long. Changement de compte dans
+  l'éditeur : non récurrente → `updateExpense` avec `account_id` (déplacement), récurrente → toute la série
+  change de compte ; la page quitte l'expense et la session la reparente (`removeLocal` + `updateLocal`).
+- **A11** — getter `isCarriedOver` (report réel uniquement) et badge « Reporté » associé dans l'UI.
+- **A14** — page dépenses non débitées : refresh du service avant `loadAccount`, garde de génération
+  `_recomputeGen` + `await _recompute()` pour éviter qu'un recompute obsolète écrase un état plus récent.
+- **A17** — Overview restauré à froid : drapeau `_initialLoadSkippedForMissingAccount` + `ref.listen(
+  accountSelectionProvider)` dans `build()` relancent `loadInitialData()` dès qu'un compte apparaît (la
+  lecture one-shot de `selectedAccount` au premier montage sautait le chargement sans relance).
+- **Onglets Settings** — un seul formulaire actif : `setEditingAccount`/`setEditingCategory` remettent le
+  brouillon à zéro, `cancelEdit` vide brouillon + édition, `addAccount`/`addCategory` ferment l'édition en
+  cours.
+
+Validation locale (Flutter 3.47.7 / Dart 3.13.5) : `flutter test` **1 253 / 1 253** sur la logique finale ; `dart format`
+0 écart, `flutter analyze` 0 problème sur l'état final (y compris correction des infos de lint du helper
+`tool/clean_manual_test_user.dart`) ; périmètre re-lancé après formatage final : overview 12/12,
+category_expenses 24/24, undebited 18/18, settings 61/61. Tests d'intégration non relancés (émulateur requis).

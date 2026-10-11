@@ -36,7 +36,8 @@ Services own business operations, persistence, remote calls and synchronization.
 - `LocalCache`: durable SharedPreferences-backed state for Supabase-owned entities.
 - Firestore persistence: native offline persistence for expenses and budgets.
 - `SyncQueue`: durable pending Supabase mutations.
-- `SyncManager`: lifecycle-bound coordinator that replays the queue. It is exposed through Riverpod and has no production singleton compatibility API.
+- `SyncManager`: lifecycle-bound coordinator that replays the queue. It is explicitly constructed through Riverpod, owns no UI state, and exposes its status as a stream consumed by `SyncStatusNotifier`. It has no production singleton compatibility API.
+- Firebase Auth is the authentication source of truth. `AuthService.authStateChanges` is observed by `ProfileSession` for session isolation and by `AppRouter` for redirect refresh; there is no separate mutable auth `ChangeNotifier` bridge.
 
 ## Dependency injection
 
@@ -45,7 +46,7 @@ Riverpod is the composition boundary. Providers construct services and pass thei
 Rules:
 
 - no `SomeService.instance` access in production domain code;
-- process-wide resources are allowed only when their lifecycle is genuinely process-scoped (for example the analytics client or auth lifecycle bridge), and they remain exposed through Riverpod;
+- process-wide resources are allowed only when their lifecycle is genuinely process-scoped (for example the analytics client or Firebase Auth stream), and they remain exposed through Riverpod;
 - tests instantiate explicit services/coordinators instead of relying on production singletons;
 - constructors must not silently reach into unrelated global state.
 

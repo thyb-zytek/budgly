@@ -80,9 +80,11 @@ Légende : ⬜ à faire · 🔧 en cours · ✅ fait et validé par exécution �
 
 ## Phase 7 — Chantiers structurels (décision requise)
 
+**Mise à jour 2026-10-09 :** X1 n'est plus à interpréter comme une obligation de convertir `ProfileSession` en `AsyncNotifier` ou de faire un `ref.watch(auth...)` qui relancerait `build()`. Le choix actuellement implémenté est un abonnement `authStateChanges` qui déclenche une remise à zéro sans reconstruire `ProfileSession`. La garde `_sessionRevision` reste en place. La couverture du changement d'identité pendant `_preloadReferenceData()` reste un point à verrouiller par test.
+
 | ID | Sujet | Statut |
 |---|---|---|
-| X1 | Sessions en `AsyncNotifier` et dépendance à l'auth (`ref.watch`) à la place de `_sessionRevision` et des `.clear()` manuels | ⏸ à prioriser |
+| X1 | Cycle de vie des sessions lié à l'identité Auth, invalidation des données de l'ancien utilisateur | 🔧 partiellement réalisé : listener `authStateChanges` + reset central, `_sessionRevision` conservé ; race pendant le préchargement de référence à tester (voir `FOUNDATION_REVIEW_2026-10-09.md`) |
 | X2 | Dépenses en `StreamProvider` sur snapshots Firestore (suppression de `ExpensePeriodCache`) | ⏸ à prioriser |
 | X3 | `ImageService` sorti de `services/` (UI) ; `ProfileService` scindé (orchestration du logout dans un notifier) | ✅ |
 | X4 | ~~`connectivity_plus` comme déclencheur de sync~~ | ❌ **abandonné** |
@@ -362,3 +364,39 @@ _(complété au fil des étapes)_
 - Tests : `deletion_cleanup_service_test.dart` (nouveau, y compris reprise après échec partiel),
   `sync_bootstrap_provider_test.dart` (nouveau, régression composition root), `accounts_settings_provider_test.dart`
   adapté (signature de `deleteAccountFolder`).
+## 2026-10-08 — Follow-up hardening from repository-wide audit
+
+### Session/auth boundary
+
+- `AuthSessionNotifier` and `AuthSessionRevision` were removed. They were only a mutable `Listenable` bridge around Firebase Auth changes; `ProfileSession` now listens directly to `AuthService.authStateChanges`, and `AppRouter` refreshes directly from the same authentication stream.
+- External Firebase sign-out now resets `ProfileSession` and the Accounts/Categories/Expenses/Budgets sessions. `_sessionRevision` is intentionally retained as an async stale-result guard until the broader lifecycle refactor is completed.
+- X1 is therefore **partially addressed**, not complete: the remaining work is to make `load()/refresh()` deterministic and remove the manual revision/clear orchestration only after equivalent concurrency/session guarantees are proven by tests.
+
+### Profile refresh boundary
+
+- `ProfileService.refreshFromServer()` delegates to `_refreshProfileFromRemote()` so pending `user_profiles` mutations and user-identity guards apply consistently.
+- Background refreshes swallow transient remote errors; explicit/manual refreshes can request the original error to be propagated to the caller.
+- Invalidating Firebase auth errors still trigger sign-out, but a sign-out failure does not mask the original auth error.
+
+### Login/profile initialization hardening
+
+- `Login` no longer uses `_waitForProfileLoaded()` (50 polls × 100 ms). `ProfileSession.load()` is now treated as the synchronization barrier: its future already awaits profile loading, reference-data preload, session validation, and the final `_setUser()`.
+- The login test fake now exposes a simulated Firebase identity, so the real session UID guard is exercised instead of bypassed.
+- `profile_session_test.dart` adds a no-polling regression that awaits `ProfileSession.load()` directly and asserts the fully applied session state.
+- `_sessionRevision` is intentionally retained for now: removing it remains part of the broader lifecycle refactor and requires proving equivalent stale-result guarantees first.
+
+### Synchronization state
+
+- `SyncManager` is now a pure lifecycle/replay coordinator; its UI status is exposed as an immutable stream and owned reactively by `SyncStatusNotifier`.
+- The former `ChangeNotifier` status bridge is removed. `ExpenseFormController` remains intentionally local `ChangeNotifier` state and is not considered legacy.
+
+## 2026-10-10 — Lots 6/7: DI, async race guards and upgrade guidance
+
+- `lib/src/core/dependencies/backend_clients_provider.dart` is the single Riverpod composition point for backend SDK clients; production service providers pass these clients to adapters explicitly.
+- `ProfileService` now increments a per-user profile mutation revision before local mutations await, serializes cache writes and rejects remote snapshots that began before a local mutation. `savePreferences` participates in the same revision contract. The remote queue check remains repeated immediately before the cache write.
+- `ProfileSession` tracks the Firebase UID observed from the auth stream, rather than inferring the active identity only from `state.currentUser`, which may not yet have been published while accounts/categories preload.
+- The Accounts/Categories/Expenses/AccountBudgets sessions gate in-flight load/revalidation results against session/account revisions. A `clear()`/account invalidation now prevents those older results from restoring old state.
+- `SyncQueue` assigns legacy entries without `owner_user_id` to the currently authenticated user on the first authenticated queue read. If signed out, entries remain ownerless; the first user's claim is persisted and is not changed by later logins. A legacy `user_profiles` mutation therefore participates in the same owner's pending-refresh protection after migration.
+- Added regressions to `test/state/*_session_test.dart`, `test/state/profile_session_test.dart`, `test/services/profile/profile_service_refresh_test.dart`, and `test/services/offline/sync_queue_advanced_test.dart`.
+- Added `docs/DEPENDENCY_UPGRADE_PLAN.md`: dependency majors are staged separately; this checkpoint does not alter package versions or use overrides.
+- Full validation is pending because Flutter/Dart are unavailable in the editing environment. Do not treat these source changes or tests as compile-verified until local/CI runs succeed.
