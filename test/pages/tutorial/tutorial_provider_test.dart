@@ -99,6 +99,9 @@ class _FakeCategoriesService extends CategoriesService {
     bool forceRefresh = false,
     void Function(List<Category>)? onRevalidated,
   }) async => byAccount[accountId] ?? const [];
+
+  @override
+  Future<Category> createCategory(Category category) async => category;
 }
 
 class _FakeAccountBudgetsService extends AccountBudgetsService {
@@ -239,4 +242,37 @@ void main() {
     expect(container.read(tutorialProvider).createdAccount, isNull);
     expect(container.read(tutorialProvider).isInitializing, isFalse);
   });
+
+  test(
+    'addCategory stores an optional monthly threshold on the created category',
+    () async {
+      final container = _makeContainer(
+        accounts: _FakeAccountsService([existingAccount]),
+      );
+      addTearDown(container.dispose);
+
+      await _waitForInitialization(container);
+
+      final notifier = container.read(tutorialProvider.notifier);
+
+      expect(
+        await notifier.addCategory('Loisirs', monthlyThreshold: '250,5'),
+        isTrue,
+      );
+      var categories = container.read(tutorialProvider).createdCategories;
+      expect(categories, hasLength(1));
+      expect(categories.single.name, 'Loisirs');
+      expect(categories.single.monthlyThreshold, 250.5);
+
+      // An empty (or invalid) threshold stays disabled: null.
+      expect(
+        await notifier.addCategory('Transport', monthlyThreshold: ''),
+        isTrue,
+      );
+      categories = container.read(tutorialProvider).createdCategories;
+      expect(categories, hasLength(2));
+      expect(categories.last.name, 'Transport');
+      expect(categories.last.monthlyThreshold, isNull);
+    },
+  );
 }
