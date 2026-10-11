@@ -1,4 +1,7 @@
 import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/src/services/accounts/accounts_service_provider.dart';
+import 'package:budgly/src/services/accounts/accounts_service.dart';
+import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:budgly/src/pages/settings/profile/profile_settings_provider.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
@@ -17,14 +20,10 @@ import '../../../helpers.dart';
 /// `changePassword` and the pure `validatePassword`) with `loadUser`,
 /// `onChangeName` and the offline branch of `refreshUser`.
 ///
-/// `_isCurrentSession`'s guard only compares the *currently* signed-in uid
-/// against the uid captured when the call started (both `null` here, a
-/// signed-out mock auth), not against the loaded profile's own id — so a
-/// fake `loadUserProfile` returning a non-null [User] is enough to populate
-/// `ProfileSession.currentUser` without needing to also fake accounts or
-/// categories (their own load call is separately guarded and short-circuits
-/// for the same reason). This is what lets `onChangeName`'s tests below prime
-/// a real `currentUser` with a single extra `load()` call.
+/// The rename tests use an authenticated mock whose uid matches the loaded
+/// profile. This preserves the production invariant that profile mutations are
+/// accepted only for the currently signed-in identity. An empty fake account
+/// service makes the required reference-data preload deterministic and offline.
 class _FakeProfileService extends ProfileService {
   _FakeProfileService({required super.authService})
     : super(
@@ -44,7 +43,7 @@ class _FakeProfileService extends ProfileService {
   }
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 
   @override
   Future<bool> flushPendingMutations() async => false;
@@ -56,15 +55,35 @@ class _FakeProfileService extends ProfileService {
   }
 }
 
-ProviderContainer _container(_FakeProfileService service) => ProviderContainer(
+class _FakeAccountsService extends AccountsService {
+  _FakeAccountsService()
+    : super(
+        analytics: AnalyticsService(),
+        syncManager: testSyncManager,
+        syncQueue: testSyncQueue,
+      );
+
+  @override
+  Future<List<Account>> loadAccounts({
+    bool forceRefresh = false,
+    void Function(List<Account>)? onRevalidated,
+  }) async => const [];
+}
+
+ProviderContainer _container(
+  _FakeProfileService service, {
+  AuthService? authService,
+}) => ProviderContainer(
   overrides: [
     authServiceProvider.overrideWithValue(
-      AuthService(
-        auth: MockFirebaseAuth(signedIn: false),
-        analytics: AnalyticsService(),
-      ),
+      authService ??
+          AuthService(
+            auth: MockFirebaseAuth(signedIn: false),
+            analytics: AnalyticsService(),
+          ),
     ),
     profileServiceProvider.overrideWithValue(service),
+    accountsServiceProvider.overrideWithValue(_FakeAccountsService()),
   ],
 );
 
@@ -108,10 +127,13 @@ void main() {
     test(
       'a successful rename updates ProfileSession and reports success',
       () async {
-        final service = _FakeProfileService(
-          authService: AuthService(analytics: AnalyticsService()),
-        )..userProfile = _user('u1');
-        final container = _container(service);
+        final authService = AuthService(
+          auth: MockFirebaseAuth(signedIn: true, mockUser: MockUser(uid: 'u1')),
+          analytics: AnalyticsService(),
+        );
+        final service = _FakeProfileService(authService: authService)
+          ..userProfile = _user('u1');
+        final container = _container(service, authService: authService);
         addTearDown(container.dispose);
         // Primes ProfileSession.currentUser (see the class-level doc comment).
         await container.read(profileSessionProvider.notifier).load();
@@ -133,10 +155,13 @@ void main() {
     test(
       'a failure is reported and ProfileSession is left untouched',
       () async {
-        final service = _FakeProfileService(
-          authService: AuthService(analytics: AnalyticsService()),
-        )..userProfile = _user('u1');
-        final container = _container(service);
+        final authService = AuthService(
+          auth: MockFirebaseAuth(signedIn: true, mockUser: MockUser(uid: 'u1')),
+          analytics: AnalyticsService(),
+        );
+        final service = _FakeProfileService(authService: authService)
+          ..userProfile = _user('u1');
+        final container = _container(service, authService: authService);
         addTearDown(container.dispose);
         await container.read(profileSessionProvider.notifier).load();
 
@@ -156,22 +181,19 @@ void main() {
   });
 
   group('refreshUser', () {
-    test(
-      'stays offline (pending mutations could not be flushed) and reports a failure without touching local data',
-      () async {
-        // flushPendingMutations() -> false is the default on this fake.
-        final service = _FakeProfileService(
-          authService: AuthService(analytics: AnalyticsService()),
-        );
-        final container = _container(service);
-        addTearDown(container.dispose);
+    test('stays offline (pending mutations could not be flushed) and reports a failure without touching local data', () async {
+      // flushPendingMutations() -> false is the default on this fake.
+      final service = _FakeProfileService(
+        authService: AuthService(analytics: AnalyticsService()),
+      );
+      final container = _container(service);
+      addTearDown(container.dispose);
 
-        await container.read(profileSettingsProvider.notifier).refreshUser();
+      await container.read(profileSettingsProvider.notifier).refreshUser();
 
-        final state = container.read(profileSettingsProvider);
-        expect(state.hasError, isTrue);
-        expect(state.pendingMessage, isNotNull);
-      },
-    );
+      final state = container.read(profileSettingsProvider);
+      expect(state.hasError, isTrue);
+      expect(state.pendingMessage, isNotNull);
+    });
   });
 }

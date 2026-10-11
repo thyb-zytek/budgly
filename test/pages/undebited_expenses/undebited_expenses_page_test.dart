@@ -24,8 +24,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../helpers.dart';
 
 class _FakeExpensesService extends ExpensesService {
-  _FakeExpensesService(this.byAccount) : super(analytics: AnalyticsService());
+  _FakeExpensesService(this.byAccount, {bool coldStartCache = false})
+    : _cacheWarm = !coldStartCache,
+      super(analytics: AnalyticsService());
   final Map<String, List<Expense>> byAccount;
+
+  /// Mirrors the real service's private `_periodData`: until a period has been
+  /// queried, the store-backed lookups (`getExpensesForAccount` /
+  /// `listExpensesForAccount`) return nothing. Starting cold lets a test
+  /// observe the A14 ordering contract (populate the period cache *before*
+  /// loading the account into the shared session).
+  bool _cacheWarm;
+
   final List<(Expense, DateTime)> marks = [];
   final List<(Expense, DateTime, DateTime, bool)> moves = [];
 
@@ -39,13 +49,49 @@ class _FakeExpensesService extends ExpensesService {
   }
 
   @override
-  List<Expense> getExpensesForAccount(String accountId) => _for(accountId);
+  List<Expense> getExpensesForAccount(String accountId) =>
+      _cacheWarm ? _for(accountId) : const [];
 
   @override
   Future<List<Expense>> listExpensesForAccount(
     String accountId, {
     bool forceRefresh = false,
-  }) async => _for(accountId);
+  }) async {
+    if (!forceRefresh && !_cacheWarm) return const [];
+    return _for(accountId);
+  }
+
+  @override
+  Future<List<Expense>> listExpensesForAccountBefore(
+    String accountId,
+    DateTime endExclusive, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && !_cacheWarm) return const [];
+    return _for(accountId)
+        .where((expense) => expense.debitDate.isBefore(endExclusive))
+        .toList(growable: false);
+  }
+
+  /// Queries (and warms) the period cache: after this call the store-backed
+  /// lookups answer normally, exactly like the real service whose `_periodData`
+  /// is populated from this path. A cold fake therefore only returns expenses
+  /// once a period has been requested.
+  @override
+  Future<List<Expense>> listExpensesForPeriod(
+    String accountId,
+    Period period, {
+    String? categoryId,
+    bool forceRefresh = false,
+    void Function(List<Expense>)? onRevalidated,
+  }) async {
+    _cacheWarm = true;
+    return _for(accountId);
+  }
+
+  @override
+  List<Expense>? cachedExpensesForPeriod(String accountId, Period period) =>
+      _cacheWarm ? _for(accountId) : null;
 
   @override
   Future<Expense> markOccurrenceDebited(Expense expense, DateTime date) async {
@@ -110,7 +156,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 }
 
 /// Locates the swipeable [Dismissible] wrapping the card whose title is
@@ -209,9 +255,11 @@ _buildLoadedViewModel({
   List<Account> accounts = const [],
   Map<String, List<Expense>> expensesByAccount = const {},
   LocalCache? localCache,
+  bool coldStartCache = false,
 }) async {
   final expensesService = _FakeExpensesService(
     Map<String, List<Expense>>.from(expensesByAccount),
+    coldStartCache: coldStartCache,
   );
   final container = ProviderContainer(
     overrides: [
@@ -929,6 +977,41 @@ void main() {
       await built.viewModel.dismiss();
 
       expect(cache.dismissedAccountIds, ['a1']);
+    },
+  );
+
+  // A14: on a cold start the service's period cache is empty. The undebited
+  // refresh must populate it *before* loading the account into the shared
+  // session, otherwise the session projects an empty list and the banner stays
+  // hidden until an unrelated refresh/period change.
+  test(
+    'a cold start fills the period cache before projecting the account into '
+    'the session, so the banner is visible without a period change',
+    () async {
+      final previous = Period.fromDate(DateTime.now()).previous;
+      final built = await _buildLoadedViewModel(
+        accounts: [_account('a1', 'Main')],
+        expensesByAccount: {
+          'a1': [
+            _expense(
+              id: 'e1',
+              accountId: 'a1',
+              name: 'Loyer',
+              amount: 100,
+              debitDate: DateTime(previous.year, previous.month, 5),
+            ),
+          ],
+        },
+        coldStartCache: true,
+      );
+
+      expect(
+        built.viewModel.state.displayed,
+        isNotEmpty,
+        reason:
+            'the account must be loaded after the period cache is populated',
+      );
+      expect(built.viewModel.state.bannerVisible, isTrue);
     },
   );
 }

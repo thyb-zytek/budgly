@@ -366,56 +366,79 @@ class CategoryExpenses extends _$CategoryExpenses {
     if (state.isSaving || occurrence == null) return false;
     state = state.copyWith(isSaving: true);
     try {
-      final updated = occurrence.expense.copyWith(
-        accountId: occurrence.expense.accountId,
-        categoryId: data.categoryId ?? occurrence.expense.categoryId,
+      final original = occurrence.expense;
+      final newAccountId = data.accountId ?? original.accountId;
+      final newCategoryId = data.categoryId ?? original.categoryId;
+      final accountChanged = newAccountId != original.accountId;
+      final categoryChanged = newCategoryId != original.categoryId;
+
+      // A recurring edit only carries the fields the series owns; the debit
+      // date and recurrence are applied by the occurrence-scoped service call.
+      final recurringUpdated = original.copyWith(
+        accountId: newAccountId,
+        categoryId: newCategoryId,
         name: data.name,
         amount: data.amount,
-        debitDate: occurrence.expense.debitDate,
-        endDate: occurrence.expense.endDate,
-        recurrence: occurrence.expense.recurrence,
+      );
+      final nonRecurringUpdated = recurringUpdated.copyWith(
+        debitDate: data.debitDate,
+        endDate: data.endDate,
+        clearEndDate: data.endDate == null,
+        recurrence: data.recurrence,
       );
       final isRecurringSingle =
-          occurrence.expense.isRecurring &&
-          _editScope == RecurringEditScope.single;
-      final moved =
-          !occurrence.expense.isRecurring &&
-          updated.categoryId != occurrence.expense.categoryId;
-      final savedExpense = isRecurringSingle
-          ? await _expensesService.modifySingleOccurrence(
-              original: occurrence.expense,
-              occurrenceDate: occurrence.sourceDate ?? occurrence.date,
-              override: updated,
-            )
-          : occurrence.expense.isRecurring
-          ? await _expensesService.modifyFutureOccurrences(
-              original: occurrence.expense,
-              updated: updated,
-              effectiveDate: occurrence.sourceDate ?? occurrence.date,
-            )
-          : await _expensesService.updateExpense(
-              occurrence.expense.copyWith(
-                categoryId: data.categoryId ?? occurrence.expense.categoryId,
-                name: data.name,
-                amount: data.amount,
-                debitDate: data.debitDate,
-                endDate: data.endDate,
-                clearEndDate: data.endDate == null,
-                recurrence: data.recurrence,
-              ),
-              previous: occurrence.expense,
-            );
+          original.isRecurring &&
+          _editScope == RecurringEditScope.single &&
+          !accountChanged;
+      // A recurring series is a single document whose occurrences all share
+      // its account, so changing the account always moves the whole series.
+      // A non-recurring expense additionally leaves the page when its category
+      // changes. Either way it no longer belongs to this account/category page.
+      final leavesPage =
+          accountChanged || (!original.isRecurring && categoryChanged);
+
+      final Expense savedExpense;
+      if (original.isRecurring) {
+        if (accountChanged) {
+          savedExpense = await _expensesService.updateExpense(
+            recurringUpdated,
+            previous: original,
+          );
+        } else if (isRecurringSingle) {
+          savedExpense = await _expensesService.modifySingleOccurrence(
+            original: original,
+            occurrenceDate: occurrence.sourceDate ?? occurrence.date,
+            override: recurringUpdated,
+          );
+        } else {
+          savedExpense = await _expensesService.modifyFutureOccurrences(
+            original: original,
+            updated: recurringUpdated,
+            effectiveDate: occurrence.sourceDate ?? occurrence.date,
+          );
+        }
+      } else {
+        savedExpense = await _expensesService.updateExpense(
+          nonRecurringUpdated,
+          previous: original,
+        );
+      }
       if (!ref.mounted) return false;
 
-      if (moved) {
-        // The expense still exists on the account, just under another
-        // category: keep the shared session in sync, only drop it from this
-        // page's own (category-scoped) list.
+      if (leavesPage) {
+        // The expense still exists, just under another account/category. When
+        // it changed account, the shared session still lists it under the
+        // previous account (`updateLocal` only ever adds to the new one), so
+        // drop it there explicitly.
+        if (accountChanged && original.id != null) {
+          ref
+              .read(expensesSessionProvider.notifier)
+              .removeLocal(original.id!, original.accountId);
+        }
         ref.read(expensesSessionProvider.notifier).updateLocal(savedExpense);
-        _removeExpense(occurrence.expense.id);
+        _removeExpense(original.id);
         state = state.copyWith(editingOccurrence: null);
-      } else if (occurrence.expense.isRecurring &&
-          savedExpense.id != occurrence.expense.id) {
+      } else if (original.isRecurring && savedExpense.id != original.id) {
         // The recurring series was split: the original record was truncated
         // (new endDate) and a new one was created for the future occurrences.
         // We only get the new record back from the service, so refresh the
@@ -427,18 +450,18 @@ class CategoryExpenses extends _$CategoryExpenses {
         if (!ref.mounted) return true;
         final previous = ref
             .read(expensesSessionProvider.notifier)
-            .getExpenseById(occurrence.expense.id!);
+            .getExpenseById(original.id!);
         final next = savedExpense.id == null
             ? null
             : ref
                   .read(expensesSessionProvider.notifier)
                   .getExpenseById(savedExpense.id!);
-        _removeExpense(occurrence.expense.id);
+        _removeExpense(original.id);
         if (previous != null) _appendExpenses([previous]);
         if (next != null) _appendExpenses([next]);
       } else {
         ref.read(expensesSessionProvider.notifier).updateLocal(savedExpense);
-        _replaceExpense(occurrence.expense.id, savedExpense);
+        _replaceExpense(original.id, savedExpense);
       }
       _publishOccurrences();
       return true;
@@ -482,6 +505,10 @@ class CategoryExpenses extends _$CategoryExpenses {
   }
 
   Future<bool> deleteOccurrence(ExpenseOccurrence occurrence) async {
+    // A debited expense must not be deleted: removing money already accounted
+    // for as spent would silently rewrite the period's actuals. It must be
+    // put back on hold first.
+    if (occurrence.isDebited) return false;
     if (occurrence.recurrence.isRecurring) {
       return deleteSingleOccurrence(occurrence);
     }
@@ -536,6 +563,9 @@ class CategoryExpenses extends _$CategoryExpenses {
     ExpenseOccurrence occurrence,
     Future<bool> Function() action,
   ) async {
+    // Same guard as deleteOccurrence: a debited occurrence cannot be deleted,
+    // including via "this and future occurrences" reached on a debited one.
+    if (occurrence.isDebited) return false;
     if (state.isSaving || occurrence.id.isEmpty) return false;
     state = state.copyWith(isSaving: true);
     try {
@@ -641,6 +671,7 @@ class ExpenseEditFormData {
   const ExpenseEditFormData({
     required this.name,
     required this.amount,
+    required this.accountId,
     required this.categoryId,
     required this.debitDate,
     required this.endDate,
@@ -649,6 +680,10 @@ class ExpenseEditFormData {
 
   final String name;
   final double amount;
+
+  /// Selected owning account. Editing the account moves the expense (and, for
+  /// a recurring series, the whole series) to that account.
+  final String? accountId;
   final String? categoryId;
   final DateTime debitDate;
   final DateTime? endDate;

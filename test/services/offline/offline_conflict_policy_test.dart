@@ -78,29 +78,26 @@ void main() {
     },
   );
 
-  test(
-    'a pending local mutation prevents a stale refresh from becoming authoritative',
-    () async {
-      final local = {'name': 'Local'};
-      final server = {'name': 'Stale'};
+  test('a pending local mutation prevents a stale refresh from becoming authoritative', () async {
+    final local = {'name': 'Local'};
+    final server = {'name': 'Stale'};
 
-      await testSyncQueue.enqueue(
-        id: 'update-account',
-        type: 'accounts',
-        operation: 'update',
-        payload: {'id': 'a1', ...local},
-      );
+    await testSyncQueue.enqueue(
+      id: 'update-account',
+      type: 'accounts',
+      operation: 'update',
+      payload: {'id': 'a1', ...local},
+    );
 
-      final displayed = <String, String>{...server};
-      final pending = await testSyncQueue.hasPending(
-        type: 'accounts',
-        entityId: 'a1',
-      );
-      if (pending) {
-        displayed.addAll(local);
-      }
+    final displayed = <String, String>{...server};
+    final pending = await testSyncQueue.hasPending(
+      type: 'accounts',
+      entityId: 'a1',
+    );
+    if (pending) {
+      displayed.addAll(local);
+    }
 
-      expect(displayed['name'], 'Local');
-    },
-  );
+    expect(displayed['name'], 'Local');
+  });
 }

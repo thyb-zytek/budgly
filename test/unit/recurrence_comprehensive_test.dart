@@ -344,49 +344,52 @@ void main() {
       expect(occ[3].isDebited, isFalse);
     });
 
-    test('modification future ne modifie pas historique (split invariants)', () {
-      // Simulated via RecurringExpenseVersioning split semantics: previous keeps history
-      final original = _exp(
-        id: 'rid',
-        debitDate: DateTime(2026, 1, 15),
-        recurrence: RecurrenceType.monthly,
-        debited: ['2026-01-15', '2026-02-15'],
-      );
-      final updated = _exp(
-        id: 'rid',
-        debitDate: DateTime(2026, 3, 15),
-        recurrence: RecurrenceType.monthly,
-        debited: [],
-      );
-      // After split at 2026-03-15, previous endDate should be 2026-03-14 and contain only earlier debited
-      // This is validated in dedicated versioning tests, here we just verify occurrence generation respects endDate
-      final prevEnd = DateTime(2026, 3, 14);
-      final previous = original.copyWith(
-        endDate: prevEnd,
-        debitedOccurrences: ['2026-01-15', '2026-02-15'],
-      );
-      final occPrev = expandExpenseOccurrencesBetween(
-        previous,
-        CalendarDateRange(
-          start: DateTime(2026, 1, 1),
-          endExclusive: DateTime(2026, 12, 31).add(const Duration(days: 1)),
-        ),
-      );
-      final occNext = expandExpenseOccurrencesBetween(
-        updated.copyWith(debitDate: DateTime(2026, 3, 15)),
-        CalendarDateRange(
-          start: DateTime(2026, 1, 1),
-          endExclusive: DateTime(2026, 12, 31).add(const Duration(days: 1)),
-        ),
-      );
-      // No overlap and history preserved
-      expect(occPrev.any((o) => o.date.isAfter(prevEnd)), isFalse);
-      expect(
-        occNext.any((o) => o.date.isBefore(DateTime(2026, 3, 15))),
-        isFalse,
-      );
-      expect(occPrev.length, 2);
-    });
+    test(
+      'modification future ne modifie pas historique (split invariants)',
+      () {
+        // Simulated via RecurringExpenseVersioning split semantics: previous keeps history
+        final original = _exp(
+          id: 'rid',
+          debitDate: DateTime(2026, 1, 15),
+          recurrence: RecurrenceType.monthly,
+          debited: ['2026-01-15', '2026-02-15'],
+        );
+        final updated = _exp(
+          id: 'rid',
+          debitDate: DateTime(2026, 3, 15),
+          recurrence: RecurrenceType.monthly,
+          debited: [],
+        );
+        // After split at 2026-03-15, previous endDate should be 2026-03-14 and contain only earlier debited
+        // This is validated in dedicated versioning tests, here we just verify occurrence generation respects endDate
+        final prevEnd = DateTime(2026, 3, 14);
+        final previous = original.copyWith(
+          endDate: prevEnd,
+          debitedOccurrences: ['2026-01-15', '2026-02-15'],
+        );
+        final occPrev = expandExpenseOccurrencesBetween(
+          previous,
+          CalendarDateRange(
+            start: DateTime(2026, 1, 1),
+            endExclusive: DateTime(2026, 12, 31).add(const Duration(days: 1)),
+          ),
+        );
+        final occNext = expandExpenseOccurrencesBetween(
+          updated.copyWith(debitDate: DateTime(2026, 3, 15)),
+          CalendarDateRange(
+            start: DateTime(2026, 1, 1),
+            endExclusive: DateTime(2026, 12, 31).add(const Duration(days: 1)),
+          ),
+        );
+        // No overlap and history preserved
+        expect(occPrev.any((o) => o.date.isAfter(prevEnd)), isFalse);
+        expect(
+          occNext.any((o) => o.date.isBefore(DateTime(2026, 3, 15))),
+          isFalse,
+        );
+        expect(occPrev.length, 2);
+      },
+    );
   });
 
   group('addMonthsClamped utility', () {

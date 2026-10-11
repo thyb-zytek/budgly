@@ -83,8 +83,18 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final state = ref.watch(tutorialProvider);
-    final currentIcon = state.categoryIcon ?? AppConstants.defaultCategoryIcon;
+    final categoryState = ref.watch(
+      tutorialProvider.select(
+        (state) => (
+          categoryIcon: state.categoryIcon,
+          categoryColor: state.categoryColor,
+          isAddingCategory: state.isAddingCategory,
+          createdCategories: state.createdCategories,
+        ),
+      ),
+    );
+    final currentIcon =
+        categoryState.categoryIcon ?? AppConstants.defaultCategoryIcon;
 
     return TutorialStepScaffold(
       title: tr.tutorialStepCategories,
@@ -101,7 +111,7 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
                 hintAnimation: hintAnimation,
                 child: CategoryIconView(
                   icon: currentIcon,
-                  color: state.categoryColor,
+                  color: categoryState.categoryColor,
                   size: 56,
                   onTap: () => _openCustomizationPicker(context),
                   showEditBadge: true,
@@ -129,8 +139,9 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
             valueListenable: _nameController,
             builder: (context, value, _) {
               final valid =
-                  value.text.trim().isNotEmpty && !state.isAddingCategory;
-              return state.isAddingCategory
+                  value.text.trim().isNotEmpty &&
+                  !categoryState.isAddingCategory;
+              return categoryState.isAddingCategory
                   ? FilledButton.tonalIcon(
                       onPressed: null,
                       icon: const SizedBox(
@@ -146,14 +157,14 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
                     );
             },
           ),
-          if (state.createdCategories.isNotEmpty)
+          if (categoryState.createdCategories.isNotEmpty)
             AnimatedSize(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               alignment: Alignment.topCenter,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: state.createdCategories
+                children: categoryState.createdCategories
                     .map(
                       (category) => TutorialCategoryTile(
                         category: category,

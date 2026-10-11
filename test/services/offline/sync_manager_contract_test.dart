@@ -3,6 +3,7 @@ import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../helpers.dart';
 
 void main() {
@@ -224,34 +225,31 @@ void main() {
     },
   );
 
-  test(
-    'does not replay queued mutations while the authentication session is absent',
-    () async {
-      String? currentUserId = 'user-a';
-      final queue = SyncQueue(ownerUserIdProvider: () => currentUserId);
-      final manager = SyncManager(
-        queue: queue,
-        analytics: AnalyticsService(),
-        ownerUserIdProvider: () => currentUserId,
-      );
-      addTearDown(manager.resetForTest);
+  test('does not replay queued mutations while the authentication session is absent', () async {
+    String? currentUserId = 'user-a';
+    final queue = SyncQueue(ownerUserIdProvider: () => currentUserId);
+    final manager = SyncManager(
+      queue: queue,
+      analytics: AnalyticsService(),
+      ownerUserIdProvider: () => currentUserId,
+    );
+    addTearDown(manager.resetForTest);
 
-      await queue.enqueue(
-        id: 'a',
-        type: 'contract',
-        operation: 'update',
-        payload: {'id': 'a'},
-      );
-      currentUserId = null;
+    await queue.enqueue(
+      id: 'a',
+      type: 'contract',
+      operation: 'update',
+      payload: {'id': 'a'},
+    );
+    currentUserId = null;
 
-      var calls = 0;
-      manager.registerHandler('contract', (_) async => calls++);
-      await manager.flush(forceRetry: true);
+    var calls = 0;
+    manager.registerHandler('contract', (_) async => calls++);
+    await manager.flush(forceRetry: true);
 
-      expect(calls, 0);
-      expect(await queue.all(), hasLength(1));
-    },
-  );
+    expect(calls, 0);
+    expect(await queue.all(), hasLength(1));
+  });
 
   test(
     'stops an in-flight replay pass when the authenticated user changes',

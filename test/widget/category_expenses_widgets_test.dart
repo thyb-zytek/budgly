@@ -61,7 +61,7 @@ void main() {
     expect(find.text('Mensuel'), findsOneWidget);
   });
 
-  testWidgets('ExpenseCard disables edit from quick actions once debited', (
+  testWidgets('ExpenseCard offers only "Remise en attente" once debited', (
     tester,
   ) async {
     final expense = Fixtures.expense(
@@ -78,6 +78,8 @@ void main() {
       isDebited: true,
     );
     var editCalls = 0;
+    var deleteCalls = 0;
+    var toggleCalls = 0;
 
     await pumpApp(
       tester,
@@ -87,8 +89,8 @@ void main() {
         localeName: 'fr',
         onTap: () {},
         onEdit: () => editCalls++,
-        onToggleDebited: () {},
-        onDelete: () {},
+        onToggleDebited: () => toggleCalls++,
+        onDelete: () => deleteCalls++,
       ),
     );
 
@@ -96,9 +98,16 @@ void main() {
     await tester.longPress(find.text('Courses'));
     await tester.pumpAndSettle();
 
+    // A8: a debited expense cannot be edited or deleted, only put back on hold.
     expect(find.text('Modifier'), findsNothing);
-    expect(find.text('Supprimer'), findsOneWidget);
+    expect(find.text('Supprimer'), findsNothing);
+    expect(find.text('Remise en attente'), findsOneWidget);
     expect(editCalls, 0);
+    expect(deleteCalls, 0);
+
+    await tester.tap(find.text('Remise en attente'));
+    await tester.pumpAndSettle();
+    expect(toggleCalls, 1);
   });
 
   testWidgets('ExpenseStatusAvatar switches icon with debited state', (

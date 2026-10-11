@@ -36,30 +36,27 @@ void main() {
   AccountBudgetsService service(ScriptedAccountBudgetFirestore provider) =>
       AccountBudgetsService(provider: provider, analytics: AnalyticsService());
 
-  test(
-    'a cache-hit background revalidation reaches onRevalidated instead of being silently dropped',
-    () async {
-      final provider = ScriptedAccountBudgetFirestore([
-        budget(1000),
-        budget(1500),
-      ]);
-      final svc = service(provider);
+  test('a cache-hit background revalidation reaches onRevalidated instead of being silently dropped', () async {
+    final provider = ScriptedAccountBudgetFirestore([
+      budget(1000),
+      budget(1500),
+    ]);
+    final svc = service(provider);
 
-      final revalidated = <AccountBudget?>[];
-      final cached = await svc.loadRevenue(
-        'a1',
-        2026,
-        3,
-        onRevalidated: revalidated.add,
-      );
-      expect(cached?.revenue, 1000);
+    final revalidated = <AccountBudget?>[];
+    final cached = await svc.loadRevenue(
+      'a1',
+      2026,
+      3,
+      onRevalidated: revalidated.add,
+    );
+    expect(cached?.revenue, 1000);
 
-      await Future<void>.delayed(Duration.zero);
-      expect(provider.calls, 2);
-      expect(revalidated, hasLength(1));
-      expect(revalidated.single?.revenue, 1500);
-    },
-  );
+    await Future<void>.delayed(Duration.zero);
+    expect(provider.calls, 2);
+    expect(revalidated, hasLength(1));
+    expect(revalidated.single?.revenue, 1500);
+  });
 
   test(
     'RL-01 §3.2: a background revalidation does not leak the in-flight guard '

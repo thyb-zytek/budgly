@@ -97,21 +97,18 @@ void main() {
       );
     });
 
-    test(
-      'copies a local picture into the documents folder with a timestamped name',
-      () async {
-        final file = File('${sourceDir.path}/avatar.png');
-        await file.writeAsString('png-bytes');
+    test('copies a local picture into the documents folder with a timestamped name', () async {
+      final file = File('${sourceDir.path}/avatar.png');
+      await file.writeAsString('png-bytes');
 
-        final result = await AccountImageHelper.prepareImage(file.path);
+      final result = await AccountImageHelper.prepareImage(file.path);
 
-        expect(result, isNotNull);
-        expect(result!.fileName, endsWith('_avatar.png'));
-        expect(result.fileName, isNot(equals('avatar.png')));
-        expect(result.file.path, startsWith(docsDir.path));
-        expect(await File(result.file.path).readAsString(), 'png-bytes');
-      },
-    );
+      expect(result, isNotNull);
+      expect(result!.fileName, endsWith('_avatar.png'));
+      expect(result.fileName, isNot(equals('avatar.png')));
+      expect(result.file.path, startsWith(docsDir.path));
+      expect(await File(result.file.path).readAsString(), 'png-bytes');
+    });
   });
 
   group('AccountImageHelper.uploadAndLinkImage', () {

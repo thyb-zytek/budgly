@@ -7,8 +7,11 @@ import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab.dart';
 import 'package:flutter/material.dart';
 
-typedef CategoryPreviewBuilder =
-    Widget Function(BuildContext context, CategoryIcon icon, Color color);
+typedef CategoryPreviewBuilder = Widget Function(
+  BuildContext context,
+  CategoryIcon icon,
+  Color color,
+);
 
 Future<bool> showCategoryCustomizationSheet(
   BuildContext context, {

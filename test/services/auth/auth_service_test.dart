@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 
 import '../../fixtures/builders.dart';
+
 import 'package:mock_exceptions/mock_exceptions.dart';
 
 class FakeUserProfileSupabase extends UserProfileSupabase {
@@ -82,9 +83,8 @@ void main() {
       );
       profileSupabase.profiles['u1'] = Fixtures.profile(id: 'u1');
 
-      final user = await service(
-        auth,
-      ).signInWithEmailAndPassword('test@budgly.app', 'password');
+      final user = await service(auth)
+          .signInWithEmailAndPassword('test@budgly.app', 'password');
 
       expect(user.id, 'u1');
       expect(profileSupabase.getOrCreateCalls, 1);
@@ -113,9 +113,8 @@ void main() {
     test('signUpWithEmailAndPassword creates a user and the profile', () async {
       final auth = MockFirebaseAuth(signedIn: false);
 
-      final user = await service(
-        auth,
-      ).signUpWithEmailAndPassword('new@budgly.app', 'password');
+      final user = await service(auth)
+          .signUpWithEmailAndPassword('new@budgly.app', 'password');
 
       expect(user.email, 'new@budgly.app');
       expect(profileSupabase.getOrCreateCalls, 1);
@@ -153,9 +152,9 @@ void main() {
 
     test('changePassword throws when no user is signed in', () async {
       expect(
-        () => service(
-          MockFirebaseAuth(signedIn: false),
-        ).changePassword('old', 'new'),
+        () =>
+            service(MockFirebaseAuth(signedIn: false))
+                .changePassword('old', 'new'),
         throwsA(isA<AuthenticationException>()),
       );
     });
@@ -169,9 +168,9 @@ void main() {
       'resetPassword maps provider errors onto AuthenticationException',
       () async {
         final auth = signedInAuth();
-        whenCalling(
-          Invocation.method(#sendPasswordResetEmail, null),
-        ).on(auth).thenThrow(fb.FirebaseAuthException(code: 'user-not-found'));
+        whenCalling(Invocation.method(#sendPasswordResetEmail, null))
+            .on(auth)
+            .thenThrow(fb.FirebaseAuthException(code: 'user-not-found'));
 
         expect(
           () => service(auth).resetPassword('a@b.c'),
@@ -230,9 +229,8 @@ void main() {
     });
 
     test('reloadCurrentUser returns null when signed out', () async {
-      final user = await service(
-        MockFirebaseAuth(signedIn: false),
-      ).reloadCurrentUser();
+      final user = await service(MockFirebaseAuth(signedIn: false))
+          .reloadCurrentUser();
       expect(user, isNull);
     });
   });

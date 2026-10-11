@@ -1,3 +1,5 @@
+import 'package:budgly/src/core/dependencies/backend_clients_provider.dart';
+import 'package:budgly/src/services/providers/supabase/categories.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/analytics/analytics_service_provider.dart';
 import 'package:budgly/src/services/categories/category_icons_service_provider.dart';
@@ -9,6 +11,7 @@ part 'categories_service_provider.g.dart';
 
 @Riverpod(keepAlive: true)
 CategoriesService categoriesService(Ref ref) => CategoriesService(
+  categorySupabase: CategorySupabase(client: ref.watch(supabaseClientProvider)),
   analytics: ref.watch(analyticsServiceProvider),
   categoryIconsService: ref.watch(categoryIconsServiceProvider),
   syncManager: ref.watch(syncManagerProvider),

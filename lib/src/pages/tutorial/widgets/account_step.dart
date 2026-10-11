@@ -84,11 +84,13 @@ class _AccountStepState extends ConsumerState<AccountStep> {
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final state = ref.watch(tutorialProvider);
+    final createdAccount = ref.watch(
+      tutorialProvider.select((state) => state.createdAccount),
+    );
     final notifier = ref.read(tutorialProvider.notifier);
     if (_nameController.text.isEmpty &&
-        state.createdAccount?.name.isNotEmpty == true) {
-      _nameController.text = state.createdAccount!.name;
+        createdAccount?.name.isNotEmpty == true) {
+      _nameController.text = createdAccount!.name;
     }
 
     return TutorialStepScaffold(
@@ -120,8 +122,8 @@ class _AccountStepState extends ConsumerState<AccountStep> {
                 );
               },
               compact: true,
-              withPulse: state.createdAccount?.id == null,
-              withHint: state.createdAccount?.id == null,
+              withPulse: createdAccount?.id == null,
+              withHint: createdAccount?.id == null,
               enabled: !_isSubmitting,
             ),
             Text(

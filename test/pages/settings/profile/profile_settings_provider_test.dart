@@ -10,6 +10,7 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../helpers.dart';
 
 class _FakeProfileService extends ProfileService {
@@ -26,7 +27,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 
   @override
   Future<User> changePassword(String oldPassword, String newPassword) async {
@@ -94,29 +95,26 @@ void main() {
       expect(state.pendingMessage, isNotNull);
     });
 
-    test(
-      'a password-change-failed AuthenticationException reports the dedicated message',
-      () async {
-        final service =
-            _FakeProfileService(
-                authService: AuthService(analytics: AnalyticsService()),
-              )
-              ..changePasswordError = const AuthenticationException(
-                message: 'wrong password',
-                code: 'password-change-failed',
-              );
-        final container = _container(service);
-        addTearDown(container.dispose);
+    test('a password-change-failed AuthenticationException reports the dedicated message', () async {
+      final service =
+          _FakeProfileService(
+              authService: AuthService(analytics: AnalyticsService()),
+            )
+            ..changePasswordError = const AuthenticationException(
+              message: 'wrong password',
+              code: 'password-change-failed',
+            );
+      final container = _container(service);
+      addTearDown(container.dispose);
 
-        await container
-            .read(profileSettingsProvider.notifier)
-            .changePassword(oldPassword: 'wrong', newPassword: 'newpass');
+      await container
+          .read(profileSettingsProvider.notifier)
+          .changePassword(oldPassword: 'wrong', newPassword: 'newpass');
 
-        final state = container.read(profileSettingsProvider);
-        expect(state.hasError, isTrue);
-        expect(state.pendingMessage, isNotNull);
-      },
-    );
+      final state = container.read(profileSettingsProvider);
+      expect(state.hasError, isTrue);
+      expect(state.pendingMessage, isNotNull);
+    });
 
     test(
       'any other error is still reported through the generic classifier',

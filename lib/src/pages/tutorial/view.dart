@@ -44,24 +44,33 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(tutorialProvider);
+    final tutorial = ref.watch(
+      tutorialProvider.select(
+        (state) => (
+          currentStep: state.currentStep,
+          totalSteps: state.totalSteps,
+          canGoBack: state.canGoBack,
+          isInitializing: state.isInitializing,
+        ),
+      ),
+    );
     final notifier = ref.read(tutorialProvider.notifier);
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    if (state.isInitializing) {
+    if (tutorial.isInitializing) {
       return const Scaffold(body: AppLoadingIndicator());
     }
 
-    _pageController ??= PageController(initialPage: state.currentStep);
+    _pageController ??= PageController(initialPage: tutorial.currentStep);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (state.canGoBack) {
+        if (tutorial.canGoBack) {
           notifier.previousStep();
-          _goToStep(state.currentStep - 1);
+          _goToStep(tutorial.currentStep - 1);
         } else {
           _showLogoutDialog(context, tr);
         }
@@ -76,10 +85,10 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                   alignment: Alignment.center,
                   children: [
                     StepIndicator(
-                      currentStep: state.currentStep,
-                      totalSteps: state.totalSteps,
+                      currentStep: tutorial.currentStep,
+                      totalSteps: tutorial.totalSteps,
                     ),
-                    if (state.canGoBack)
+                    if (tutorial.canGoBack)
                       Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton(
@@ -91,7 +100,7 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                           icon: const Icon(Icons.arrow_back_rounded, size: 20),
                           onPressed: () {
                             notifier.previousStep();
-                            _goToStep(state.currentStep - 1);
+                            _goToStep(tutorial.currentStep - 1);
                           },
                         ),
                       ),
@@ -106,19 +115,19 @@ class _TutorialPageState extends ConsumerState<TutorialPage> {
                     WelcomeStep(
                       onNext: () {
                         notifier.nextStep();
-                        _goToStep(state.currentStep + 1);
+                        _goToStep(tutorial.currentStep + 1);
                       },
                     ),
                     AccountStep(
                       onNext: () {
                         notifier.nextStep();
-                        _goToStep(state.currentStep + 1);
+                        _goToStep(tutorial.currentStep + 1);
                       },
                     ),
                     CategoryStep(
                       onNext: () {
                         notifier.nextStep();
-                        _goToStep(state.currentStep + 1);
+                        _goToStep(tutorial.currentStep + 1);
                       },
                     ),
                     BudgetStep(onFinish: _goToOverview),

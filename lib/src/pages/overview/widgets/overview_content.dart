@@ -8,6 +8,7 @@ import 'package:budgly/src/pages/overview/account_selection_provider.dart';
 import 'package:budgly/src/pages/overview/overview_provider.dart';
 import 'package:budgly/src/pages/overview/period_expenses_provider.dart';
 import 'package:budgly/src/pages/overview/revenue_provider.dart';
+import 'package:budgly/src/pages/overview/ui_state.dart';
 import 'package:budgly/src/pages/overview/widgets/overview_expenses_sliver.dart';
 import 'package:budgly/src/pages/overview/widgets/collapsing_summary_header.dart';
 import 'package:budgly/src/pages/overview/widgets/period_selector.dart';
@@ -103,6 +104,10 @@ class _RevenueEditorSliver extends ConsumerWidget {
       profileSessionProvider.select((s) => s.currency),
     );
     final notifier = ref.read(revenueProvider(accountId, period).notifier);
+    // The switcher can retain outgoing children while the user moves quickly
+    // between periods. Include the scope and visibility in each key so two
+    // different periods never contribute duplicate editor/placeholder keys.
+    final editorKey = ValueKey((accountId, period, revenue.showEditor));
     return SliverToBoxAdapter(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
@@ -110,14 +115,14 @@ class _RevenueEditorSliver extends ConsumerWidget {
             ? Padding(
                 padding: EdgeInsets.only(top: BudglySpacing.md),
                 child: RevenueForm(
-                  key: const ValueKey('revenue-editor'),
+                  key: editorKey,
                   state: revenue,
                   currencyCode: currencyCode,
                   onClose: notifier.closeEditor,
                   onSave: notifier.setRevenue,
                 ),
               )
-            : const SizedBox.shrink(key: ValueKey('revenue-editor-hidden')),
+            : SizedBox.shrink(key: editorKey),
       ),
     );
   }
@@ -142,9 +147,27 @@ class _SummarySliver extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accounts = ref.watch(accountSelectionProvider);
-    final expenses = ref.watch(periodExpensesProvider(accountId, period));
-    final revenue = ref.watch(revenueProvider(accountId, period));
+    final accounts = ref.watch(
+      accountSelectionProvider.select(
+        (state) =>
+            (accounts: state.accounts, selectedAccount: state.selectedAccount),
+      ),
+    );
+    final expenses = ref.watch(
+      periodExpensesProvider(accountId, period).select(
+        (state) => (
+          isLoaded: state.isLoaded,
+          isLoading: state.status.isLoading,
+          categorySummaries: state.categorySummaries,
+        ),
+      ),
+    );
+    final revenue = ref.watch(
+      revenueProvider(accountId, period).select(
+        (state) =>
+            (revenue: state.revenue, inheritedRevenue: state.inheritedRevenue),
+      ),
+    );
     final profile = ref.watch(
       profileSessionProvider.select(
         (s) => (s.currency, s.locale.languageCode, s.amountDecimalPlaces),
@@ -153,7 +176,7 @@ class _SummarySliver extends ConsumerWidget {
     final theme = Theme.of(context);
 
     // Show loading placeholder in summary while period expenses are loading
-    final summaries = (!expenses.isLoaded || expenses.status.isLoading)
+    final summaries = (!expenses.isLoaded || expenses.isLoading)
         ? <CategoryExpenseSummary>[]
         : expenses.categorySummaries;
 
@@ -166,7 +189,10 @@ class _SummarySliver extends ConsumerWidget {
           account: accounts.selectedAccount,
           period: period,
           categorySummaries: summaries,
-          revenue: revenue,
+          revenue: RevenueSummary(
+            revenue: revenue.revenue,
+            inheritedRevenue: revenue.inheritedRevenue,
+          ),
           currencyCode: profile.$1,
           localeName: profile.$2,
           amountDecimalPlaces: profile.$3,

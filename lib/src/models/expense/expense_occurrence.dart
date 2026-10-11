@@ -27,6 +27,14 @@ class ExpenseOccurrence {
 
   bool get isException => sourceDate != null;
 
+  /// True only for a genuine "carried over" occurrence: one that a date
+  /// exception moved to a different calendar day than its original recurrence
+  /// date. An exception that only overrides fields (amount, name, category)
+  /// keeps [date] == [sourceDate] and must not be presented as carried over.
+  bool get isCarriedOver =>
+      sourceDate != null &&
+      Expense.isoDate(sourceDate!) != Expense.isoDate(date);
+
   // Pure value object (no server id of its own): identity follows every
   // field, same convention as Period/CategoryIcon. `expense ==` itself
   // compares by Expense.id (see Expense), so this stays cheap.

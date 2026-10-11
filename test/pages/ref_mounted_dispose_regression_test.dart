@@ -48,6 +48,9 @@ class _FakeAuthService extends AuthService {
   User? get currentUser => null;
   @override
   fb.User? get firebaseUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 }
 
 class _FakeProfileService extends ProfileService {
@@ -80,7 +83,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 
   @override
   Future<User> changePassword(String oldPassword, String newPassword) =>

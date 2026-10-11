@@ -54,12 +54,32 @@ class OverviewState {
 
 @riverpod
 class Overview extends _$Overview {
+  /// Set when [loadInitialData] ran before ProfileSession's reference preload
+  /// had applied accounts to `AccountSelection` (this happens when the
+  /// Overview mounts from a restored route at cold start). In that case the
+  /// one-shot initial load would otherwise complete empty and no later event
+  /// would ever load the screen data: the page would stay empty until the user
+  /// changed the period or pulled to refresh. The account-selection listener
+  /// below retries the load as soon as an account becomes available.
+  var _initialLoadSkippedForMissingAccount = false;
+
   @override
-  OverviewState build() => OverviewState(
-    selectedPeriod: Period.current(),
-    status: const ActionStatus.idle(),
-    hasLoaded: false,
-  );
+  OverviewState build() {
+    ref.listen(accountSelectionProvider, (previous, next) {
+      final accountAppeared =
+          next.selectedAccount?.id != null &&
+          previous?.selectedAccount?.id == null;
+      if (accountAppeared && _initialLoadSkippedForMissingAccount) {
+        _initialLoadSkippedForMissingAccount = false;
+        unawaited(loadInitialData());
+      }
+    });
+    return OverviewState(
+      selectedPeriod: Period.current(),
+      status: const ActionStatus.idle(),
+      hasLoaded: false,
+    );
+  }
 
   Future<void> loadInitialData() async {
     if (state.status.isLoading) return;
@@ -77,6 +97,12 @@ class Overview extends _$Overview {
           ref.read(revenueProvider(accountId, period).notifier).load(),
           ref.read(undebitedExpensesProvider.notifier).ensureDataLoaded(),
         ]);
+      } else {
+        // No account selected yet (restored route at cold start, or the user
+        // simply has no account). Remember the miss so the listener above
+        // retries once an account appears, instead of leaving the screen
+        // permanently empty.
+        _initialLoadSkippedForMissingAccount = true;
       }
       if (!ref.mounted) return;
       ref.read(analyticsServiceProvider).track('screen_viewed', {

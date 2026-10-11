@@ -100,7 +100,7 @@ class SignUpForm extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(
-            top: MediaQuery.of(context).viewInsets.bottom > 0
+            top: MediaQuery.viewInsetsOf(context).bottom > 0
                 ? BudglySpacing.xl
                 : BudglySpacing.sm,
           ),

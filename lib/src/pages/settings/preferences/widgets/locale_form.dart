@@ -22,7 +22,7 @@ class LocaleForm extends StatelessWidget {
       title: tr.locale,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.3,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.3,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(

@@ -73,12 +73,18 @@ class AccountsSettings extends _$AccountsSettings {
     status: ActionStatus.idle(),
   );
 
+  /// Starts editing [account] (or clears editing when null). Any local draft
+  /// is discarded first: both the draft and the edited row render an
+  /// [AccountForm] that shares the single `formKey`, so keeping both would
+  /// mount two widgets on the same GlobalKey.
   void setEditingAccount(Account? account) {
-    state = state._copyWith(editingAccount: account);
+    state = state._copyWith(localAccounts: const [], editingAccount: account);
   }
 
+  /// Discards the in-progress edit and any local draft. Cancel on a draft
+  /// form must remove it, otherwise it would linger next to another form.
   void cancelEdit() {
-    state = state._copyWith(editingAccount: null);
+    state = state._copyWith(localAccounts: const [], editingAccount: null);
   }
 
   Future<void> loadAccounts() async {
@@ -116,7 +122,10 @@ class AccountsSettings extends _$AccountsSettings {
       pictureUrl: null,
       color: randomAccountColor(),
     );
-    state = state._copyWith(localAccounts: [...state.localAccounts, account]);
+    state = state._copyWith(
+      localAccounts: [...state.localAccounts, account],
+      editingAccount: null,
+    );
     return account;
   }
 

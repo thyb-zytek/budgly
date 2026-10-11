@@ -68,6 +68,11 @@ void main() {
     expect(mar.single.name, 'Rent');
     expect(mar.single.categoryId, 'category-1');
     expect(feb.single.isException, isTrue);
+    // A11: an exception that only overrides fields keeps the same calendar
+    // day, so it must not be presented as a carried-over occurrence.
+    expect(feb.single.isCarriedOver, isFalse);
+    expect(feb.single.sourceDate, DateTime(2026, 2, 15));
+    expect(feb.single.date, DateTime(2026, 2, 15));
   });
 
   test('a moved exception is projected into the destination period', () {
@@ -95,6 +100,8 @@ void main() {
     expect(moved, hasLength(1));
     expect(moved.single.date, DateTime(2026, 2, 2));
     expect(moved.single.key, 'expense-1@2026-01-15');
+    // A11: a real date change is a carried-over occurrence.
+    expect(moved.single.isCarriedOver, isTrue);
   });
 
   test('exception survives JSON serialization', () {

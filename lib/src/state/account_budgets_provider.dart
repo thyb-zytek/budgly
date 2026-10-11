@@ -19,6 +19,17 @@ class AccountBudgetsSession extends _$AccountBudgetsSession {
   AccountBudgetsSessionState build() =>
       const AccountBudgetsSessionState(budgets: {}, loadedKeys: {});
 
+  int _sessionRevision = 0;
+  final Map<String, int> _keyRevisions = {};
+  final Map<String, int> _accountRevisions = {};
+
+  int _keyRevision(String key) => _keyRevisions[key] ?? 0;
+  void _bumpKeyRevision(String key) =>
+      _keyRevisions[key] = _keyRevision(key) + 1;
+  int _accountRevision(String accountId) => _accountRevisions[accountId] ?? 0;
+  void _bumpAccountRevision(String accountId) =>
+      _accountRevisions[accountId] = _accountRevision(accountId) + 1;
+
   String _key(String accountId, int year, int month) =>
       '${accountId}_${year}_$month';
 
@@ -34,6 +45,9 @@ class AccountBudgetsSession extends _$AccountBudgetsSession {
     bool forceRefresh = false,
   }) async {
     final key = _key(accountId, year, month);
+    final sessionRevision = _sessionRevision;
+    final accountRevision = _accountRevision(accountId);
+    final keyRevision = _keyRevision(key);
     final budget = await ref
         .read(accountBudgetsServiceProvider)
         .loadRevenue(
@@ -44,9 +58,21 @@ class AccountBudgetsSession extends _$AccountBudgetsSession {
           // RL-01 §3.2: push a later background revalidation into the
           // session too, so Revenue/Overview rebuild instead of staying
           // stuck on the cache-first snapshot returned below.
-          onRevalidated: (remote) => _set(key, remote),
+          onRevalidated: (remote) {
+            if (ref.mounted &&
+                sessionRevision == _sessionRevision &&
+                accountRevision == _accountRevision(accountId) &&
+                keyRevision == _keyRevision(key)) {
+              _set(key, remote);
+            }
+          },
         );
-    _set(key, budget);
+    if (ref.mounted &&
+        sessionRevision == _sessionRevision &&
+        accountRevision == _accountRevision(accountId) &&
+        keyRevision == _keyRevision(key)) {
+      _set(key, budget);
+    }
     return budget;
   }
 
@@ -56,14 +82,33 @@ class AccountBudgetsSession extends _$AccountBudgetsSession {
     int month,
     double revenue,
   ) async {
+    final key = _key(accountId, year, month);
+    final sessionRevision = _sessionRevision;
+    final accountRevision = _accountRevision(accountId);
+    _bumpKeyRevision(key);
+    final keyRevision = _keyRevision(key);
     final budget = await ref
         .read(accountBudgetsServiceProvider)
         .setRevenue(accountId, year, month, revenue);
-    _set(_key(accountId, year, month), budget);
+    if (ref.mounted &&
+        sessionRevision == _sessionRevision &&
+        accountRevision == _accountRevision(accountId) &&
+        keyRevision == _keyRevision(key)) {
+      _set(key, budget);
+    }
   }
 
   void clearAccount(String accountId) {
     final prefix = '${accountId}_';
+    _bumpAccountRevision(accountId);
+    for (final key
+        in state.budgets.keys.where((key) => key.startsWith(prefix)).toList()) {
+      _bumpKeyRevision(key);
+    }
+    for (final key
+        in state.loadedKeys.where((key) => key.startsWith(prefix)).toList()) {
+      _bumpKeyRevision(key);
+    }
     final next = Map<String, AccountBudget?>.from(state.budgets)
       ..removeWhere((k, _) => k.startsWith(prefix));
     state = AccountBudgetsSessionState(
@@ -75,6 +120,9 @@ class AccountBudgetsSession extends _$AccountBudgetsSession {
   }
 
   void clear() {
+    _sessionRevision++;
+    _keyRevisions.clear();
+    _accountRevisions.clear();
     state = const AccountBudgetsSessionState(budgets: {}, loadedKeys: {});
     ref.read(accountBudgetsServiceProvider).invalidateCache();
   }

@@ -1,5 +1,4 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/pages/overview/revenue_provider.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:flutter/material.dart';
 
@@ -29,6 +28,18 @@ class OverviewStatItem {
   });
 }
 
+@immutable
+class RevenueSummary {
+  const RevenueSummary({required this.revenue, required this.inheritedRevenue});
+
+  final double revenue;
+  final double? inheritedRevenue;
+
+  bool get hasRevenue => revenue > 0;
+  bool get isEstimated => !hasRevenue && (inheritedRevenue ?? 0) > 0;
+  double get effectiveRevenue => hasRevenue ? revenue : (inheritedRevenue ?? 0);
+}
+
 class OverviewSummaryStats {
   final OverviewStatItem revenue;
   final OverviewStatItem expenses;
@@ -44,7 +55,7 @@ class OverviewSummaryStats {
 
   factory OverviewSummaryStats.from(
     BuildContext context, {
-    required RevenueState revenue,
+    required RevenueSummary revenue,
     required double totalExpenses,
     required double pendingExpenses,
     required int? remainingWeekends,

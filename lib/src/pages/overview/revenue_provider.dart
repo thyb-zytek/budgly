@@ -19,11 +19,13 @@ class RevenueState {
     required this.isLoaded,
     required this.showEditor,
     required this.status,
+    this.isInheritedLoaded = false,
   });
 
   final double revenue;
   final double? inheritedRevenue;
   final bool isLoaded;
+  final bool isInheritedLoaded;
   final bool showEditor;
   final ActionStatus status;
 
@@ -101,11 +103,26 @@ class Revenue extends _$Revenue {
             );
       _set(
         inheritedRevenue: normalized,
-        showEditor: (normalized ?? 0) > 0 ? false : null,
+        isInheritedLoaded: true,
+        showEditor: _shouldShow(
+          state.isLoaded,
+          state.revenue,
+          normalized,
+          isInheritedLoaded: true,
+        ),
       );
     } catch (e) {
       if (!ref.mounted) return;
       AppLogger.debug('Inherited overview revenue unavailable: $e');
+      _set(
+        isInheritedLoaded: true,
+        showEditor: _shouldShow(
+          state.isLoaded,
+          state.revenue,
+          null,
+          isInheritedLoaded: true,
+        ),
+      );
     }
   }
 
@@ -155,9 +172,15 @@ class Revenue extends _$Revenue {
       revenue: revenue,
       inheritedRevenue: null,
       isLoaded: budgetSession.loadedKeys.contains(key),
-      // At build time the estimate has not been derived yet; `loadInherited`
-      // and `_refreshFromSession` refine the visibility as soon as they run.
-      showEditor: _shouldShow(true, revenue, null),
+      // Wait for the inherited-revenue lookup before deciding whether to show
+      // the editor, so a propagated value never causes a brief flash.
+      showEditor: _shouldShow(
+        budgetSession.loadedKeys.contains(key),
+        revenue,
+        null,
+        isInheritedLoaded: false,
+      ),
+      isInheritedLoaded: false,
       status: const ActionStatus.idle(),
     );
   }
@@ -171,6 +194,7 @@ class Revenue extends _$Revenue {
         current.isLoaded,
         current.revenue,
         state.inheritedRevenue,
+        isInheritedLoaded: state.isInheritedLoaded,
       ),
     );
   }
@@ -179,6 +203,7 @@ class Revenue extends _$Revenue {
     double? revenue,
     Object? inheritedRevenue = _unset,
     bool? isLoaded,
+    bool? isInheritedLoaded,
     bool? showEditor,
     ActionStatus? status,
   }) {
@@ -188,6 +213,7 @@ class Revenue extends _$Revenue {
           ? state.inheritedRevenue
           : inheritedRevenue as double?,
       isLoaded: isLoaded ?? state.isLoaded,
+      isInheritedLoaded: isInheritedLoaded ?? state.isInheritedLoaded,
       showEditor: showEditor ?? state.showEditor,
       status: status ?? state.status,
     );
@@ -196,8 +222,16 @@ class Revenue extends _$Revenue {
   /// The form is only offered once the session has resolved the period's
   /// data and the period has neither its own revenue nor one propagated from
   /// an earlier period. An explicit `openEditor` still overrides this.
-  bool _shouldShow(bool isLoaded, double revenue, double? inheritedRevenue) =>
-      isLoaded && revenue <= 0 && (inheritedRevenue ?? 0) <= 0;
+  bool _shouldShow(
+    bool isLoaded,
+    double revenue,
+    double? inheritedRevenue, {
+    required bool isInheritedLoaded,
+  }) =>
+      isLoaded &&
+      isInheritedLoaded &&
+      revenue <= 0 &&
+      (inheritedRevenue ?? 0) <= 0;
 }
 
 const _unset = Object();

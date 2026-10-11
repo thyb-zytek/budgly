@@ -118,7 +118,7 @@ class _ExpenseEditorSheetState extends State<ExpenseEditorSheet> {
               left: 20,
               right: 20,
               top: 4,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
             ),
             child: Form(
               key: _formKey,

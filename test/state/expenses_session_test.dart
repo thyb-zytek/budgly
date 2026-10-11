@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budgly/src/state/expenses_provider.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
@@ -13,6 +15,8 @@ class _FakeExpensesService extends ExpensesService {
   final List<Expense> values;
   int listPeriodCalls = 0;
   int listAccountCalls = 0;
+  Completer<List<Expense>>? deferredPeriodLoad;
+  Completer<void>? periodLoadStarted;
 
   @override
   Future<List<Expense>> listExpensesForAccount(
@@ -35,6 +39,13 @@ class _FakeExpensesService extends ExpensesService {
   }) async {
     listPeriodCalls++;
     _lastOnRevalidated = onRevalidated;
+    final pending = deferredPeriodLoad;
+    if (pending != null) {
+      if (periodLoadStarted != null && !periodLoadStarted!.isCompleted) {
+        periodLoadStarted!.complete();
+      }
+      return pending.future;
+    }
     return values.where((expense) => expense.accountId == accountId).toList();
   }
 
@@ -110,6 +121,37 @@ void main() {
           'frozen on the first cached snapshot',
     );
   });
+
+  test(
+    'clearAccount rejects a period load completed after account invalidation',
+    () async {
+      final service = _FakeExpensesService([]);
+      final container = ProviderContainer(
+        overrides: [expensesServiceProvider.overrideWithValue(service)],
+      );
+      addTearDown(container.dispose);
+      final session = container.read(expensesSessionProvider.notifier);
+      final deferred = Completer<List<Expense>>();
+      final started = Completer<void>();
+      service.deferredPeriodLoad = deferred;
+      service.periodLoadStarted = started;
+
+      final loading = session.loadPeriod(
+        'a1',
+        const Period(year: 2026, month: 8),
+      );
+      await started.future;
+      session.clearAccount('a1');
+      deferred.complete([_expense('stale', 'a1', DateTime(2026, 8, 1))]);
+      await loading;
+
+      expect(
+        container.read(expensesSessionProvider).expensesByAccount,
+        isEmpty,
+      );
+      expect(container.read(expensesSessionProvider).loadedAccounts, isEmpty);
+    },
+  );
 
   test('getExpenseById searches every cached account', () async {
     final first = _expense('e1', 'a1', DateTime(2026, 8, 1));

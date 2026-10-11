@@ -13,31 +13,28 @@ void main() {
     await queue.clear();
   });
 
-  test(
-    'offline create -> update -> delete keeps create and delete for crash-safe replay',
-    () async {
-      await queue.enqueue(
-        id: 'create-e1',
-        type: 'expenses',
-        operation: 'create',
-        payload: {'id': 'e1', 'amount': 10},
-      );
-      await queue.enqueue(
-        id: 'update-e1',
-        type: 'expenses',
-        operation: 'update',
-        payload: {'id': 'e1', 'amount': 20},
-      );
-      await queue.enqueue(
-        id: 'delete-e1',
-        type: 'expenses',
-        operation: 'delete',
-        payload: {'id': 'e1'},
-      );
+  test('offline create -> update -> delete keeps create and delete for crash-safe replay', () async {
+    await queue.enqueue(
+      id: 'create-e1',
+      type: 'expenses',
+      operation: 'create',
+      payload: {'id': 'e1', 'amount': 10},
+    );
+    await queue.enqueue(
+      id: 'update-e1',
+      type: 'expenses',
+      operation: 'update',
+      payload: {'id': 'e1', 'amount': 20},
+    );
+    await queue.enqueue(
+      id: 'delete-e1',
+      type: 'expenses',
+      operation: 'delete',
+      payload: {'id': 'e1'},
+    );
 
-      expect(await queue.all(), hasLength(2));
-    },
-  );
+    expect(await queue.all(), hasLength(2));
+  });
 
   test('multiple offline updates retain only the latest payload', () async {
     for (var i = 1; i <= 10; i++) {

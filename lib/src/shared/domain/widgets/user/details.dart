@@ -51,9 +51,8 @@ class _UserDetailsState extends State<UserDetails> {
       elevation: 0,
       color: theme.colorScheme.surface,
       child: Padding(
-        padding: EdgeInsets.all(
-          BudglySpacing.lg,
-        ).copyWith(top: BudglySpacing.xl),
+        padding: EdgeInsets.all(BudglySpacing.lg)
+            .copyWith(top: BudglySpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,9 +73,8 @@ class _UserDetailsState extends State<UserDetails> {
               theme,
               title: AppLocalizations.of(context)!.userCreatedOn,
               value: widget.user.profile?.createdAt != null
-                  ? DateFormat(
-                      'dd/MM/yyyy',
-                    ).format(widget.user.profile!.createdAt)
+                  ? DateFormat('dd/MM/yyyy')
+                        .format(widget.user.profile!.createdAt)
                   : AppLocalizations.of(context)!.notAvailable,
             ),
           ],

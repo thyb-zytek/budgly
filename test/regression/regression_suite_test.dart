@@ -1,4 +1,5 @@
 import 'package:budgly/src/models/budget/calendar_date_range.dart';
+
 import 'dart:convert';
 
 import 'package:budgly/src/models/budget/account_budget.dart';
@@ -38,8 +39,7 @@ void main() {
 
       expect(await service.getIcons(), isEmpty);
       service.resetForTest();
-      bundle.content =
-          '[{"icon_name":"groceries","icon_code":16,"icon_pack":"BudglyIcons","labels":{}}]';
+      bundle.content = '[{"icon_name":"groceries","icon_code":16,"icon_pack":"BudglyIcons","labels":{}}]';
 
       expect(await service.getIcons(), hasLength(1));
     });
@@ -57,35 +57,32 @@ void main() {
   });
 
   group('REG-007: recurring amount edits per occurrence (059da28)', () {
-    test(
-      'une modification à partir de mars conserve l historique et change les occurrences suivantes',
-      () {
-        final original = Fixtures.expense(
-          id: 'r1',
-          accountId: 'acc-1',
-          categoryId: 'cat-1',
-          amount: 100,
-          debitDate: DateTime(2026, 1, 15),
-          recurrence: RecurrenceType.monthly,
-          recurrenceAnchorDay: 15,
-          debitedOccurrences: const ['2026-01-15', '2026-02-15', '2026-03-15'],
-        );
-        final updated = original.copyWith(amount: 120);
-        const versioning = RecurringExpenseVersioning();
+    test('une modification à partir de mars conserve l historique et change les occurrences suivantes', () {
+      final original = Fixtures.expense(
+        id: 'r1',
+        accountId: 'acc-1',
+        categoryId: 'cat-1',
+        amount: 100,
+        debitDate: DateTime(2026, 1, 15),
+        recurrence: RecurrenceType.monthly,
+        recurrenceAnchorDay: 15,
+        debitedOccurrences: const ['2026-01-15', '2026-02-15', '2026-03-15'],
+      );
+      final updated = original.copyWith(amount: 120);
+      const versioning = RecurringExpenseVersioning();
 
-        final result = versioning.split(
-          original: original,
-          updated: updated,
-          effectiveDate: DateTime(2026, 3, 15),
-        );
+      final result = versioning.split(
+        original: original,
+        updated: updated,
+        effectiveDate: DateTime(2026, 3, 15),
+      );
 
-        expect(result.previous.amount, 100);
-        expect(result.previous.endDate, DateTime(2026, 3, 14));
-        expect(result.next.amount, 120);
-        expect(result.next.debitDate, DateTime(2026, 3, 15));
-        expect(result.next.debitedOccurrences, ['2026-03-15']);
-      },
-    );
+      expect(result.previous.amount, 100);
+      expect(result.previous.endDate, DateTime(2026, 3, 14));
+      expect(result.next.amount, 120);
+      expect(result.next.debitDate, DateTime(2026, 3, 15));
+      expect(result.next.debitedOccurrences, ['2026-03-15']);
+    });
   });
 
   group(

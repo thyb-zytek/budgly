@@ -35,6 +35,9 @@ class _FakeAuthService extends AuthService {
 
   @override
   fb.User? get firebaseUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 }
 
 class _FakeProfileService extends ProfileService {
@@ -176,70 +179,64 @@ Future<void> _waitForInitialization(ProviderContainer container) async {
 void main() {
   const existingAccount = Account(id: 'a1', name: 'Compte existant');
 
-  test(
-    'connecting a user with an existing account loads accounts, icons, categories and revenue into every session',
-    () async {
-      final fakeCategories = _FakeCategoriesService(
-        availableIcons: [
-          CategoryIcon(
-            iconName: 'shopping',
-            iconCode: 0xe587,
-            iconPack: 'MaterialIcons',
-            labels: {'en': 'Shopping', 'fr': 'Courses'},
-          ),
-          CategoryIcon(
-            iconName: 'transport',
-            iconCode: 0xe530,
-            iconPack: 'MaterialIcons',
-            labels: {'en': 'Transport', 'fr': 'Transport'},
-          ),
-        ],
-        byAccount: {
-          'a1': const [Category(id: 'c1', name: 'Courses', accountId: 'a1')],
-        },
-      );
-      final fakeBudgets = _FakeAccountBudgetsService(
-        revenueByAccount: {'a1': 2500},
-      );
+  test('connecting a user with an existing account loads accounts, icons, categories and revenue into every session', () async {
+    final fakeCategories = _FakeCategoriesService(
+      availableIcons: [
+        CategoryIcon(
+          iconName: 'shopping',
+          iconCode: 0xe587,
+          iconPack: 'MaterialIcons',
+          labels: {'en': 'Shopping', 'fr': 'Courses'},
+        ),
+        CategoryIcon(
+          iconName: 'transport',
+          iconCode: 0xe530,
+          iconPack: 'MaterialIcons',
+          labels: {'en': 'Transport', 'fr': 'Transport'},
+        ),
+      ],
+      byAccount: {
+        'a1': const [Category(id: 'c1', name: 'Courses', accountId: 'a1')],
+      },
+    );
+    final fakeBudgets = _FakeAccountBudgetsService(
+      revenueByAccount: {'a1': 2500},
+    );
 
-      final container = _makeContainer(
-        accounts: _FakeAccountsService([existingAccount]),
-        categories: fakeCategories,
-        accountBudgets: fakeBudgets,
-      );
-      addTearDown(container.dispose);
+    final container = _makeContainer(
+      accounts: _FakeAccountsService([existingAccount]),
+      categories: fakeCategories,
+      accountBudgets: fakeBudgets,
+    );
+    addTearDown(container.dispose);
 
-      await _waitForInitialization(container);
+    await _waitForInitialization(container);
 
-      // Bug 1 regression: at connection the sessions must be populated so a
-      // reload of the app does not lose the data.
-      expect(container.read(accountsSessionProvider).accounts, hasLength(1));
-      expect(
-        container.read(categoriesSessionProvider).availableIcons,
-        hasLength(2),
-      );
-      expect(
-        container
-            .read(categoriesSessionProvider.notifier)
-            .getCategoriesForAccount('a1'),
-        hasLength(1),
-      );
-      expect(container.read(tutorialProvider).createdAccount?.id, 'a1');
-      expect(container.read(tutorialProvider).hasRevenue, isTrue);
-    },
-  );
+    // Bug 1 regression: at connection the sessions must be populated so a
+    // reload of the app does not lose the data.
+    expect(container.read(accountsSessionProvider).accounts, hasLength(1));
+    expect(
+      container.read(categoriesSessionProvider).availableIcons,
+      hasLength(2),
+    );
+    expect(
+      container
+          .read(categoriesSessionProvider.notifier)
+          .getCategoriesForAccount('a1'),
+      hasLength(1),
+    );
+    expect(container.read(tutorialProvider).createdAccount?.id, 'a1');
+    expect(container.read(tutorialProvider).hasRevenue, isTrue);
+  });
 
-  test(
-    'connecting a brand-new user still loads accounts and category icons (empty adopt is skipped)',
-    () async {
-      final container = _makeContainer();
-      addTearDown(container.dispose);
+  test('connecting a brand-new user still loads accounts and category icons (empty adopt is skipped)', () async {
+    final container = _makeContainer();
+    addTearDown(container.dispose);
 
-      await _waitForInitialization(container);
+    await _waitForInitialization(container);
 
-      expect(container.read(accountsSessionProvider).accounts, isEmpty);
-      expect(container.read(tutorialProvider).createdAccount, isNull);
-      expect(container.read(tutorialProvider).isInitializing, isFalse);
-    },
-  );
+    expect(container.read(accountsSessionProvider).accounts, isEmpty);
+    expect(container.read(tutorialProvider).createdAccount, isNull);
+    expect(container.read(tutorialProvider).isInitializing, isFalse);
+  });
 }

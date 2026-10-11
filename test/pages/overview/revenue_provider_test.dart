@@ -24,6 +24,9 @@ class _FakeAuthService extends AuthService {
 
   @override
   fb.User? get firebaseUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 }
 
 class _FakeProfileService extends ProfileService {
@@ -40,7 +43,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 }
 
 class _FakeAccountBudgetsService extends AccountBudgetsService {
@@ -136,28 +139,25 @@ void main() {
     },
   );
 
-  test(
-    'with no revenue set, falls back to the most recent past revenue as an estimate',
-    () async {
-      final service = _FakeAccountBudgetsService({
-        'a1_2026_3': null,
-      }, mostRecentRevenue: 1500);
-      final container = _makeContainer(service);
-      addTearDown(container.dispose);
+  test('with no revenue set, falls back to the most recent past revenue as an estimate', () async {
+    final service = _FakeAccountBudgetsService({
+      'a1_2026_3': null,
+    }, mostRecentRevenue: 1500);
+    final container = _makeContainer(service);
+    addTearDown(container.dispose);
 
-      final notifier = container.read(revenueProvider('a1', period).notifier);
-      await notifier.load();
+    final notifier = container.read(revenueProvider('a1', period).notifier);
+    await notifier.load();
 
-      final state = container.read(revenueProvider('a1', period));
-      expect(state.hasRevenue, isFalse);
-      expect(state.isEstimated, isTrue);
-      expect(state.effectiveRevenue, 1500);
-      // Manual-test contract: the form is only offered when the period has
-      // neither its own revenue nor a propagated one, so an existing
-      // estimate hides it (it stays reachable through the summary edit tap).
-      expect(state.showEditor, isFalse);
-    },
-  );
+    final state = container.read(revenueProvider('a1', period));
+    expect(state.hasRevenue, isFalse);
+    expect(state.isEstimated, isTrue);
+    expect(state.effectiveRevenue, 1500);
+    // Manual-test contract: the form is only offered when the period has
+    // neither its own revenue nor a propagated one, so an existing
+    // estimate hides it (it stays reachable through the summary edit tap).
+    expect(state.showEditor, isFalse);
+  });
 
   test('editor visibility: offered with no revenue at all, hidden by a '
       'propagated estimate, still openable on demand', () async {
@@ -254,22 +254,19 @@ void main() {
     },
   );
 
-  test(
-    'updating the same account/period in AccountBudgetsSession from elsewhere refreshes this provider',
-    () async {
-      final service = _FakeAccountBudgetsService({});
-      final container = _makeContainer(service);
-      addTearDown(container.dispose);
+  test('updating the same account/period in AccountBudgetsSession from elsewhere refreshes this provider', () async {
+    final service = _FakeAccountBudgetsService({});
+    final container = _makeContainer(service);
+    addTearDown(container.dispose);
 
-      // Make sure the provider exists before another part of the app writes
-      // to the shared session, the way two widgets on the same screen would.
-      container.read(revenueProvider('a1', period));
+    // Make sure the provider exists before another part of the app writes
+    // to the shared session, the way two widgets on the same screen would.
+    container.read(revenueProvider('a1', period));
 
-      await container
-          .read(accountBudgetsSessionProvider.notifier)
-          .setRevenue('a1', 2026, 3, 4200);
+    await container
+        .read(accountBudgetsSessionProvider.notifier)
+        .setRevenue('a1', 2026, 3, 4200);
 
-      expect(container.read(revenueProvider('a1', period)).revenue, 4200);
-    },
-  );
+    expect(container.read(revenueProvider('a1', period)).revenue, 4200);
+  });
 }

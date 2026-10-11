@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budgly/src/models/budget/account_budget.dart';
 import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/budget/account_budgets_service_provider.dart';
@@ -12,6 +14,8 @@ class _FakeAccountBudgetsService extends AccountBudgetsService {
 
   final Map<String, AccountBudget?> values;
   bool shouldFailLoad = false;
+  Completer<AccountBudget?>? deferredLoad;
+  Completer<void>? loadStarted;
   int invalidateCacheCalls = 0;
 
   String _key(String accountId, int year, int month) =>
@@ -28,6 +32,13 @@ class _FakeAccountBudgetsService extends AccountBudgetsService {
   }) async {
     _lastOnRevalidated = onRevalidated;
     if (shouldFailLoad) throw Exception('boom');
+    final pending = deferredLoad;
+    if (pending != null) {
+      if (loadStarted != null && !loadStarted!.isCompleted) {
+        loadStarted!.complete();
+      }
+      return pending.future;
+    }
     return values[_key(accountId, year, month)];
   }
 
@@ -144,6 +155,38 @@ void main() {
           'frozen on the first cached snapshot',
     );
   });
+
+  test(
+    'clear rejects a budget load that finishes after the session changes',
+    () async {
+      final service = _FakeAccountBudgetsService({});
+      final container = ProviderContainer(
+        overrides: [accountBudgetsServiceProvider.overrideWithValue(service)],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(accountBudgetsSessionProvider.notifier);
+      final deferred = Completer<AccountBudget?>();
+      final started = Completer<void>();
+      service.deferredLoad = deferred;
+      service.loadStarted = started;
+
+      final loading = notifier.loadRevenue('a1', 2026, 3);
+      await started.future;
+      notifier.clear();
+      deferred.complete(
+        const AccountBudget(
+          accountId: 'a1',
+          year: 2026,
+          month: 3,
+          revenue: 3000,
+        ),
+      );
+      await loading;
+
+      expect(notifier.hasLoaded('a1', 2026, 3), isFalse);
+      expect(notifier.getRevenue('a1', 2026, 3), 0);
+    },
+  );
 
   test('setRevenue writes the new value into the shared state', () async {
     final service = _FakeAccountBudgetsService({});

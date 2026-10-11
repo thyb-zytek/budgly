@@ -2,7 +2,6 @@ import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
-import 'package:budgly/src/pages/overview/revenue_provider.dart';
 import 'package:budgly/src/pages/overview/ui_state.dart';
 import 'package:budgly/src/shared/domain/widgets/accounts/selector.dart';
 import 'package:budgly/src/pages/overview/widgets/donut_chart.dart';
@@ -28,7 +27,7 @@ class OverviewSummaryCard extends StatelessWidget {
   final Account? account;
   final Period period;
   final List<CategoryExpenseSummary> categorySummaries;
-  final RevenueState revenue;
+  final RevenueSummary revenue;
   final String Function(double) formatAmount;
   final ValueChanged<Account> onSelectAccount;
   final VoidCallback? onEditRevenue;

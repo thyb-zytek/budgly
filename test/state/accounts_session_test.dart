@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/accounts/accounts_service_provider.dart';
@@ -25,6 +27,8 @@ class _FakeAccountsService extends AccountsService {
   bool shouldFailLoad = false;
   int loadCalls = 0;
   bool clearLocalAccountsCalled = false;
+  Completer<List<Account>>? deferredLoad;
+  Completer<void>? loadStarted;
   void Function(List<Account>)? _lastOnRevalidated;
 
   @override
@@ -35,6 +39,13 @@ class _FakeAccountsService extends AccountsService {
     loadCalls++;
     _lastOnRevalidated = onRevalidated;
     if (shouldFailLoad) throw Exception('boom');
+    final pending = deferredLoad;
+    if (pending != null) {
+      if (loadStarted != null && !loadStarted!.isCompleted) {
+        loadStarted!.complete();
+      }
+      return pending.future;
+    }
     return List.of(values);
   }
 
@@ -118,6 +129,37 @@ void main() {
     // not wipe out data the user already saw.
     expect(container.read(accountsSessionProvider).accounts, hasLength(1));
   });
+
+  test(
+    'clear prevents an in-flight load from repopulating the session',
+    () async {
+      final service = _FakeAccountsService([
+        Fixtures.account(id: 'a1', name: 'Old user account'),
+      ]);
+      final container = ProviderContainer(
+        overrides: [accountsServiceProvider.overrideWithValue(service)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(accountsSessionProvider.notifier).load();
+      final deferred = Completer<List<Account>>();
+      final started = Completer<void>();
+      service.deferredLoad = deferred;
+      service.loadStarted = started;
+
+      final loading = container.read(accountsSessionProvider.notifier).load();
+      await started.future;
+      container.read(accountsSessionProvider.notifier).clear();
+      deferred.complete([
+        Fixtures.account(id: 'a1', name: 'Stale old-user account'),
+      ]);
+      await loading;
+
+      final state = container.read(accountsSessionProvider);
+      expect(state.accounts, isEmpty);
+      expect(state.hasLoaded, isFalse);
+    },
+  );
 
   test('create adds the new account to the shared state', () async {
     final service = _FakeAccountsService([]);

@@ -21,11 +21,17 @@ void main() {
     final auth = MockFirebaseAuth(signedIn: false);
 
     expect(
-      RouteGuards.decideRedirect(location: AppRoutes.overview, auth: auth),
+      RouteGuards.decideRedirect(
+        location: AppRoutes.overview,
+        authUser: auth.currentUser,
+      ),
       AppRoutes.login,
     );
     expect(
-      RouteGuards.decideRedirect(location: AppRoutes.login, auth: auth),
+      RouteGuards.decideRedirect(
+        location: AppRoutes.login,
+        authUser: auth.currentUser,
+      ),
       isNull,
     );
   });
@@ -41,11 +47,17 @@ void main() {
     );
 
     expect(
-      RouteGuards.decideRedirect(location: AppRoutes.overview, auth: auth),
+      RouteGuards.decideRedirect(
+        location: AppRoutes.overview,
+        authUser: auth.currentUser,
+      ),
       AppRoutes.login,
     );
     expect(
-      RouteGuards.decideRedirect(location: AppRoutes.login, auth: auth),
+      RouteGuards.decideRedirect(
+        location: AppRoutes.login,
+        authUser: auth.currentUser,
+      ),
       isNull,
     );
   });
@@ -63,7 +75,7 @@ void main() {
     expect(
       RouteGuards.decideRedirect(
         location: AppRoutes.overview,
-        auth: auth,
+        authUser: auth.currentUser,
         profileUser: null,
       ),
       isNull,
@@ -83,7 +95,7 @@ void main() {
     expect(
       RouteGuards.decideRedirect(
         location: AppRoutes.login,
-        auth: auth,
+        authUser: auth.currentUser,
         profileUser: profileUser(true),
       ),
       AppRoutes.overview,
@@ -103,7 +115,7 @@ void main() {
     expect(
       RouteGuards.decideRedirect(
         location: AppRoutes.login,
-        auth: auth,
+        authUser: auth.currentUser,
         profileUser: profileUser(false),
       ),
       AppRoutes.tutorial,

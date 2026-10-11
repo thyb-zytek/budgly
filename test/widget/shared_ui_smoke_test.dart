@@ -10,6 +10,7 @@ import 'package:budgly/src/shared/ui/widgets/layout/section_label.dart';
 import 'package:budgly/src/shared/ui/widgets/tabs/tab_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../helpers/pump_app.dart';
 
 void main() {

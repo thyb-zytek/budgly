@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:budgly/src/core/constants/app_constants.dart';
@@ -110,18 +111,44 @@ class CategoriesSettings extends _$CategoriesSettings {
     );
     if (account?.id != null && !hasCategoriesLoaded(account)) {
       loadCategories();
+    } else if (account?.id != null) {
+      // Categories may already be in the shared session cache while this
+      // feature notifier is new. Load the bundled icon catalogue as well so
+      // editing remains available offline on the first visit to this tab.
+      unawaited(_loadAvailableIcons());
     }
   }
 
+  Future<void> _loadAvailableIcons() async {
+    final session = ref.read(categoriesSessionProvider);
+    if (!session.iconsLoaded) {
+      await ref.read(categoriesSessionProvider.notifier).loadIcons();
+    }
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      availableIcons: ref.read(categoriesSessionProvider).availableIcons,
+    );
+  }
+
+  /// Starts editing [category] (or clears editing when null). Any local
+  /// draft is discarded first: both the draft and the edited row render a
+  /// [CategoryForm] that shares the single `formKey`, so keeping both would
+  /// mount two widgets on the same GlobalKey.
   void setEditingCategory(Category? category) {
     state = state.copyWith(
+      localCategories: const [],
       editingCategory: category,
       clearEditingCategory: category == null,
     );
   }
 
+  /// Discards the in-progress edit and any local draft. Cancel on a draft
+  /// form must remove it, otherwise it would linger next to another form.
   void cancelEdit() {
-    state = state.copyWith(clearEditingCategory: true);
+    state = state.copyWith(
+      clearEditingCategory: true,
+      localCategories: const [],
+    );
   }
 
   Future<void> loadCategories() async {
@@ -177,6 +204,7 @@ class CategoriesSettings extends _$CategoriesSettings {
       state = state.copyWith(
         localCategories: [category],
         availableIcons: icons,
+        clearEditingCategory: true,
         status: state.status.doneLoading(),
       );
       return category;

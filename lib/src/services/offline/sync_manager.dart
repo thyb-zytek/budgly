@@ -1,11 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import 'sync_queue.dart';
+
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
+
+import 'sync_status.dart';
 
 /// Coordinates replay of Supabase mutations while the application is active.
 ///
@@ -22,14 +24,15 @@ import 'package:budgly/src/services/analytics/analytics_service.dart';
 /// running triggers a trailing pass so no enqueued operation waits for the
 /// next periodic trigger.
 ///
-/// [SyncManager] is also a [ChangeNotifier]: once an operation has failed
+/// [SyncManager] exposes its UI-facing status as a broadcast stream: once an
+/// operation has failed
 /// [stuckAfterAttempts] times in a row, or has been rejected permanently by
 /// the server, it is considered "stuck" — never dropped, but surfaced via
 /// [hasStuckOperations] so the UI can let the user know some of their data
 /// has not reached the server yet, instead of failing silently forever.
 /// Permanently rejected operations are not replayed by background triggers;
 /// use `flush(forceRetry: true, retryPermanent: true)` for an explicit retry.
-class SyncManager with WidgetsBindingObserver, ChangeNotifier {
+class SyncManager with WidgetsBindingObserver {
   SyncManager({
     required this._queue,
     required this._analytics,
@@ -54,6 +57,8 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
   bool _started = false;
   bool _disposed = false;
   bool _syncing = false;
+  final StreamController<SyncStatus> _statusController =
+      StreamController<SyncStatus>.broadcast();
 
   /// Completes when the running drain loop (one or more replay passes) ends.
   Future<void>? _flushHandle;
@@ -67,21 +72,25 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
   /// Whether a synchronization pass is currently running.
   bool get isSyncing => _syncing;
 
-  /// Notifies listeners, deferring to the next frame when a [flush] is
-  /// triggered synchronously during a widget build (e.g. from a service
-  /// explicit sync composition at cold-start). Notifying a widget
-  /// listener mid-build throws "setState() or markNeedsBuild() called during
-  /// build", so we let the current frame finish first. Outside a build pass
-  /// the notification is delivered synchronously as before.
-  void _notifyListenersSafely() {
-    if (_disposed) return;
-    final phase = SchedulerBinding.instance.schedulerPhase;
-    if (phase == SchedulerPhase.persistentCallbacks ||
-        phase == SchedulerPhase.midFrameMicrotasks) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
-    } else {
-      notifyListeners();
-    }
+  /// Current immutable status snapshot.
+  SyncStatus get status => SyncStatus(
+    isSyncing: _syncing,
+    hasStuckOperations: _hasStuckOperations,
+    stuckOperationsCount: _stuckOperationsCount,
+  );
+
+  /// Emits status asynchronously so Riverpod listeners can safely update
+  /// their state even when a flush is requested during another provider build.
+  Stream<SyncStatus> get statusStream => _statusController.stream;
+
+  SyncStatus? _lastEmittedStatus;
+
+  void _emitStatus() {
+    if (_disposed || _statusController.isClosed) return;
+    final next = status;
+    if (next == _lastEmittedStatus) return;
+    _lastEmittedStatus = next;
+    _statusController.add(next);
   }
 
   bool _hasStuckOperations = false;
@@ -154,6 +163,8 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
     _dirty = false;
     _forceNext = false;
     _retryPermanentNext = false;
+    _lastEmittedStatus = null;
+    _emitStatus();
   }
 
   /// Requests a replay pass and completes when the queue has been drained as
@@ -190,7 +201,7 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
         _forceNext = false;
         _retryPermanentNext = false;
         _syncing = true;
-        _notifyListenersSafely();
+        _emitStatus();
         await _runFlush(forceRetry: force, retryPermanent: retryPermanent);
       } while (_dirty && !_disposed);
     } finally {
@@ -376,7 +387,7 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
       }
     } finally {
       _syncing = false;
-      _notifyListenersSafely();
+      _emitStatus();
       await _afterPass();
     }
   }
@@ -402,7 +413,7 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
     if (isStuck != _hasStuckOperations || stuckCount != _stuckOperationsCount) {
       _hasStuckOperations = isStuck;
       _stuckOperationsCount = stuckCount;
-      _notifyListenersSafely();
+      _emitStatus();
     }
 
     _scheduleNextRetry(owned);
@@ -438,8 +449,8 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
 
   /// Stops the periodic flush timer and lifecycle observation.
   ///
-  /// [SyncManager] is a [ChangeNotifier], so [dispose] also calls this and
-  /// makes any in-flight pass stop notifying listeners.
+  /// Disposes the application-lifecycle resources and closes the status
+  /// stream. Any in-flight pass is prevented from publishing new status.
   Future<void> stop() async {
     if (!_started) return;
     _started = false;
@@ -450,10 +461,9 @@ class SyncManager with WidgetsBindingObserver, ChangeNotifier {
     _retryTimer = null;
   }
 
-  @override
   void dispose() {
     _disposed = true;
+    _statusController.close();
     unawaited(stop());
-    super.dispose();
   }
 }

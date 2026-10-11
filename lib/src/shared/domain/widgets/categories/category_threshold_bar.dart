@@ -57,10 +57,8 @@ class CategoryThresholdBar extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.end,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w600),
           ),
           LinearProgressIndicator(
             value: progress.progress,

@@ -3,7 +3,7 @@ import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/category_expense_summary.dart';
-import 'package:budgly/src/pages/overview/revenue_provider.dart';
+import 'package:budgly/src/pages/overview/ui_state.dart';
 import 'package:budgly/src/pages/overview/widgets/period_slide_switcher.dart';
 import 'package:budgly/src/pages/overview/widgets/summary_card.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +30,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
   final Account? account;
   final Period period;
   final List<CategoryExpenseSummary> categorySummaries;
-  final RevenueState revenue;
+  final RevenueSummary revenue;
   final String currencyCode;
   final String localeName;
   final int amountDecimalPlaces;

@@ -66,25 +66,22 @@ void main() {
       },
     );
 
-    test(
-      'suppression offline après création conserve create+delete pour un replay crash-safe',
-      () async {
-        final queue = testSyncQueue;
-        await queue.enqueue(
-          id: 'cat:create:1',
-          type: 'categories',
-          operation: 'create',
-          payload: {'id': '1', 'account_id': 'acc-1'},
-        );
-        await queue.enqueue(
-          id: 'cat:delete:1',
-          type: 'categories',
-          operation: 'delete',
-          payload: {'id': '1', 'account_id': 'acc-1'},
-        );
-        expect(await queue.all(), hasLength(2));
-      },
-    );
+    test('suppression offline après création conserve create+delete pour un replay crash-safe', () async {
+      final queue = testSyncQueue;
+      await queue.enqueue(
+        id: 'cat:create:1',
+        type: 'categories',
+        operation: 'create',
+        payload: {'id': '1', 'account_id': 'acc-1'},
+      );
+      await queue.enqueue(
+        id: 'cat:delete:1',
+        type: 'categories',
+        operation: 'delete',
+        payload: {'id': '1', 'account_id': 'acc-1'},
+      );
+      expect(await queue.all(), hasLength(2));
+    });
 
     test('changement catégorie offline: mutation locale isolée', () {
       final e = Fixtures.expense(
@@ -138,61 +135,55 @@ void main() {
       expect(truncated.endDateExclusive, DateTime(2026, 2, 15));
     });
 
-    test(
-      'scénario critique ONLINE->OFFLINE->modif->fermeture->relaunch vérifie état local',
-      () async {
-        // Simulate persistent queue across relaunch via SharedPreferences mock
-        final queue = testSyncQueue;
-        // ONLINE création
-        await queue.enqueue(
-          id: 'acc:create:1',
-          type: 'accounts',
-          operation: 'create',
-          payload: {'id': 'acc-1', 'name': 'Original'},
-        );
-        // OFFLINE modification (coalesced to create with new payload)
-        await queue.enqueue(
-          id: 'acc:update:1',
-          type: 'accounts',
-          operation: 'update',
-          payload: {'id': 'acc-1', 'name': 'ModifiedOffline'},
-        );
-        // Simulate fermeture: queue persists in SharedPreferences
-        final reloaded = await queue.all();
-        expect(reloaded.single.payload['name'], 'ModifiedOffline');
-        expect(reloaded.single.operation, 'create');
-        // ONLINE sync: handler succeeds -> remove
-        await queue.remove(reloaded.single.id);
-        expect(await queue.all(), isEmpty);
-      },
-    );
+    test('scénario critique ONLINE->OFFLINE->modif->fermeture->relaunch vérifie état local', () async {
+      // Simulate persistent queue across relaunch via SharedPreferences mock
+      final queue = testSyncQueue;
+      // ONLINE création
+      await queue.enqueue(
+        id: 'acc:create:1',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'acc-1', 'name': 'Original'},
+      );
+      // OFFLINE modification (coalesced to create with new payload)
+      await queue.enqueue(
+        id: 'acc:update:1',
+        type: 'accounts',
+        operation: 'update',
+        payload: {'id': 'acc-1', 'name': 'ModifiedOffline'},
+      );
+      // Simulate fermeture: queue persists in SharedPreferences
+      final reloaded = await queue.all();
+      expect(reloaded.single.payload['name'], 'ModifiedOffline');
+      expect(reloaded.single.operation, 'create');
+      // ONLINE sync: handler succeeds -> remove
+      await queue.remove(reloaded.single.id);
+      expect(await queue.all(), isEmpty);
+    });
 
-    test(
-      'batch de synchronisation persiste les succès et échecs en une opération logique',
-      () async {
-        final queue = testSyncQueue;
-        await queue.enqueue(
-          id: 'success',
-          type: 'accounts',
-          operation: 'create',
-          payload: {'id': 'success', 'name': 'Success'},
-        );
-        await queue.enqueue(
-          id: 'failure',
-          type: 'accounts',
-          operation: 'create',
-          payload: {'id': 'failure', 'name': 'Failure'},
-        );
+    test('batch de synchronisation persiste les succès et échecs en une opération logique', () async {
+      final queue = testSyncQueue;
+      await queue.enqueue(
+        id: 'success',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'success', 'name': 'Success'},
+      );
+      await queue.enqueue(
+        id: 'failure',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'id': 'failure', 'name': 'Failure'},
+      );
 
-        await queue.applyBatch(removeIds: {'success'}, failedIds: {'failure'});
+      await queue.applyBatch(removeIds: {'success'}, failedIds: {'failure'});
 
-        final remaining = await queue.all();
-        expect(remaining, hasLength(1));
-        expect(remaining.single.id, 'failure');
-        expect(remaining.single.attempts, 1);
-        expect(remaining.single.nextAttemptAt, isNotNull);
-      },
-    );
+      final remaining = await queue.all();
+      expect(remaining, hasLength(1));
+      expect(remaining.single.id, 'failure');
+      expect(remaining.single.attempts, 1);
+      expect(remaining.single.nextAttemptAt, isNotNull);
+    });
 
     test(
       'échec de synchronisation: markFailed applique backoff exponentiel',

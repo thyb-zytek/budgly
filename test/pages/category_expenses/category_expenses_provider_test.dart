@@ -31,6 +31,9 @@ class _FakeAuthService extends AuthService {
 
   @override
   fb.User? get firebaseUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 }
 
 class _FakeExpensesService extends ExpensesService {
@@ -98,7 +101,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 }
 
 Expense _expense(String id, String accountId, String categoryId) => Expense(

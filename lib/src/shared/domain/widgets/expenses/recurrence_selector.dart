@@ -52,7 +52,9 @@ class RecurrenceSelector extends StatelessWidget {
         return Padding(
           padding: EdgeInsets.symmetric(
             horizontal: BudglySpacing.sm,
-            vertical: BudglySpacing.lg,
+            // Keep each menu row compact so the first option stays within
+            // the popup's constrained viewport on smaller screens.
+            vertical: BudglySpacing.sm,
           ),
           child: Text(recurrenceLabel(tr, recurrence)),
         );

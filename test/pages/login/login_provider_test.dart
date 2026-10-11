@@ -9,18 +9,29 @@ import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/accounts/accounts_service_provider.dart';
 import 'package:budgly/src/services/auth/auth_service.dart';
 import 'package:budgly/src/services/auth/auth_service_provider.dart';
+import 'package:budgly/src/services/expenses/expenses_service_provider.dart';
+import 'package:budgly/src/services/expenses/expenses_service.dart';
+import 'package:budgly/src/services/categories/categories_service_provider.dart';
+import 'package:budgly/src/services/categories/categories_service.dart';
+import 'package:budgly/src/services/budget/account_budgets_service_provider.dart';
+import 'package:budgly/src/services/budget/account_budgets_service.dart';
 import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/state/profile_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeAuthService extends AuthService {
-  FakeAuthService(this.user) : super(analytics: AnalyticsService());
+  FakeAuthService(this.user) : super(analytics: AnalyticsService()) {
+    _firebaseUser = _toFirebaseUser(user);
+  }
+
   final User? user;
+  fb.User? _firebaseUser;
 
   User? signInUser;
   User? signUpUser;
@@ -39,31 +50,50 @@ class FakeAuthService extends AuthService {
   User? get currentUser => user;
 
   @override
-  fb.User? get firebaseUser => null;
+  fb.User? get firebaseUser => _firebaseUser;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 
   @override
   Future<User> signInWithEmailAndPassword(String email, String password) async {
     if (signInError != null) throw signInError!;
-    return signInUser!;
+    final next = signInUser!;
+    _firebaseUser = _toFirebaseUser(next);
+    return next;
   }
 
   @override
   Future<User> signUpWithEmailAndPassword(String email, String password) async {
     if (signUpError != null) throw signUpError!;
-    return signUpUser!;
+    final next = signUpUser!;
+    _firebaseUser = _toFirebaseUser(next);
+    return next;
   }
 
   @override
   Future<User> signInWithGoogle() async {
     if (googleError != null) throw googleError!;
-    return googleUser!;
+    final next = googleUser!;
+    _firebaseUser = _toFirebaseUser(next);
+    return next;
   }
 
   @override
   Future<User?> reloadCurrentUser() async {
     if (reloadError != null) throw reloadError!;
-    return reloadUser;
+    final next = reloadUser;
+    _firebaseUser = _toFirebaseUser(next);
+    return next;
   }
+
+  static fb.User? _toFirebaseUser(User? user) => user == null
+      ? null
+      : MockUser(
+          uid: user.id,
+          email: user.email,
+          isEmailVerified: user.emailVerified,
+        );
 
   @override
   Future<void> resetPassword(String email) async {
@@ -102,7 +132,7 @@ class FakeProfileService extends ProfileService {
   }
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 
   @override
   Future<void> signOut() async {
@@ -145,6 +175,22 @@ ProviderContainer _container({
       profileServiceProvider.overrideWithValue(profile ?? FakeProfileService()),
       accountsServiceProvider.overrideWithValue(
         accounts ?? FakeAccountsService(const []),
+      ),
+      categoriesServiceProvider.overrideWithValue(
+        CategoriesService(
+          analytics: AnalyticsService(),
+          syncManager: SyncManager(
+            queue: SyncQueue(),
+            analytics: AnalyticsService(),
+          ),
+          syncQueue: SyncQueue(),
+        ),
+      ),
+      expensesServiceProvider.overrideWithValue(
+        ExpensesService(analytics: AnalyticsService()),
+      ),
+      accountBudgetsServiceProvider.overrideWithValue(
+        AccountBudgetsService(analytics: AnalyticsService()),
       ),
     ],
   );
@@ -335,17 +381,42 @@ void main() {
     expect(container.read(loginProvider).isGoogleSignIn, isFalse);
   });
 
-  test('sign-out clears the authenticated state', () async {
-    const user = User(id: 'u1', email: 'user@example.com', emailVerified: true);
-    final auth = FakeAuthService(user);
-    final profile = FakeProfileService();
-    final container = _container(auth: auth, profile: profile);
-    addTearDown(container.dispose);
-    await container.read(loginProvider.notifier).signOut();
-    expect(profile.signOutCalls, 1);
-    expect(container.read(loginProvider).currentUser, isNull);
-    expect(container.read(loginProvider).formType, AuthForm.signUp);
-  });
+  test(
+    'sign-out clears the authenticated state and returns to sign-in',
+    () async {
+      const user = User(
+        id: 'u1',
+        email: 'user@example.com',
+        emailVerified: true,
+      );
+      final auth = FakeAuthService(user);
+      final profile = FakeProfileService();
+      final container = _container(auth: auth, profile: profile);
+      addTearDown(container.dispose);
+      await container.read(loginProvider.notifier).signOut();
+      expect(profile.signOutCalls, 1);
+      expect(container.read(loginProvider).currentUser, isNull);
+      expect(container.read(loginProvider).formType, AuthForm.signIn);
+    },
+  );
+
+  test(
+    'sign-out from email verification returns to sign-in, not sign-up (A2)',
+    () async {
+      const user = User(
+        id: 'u1',
+        email: 'user@example.com',
+        emailVerified: false,
+      );
+      final auth = FakeAuthService(user);
+      final profile = FakeProfileService();
+      final container = _container(auth: auth, profile: profile);
+      addTearDown(container.dispose);
+      expect(container.read(loginProvider).formType, AuthForm.verifyEmail);
+      await container.read(loginProvider.notifier).signOut();
+      expect(container.read(loginProvider).formType, AuthForm.signIn);
+    },
+  );
 
   test(
     'post-auth routing goes to overview when onboarding is completed '

@@ -40,26 +40,21 @@ class ExpenseFormFields extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 18,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 12,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
           children: [
-            Expanded(
-              flex: 4,
-              child: TextInput(
-                controller: nameController,
-                labelText: tr.activity,
-                hotValidating: (v) =>
-                    v == null || v.trim().isEmpty ? tr.nameRequired : null,
-              ),
+            TextInput(
+              controller: nameController,
+              labelText: tr.activity,
+              maxLines: null,
+              hotValidating: (v) =>
+                  v == null || v.trim().isEmpty ? tr.nameRequired : null,
             ),
-            Expanded(
-              flex: 3,
-              child: CurrencyInput(
-                controller: amountController,
-                currencyCode: currencyCode,
-                labelText: tr.amount,
-              ),
+            CurrencyInput(
+              controller: amountController,
+              currencyCode: currencyCode,
+              labelText: tr.amount,
             ),
           ],
         ),

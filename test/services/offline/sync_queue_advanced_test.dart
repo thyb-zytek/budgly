@@ -1,6 +1,7 @@
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../helpers.dart';
 
 void main() {
@@ -156,19 +157,76 @@ void main() {
     });
 
     test(
-      'migrates legacy ownerless entries to the current authenticated user',
+      'assigns legacy ownerless entries to the current authenticated user',
       () async {
         SharedPreferences.setMockInitialValues({
-          'offline.pending_sync.v2':
-              '[{"id":"legacy","type":"accounts","operation":"update","payload":{"id":"a"}}]',
+          'offline.pending_sync.v2': '[{"id":"legacy","type":"accounts","operation":"update","payload":{"id":"a"}}]',
         });
         final ownedQueue = SyncQueue(ownerUserIdProvider: () => 'user-a');
 
-        final operations = await ownedQueue.all();
+        final currentOwnerOperations = await ownedQueue.allForCurrentOwner();
+        expect(currentOwnerOperations, hasLength(1));
+        expect(currentOwnerOperations.single.ownerUserId, 'user-a');
 
-        expect(operations.single.ownerUserId, 'user-a');
-        final persisted = await ownedQueue.all();
+        // Ownership is persisted: switching users must not reassign it.
+        final queueForB = SyncQueue(ownerUserIdProvider: () => 'user-b');
+        expect(await queueForB.allForCurrentOwner(), isEmpty);
+        final persisted = await queueForB.all();
         expect(persisted.single.ownerUserId, 'user-a');
+      },
+    );
+
+    test('keeps legacy entries ownerless while signed out, then assigns them to the first user', () async {
+      SharedPreferences.setMockInitialValues({
+        'offline.pending_sync.v2': '[{"id":"legacy","type":"accounts","operation":"update","payload":{"id":"a"}}]',
+      });
+      String? currentUserId;
+      final ownedQueue = SyncQueue(ownerUserIdProvider: () => currentUserId);
+
+      expect((await ownedQueue.all()).single.ownerUserId, isNull);
+      final prefsWhileSignedOut = await SharedPreferences.getInstance();
+      final rawWhileSignedOut = prefsWhileSignedOut.getString(
+        'offline.pending_sync.v2',
+      );
+      expect(rawWhileSignedOut, contains('"id":"legacy"'));
+      expect(rawWhileSignedOut, isNot(contains('owner_user_id')));
+
+      currentUserId = 'first-user';
+      final claimed = await ownedQueue.allForCurrentOwner();
+      expect(claimed, hasLength(1));
+      expect(claimed.single.ownerUserId, 'first-user');
+
+      currentUserId = 'second-user';
+      expect(await ownedQueue.allForCurrentOwner(), isEmpty);
+      expect((await ownedQueue.all()).single.ownerUserId, 'first-user');
+    });
+
+    test(
+      'claims a legacy profile mutation and scopes pending checks to its owner',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'offline.pending_sync.v2': '[{"id":"legacy-profile","type":"user_profiles","operation":"update","payload":{"id":"user-a","currency":"USD"}}]',
+        });
+        var currentUserId = 'user-a';
+        final ownedQueue = SyncQueue(ownerUserIdProvider: () => currentUserId);
+
+        expect(
+          await ownedQueue.hasPending(
+            type: 'user_profiles',
+            entityId: 'user-a',
+            currentOwnerOnly: true,
+          ),
+          isTrue,
+        );
+        currentUserId = 'user-b';
+        expect(
+          await ownedQueue.hasPending(
+            type: 'user_profiles',
+            entityId: 'user-b',
+            currentOwnerOnly: true,
+          ),
+          isFalse,
+        );
       },
     );
   });
@@ -249,31 +307,28 @@ void main() {
       expect(operations, hasLength(2));
     });
 
-    test(
-      'entities without ids remain independent because they cannot be safely coalesced',
-      () async {
-        await queue.enqueue(
-          id: 'op-1',
-          type: 'accounts',
-          operation: 'create',
-          payload: {'name': 'Account'},
-        );
-        await queue.enqueue(
-          id: 'op-2',
-          type: 'accounts',
-          operation: 'update',
-          payload: {'name': 'Updated'},
-        );
+    test('entities without ids remain independent because they cannot be safely coalesced', () async {
+      await queue.enqueue(
+        id: 'op-1',
+        type: 'accounts',
+        operation: 'create',
+        payload: {'name': 'Account'},
+      );
+      await queue.enqueue(
+        id: 'op-2',
+        type: 'accounts',
+        operation: 'update',
+        payload: {'name': 'Updated'},
+      );
 
-        // An empty id is not a stable identity; never merge unrelated operations.
-        final operations = await queue.all();
-        expect(operations, hasLength(2));
-        expect(operations.map((operation) => operation.payload['name']), [
-          'Account',
-          'Updated',
-        ]);
-      },
-    );
+      // An empty id is not a stable identity; never merge unrelated operations.
+      final operations = await queue.all();
+      expect(operations, hasLength(2));
+      expect(operations.map((operation) => operation.payload['name']), [
+        'Account',
+        'Updated',
+      ]);
+    });
 
     test('forType filters by type', () async {
       await queue.enqueue(

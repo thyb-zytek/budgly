@@ -185,24 +185,21 @@ void main() {
   });
 
   group('equality', () {
-    test(
-      'two occurrences with the same expense/date/isDebited/sourceDate are equal',
-      () {
-        final expense = buildExpense();
-        final a = ExpenseOccurrence(
-          expense: expense,
-          date: DateTime(2026, 1, 15),
-          isDebited: false,
-        );
-        final b = ExpenseOccurrence(
-          expense: expense,
-          date: DateTime(2026, 1, 15),
-          isDebited: false,
-        );
-        expect(a, equals(b));
-        expect(a.hashCode, b.hashCode);
-      },
-    );
+    test('two occurrences with the same expense/date/isDebited/sourceDate are equal', () {
+      final expense = buildExpense();
+      final a = ExpenseOccurrence(
+        expense: expense,
+        date: DateTime(2026, 1, 15),
+        isDebited: false,
+      );
+      final b = ExpenseOccurrence(
+        expense: expense,
+        date: DateTime(2026, 1, 15),
+        isDebited: false,
+      );
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
 
     test('a different date makes occurrences unequal', () {
       final expense = buildExpense();

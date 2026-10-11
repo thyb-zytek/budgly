@@ -34,6 +34,21 @@ class ProfileService {
 
   SharedPreferences? _prefs;
   Future<User?>? _loadProfileFuture;
+  String? _loadProfileFutureUserId;
+  final Map<String, int> _profileMutationRevisions = {};
+  Future<void> _profileCacheWriteLock = Future<void>.value();
+
+  int _mutationRevisionFor(String userId) =>
+      _profileMutationRevisions[userId] ?? 0;
+
+  Future<T> _serializeProfileCacheWrite<T>(Future<T> Function() action) {
+    final previous = _profileCacheWriteLock;
+    final release = Completer<void>();
+    _profileCacheWriteLock = previous.then((_) => release.future);
+    return previous
+        .then((_) => action())
+        .whenComplete(() => release.complete());
+  }
 
   ProfileService({
     AuthService? authService,
@@ -129,21 +144,36 @@ class ProfileService {
   }
 
   Future<User?> loadUserProfile({bool forceRefresh = false}) async {
-    if (_loadProfileFuture != null) return _loadProfileFuture!;
-    final user = _authService.firebaseUser;
-    if (user == null) return null;
-    final cached = await _localCache.loadProfile(user.uid);
+    // A shared in-flight future must be keyed by identity. Otherwise a login
+    // for user B can accidentally await user A's request and remain unloaded
+    // after A's result is correctly rejected by ProfileSession.
+    final firebaseUser = _authService.firebaseUser;
+    if (firebaseUser == null) return null;
+    final userId = firebaseUser.uid;
+
+    final existing = _loadProfileFuture;
+    if (existing != null && _loadProfileFutureUserId == userId) {
+      return existing;
+    }
+
+    final cached = await _localCache.loadProfile(userId);
+    if (_authService.firebaseUser?.uid != userId) return null;
     if (cached != null && !forceRefresh) {
-      final localUser = User.fromFirebaseUser(user, profile: cached);
-      unawaited(_refreshProfileFromRemote(user.uid));
+      final localUser = User.fromFirebaseUser(firebaseUser, profile: cached);
+      unawaited(_refreshProfileFromRemote(userId));
       return localUser;
     }
-    final future = _loadProfile(user.uid, cached);
+
+    final future = _loadProfile(userId, cached);
     _loadProfileFuture = future;
+    _loadProfileFutureUserId = userId;
     try {
       return await future;
     } finally {
-      if (identical(_loadProfileFuture, future)) _loadProfileFuture = null;
+      if (identical(_loadProfileFuture, future)) {
+        _loadProfileFuture = null;
+        _loadProfileFutureUserId = null;
+      }
     }
   }
 
@@ -151,30 +181,59 @@ class ProfileService {
     return _refreshProfileFromRemote(userId);
   }
 
-  Future<User?> refreshFromServer() async {
-    final user = await _authService.reloadCurrentUser().timeout(
-      AppConstants.networkTimeout,
-    );
-    if (user == null) return null;
-    if (user.profile != null) {
-      await _localCache.saveProfile(user.id, user.profile!);
-    }
-    return user;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async {
+    final userId = _authService.firebaseUser?.uid;
+    if (userId == null) return null;
+    return _refreshProfileFromRemote(userId, rethrowErrors: rethrowErrors);
   }
 
-  Future<User?> _refreshProfileFromRemote(String userId) async {
-    if (_authService.firebaseUser?.uid != userId ||
-        await _syncQueue.hasPending(type: 'user_profiles', entityId: userId)) {
-      return null;
-    }
+  Future<User?> _refreshProfileFromRemote(
+    String userId, {
+    bool rethrowErrors = false,
+  }) async {
+    if (_authService.firebaseUser?.uid != userId) return null;
+
+    final mutationRevisionAtStart = _mutationRevisionFor(userId);
+
     try {
+      final hasPendingProfileMutation = await _syncQueue.hasPending(
+        type: 'user_profiles',
+        entityId: userId,
+        currentOwnerOnly: true,
+      );
+      if (hasPendingProfileMutation) {
+        if (rethrowErrors) {
+          throw StateError(
+            'Profile refresh deferred because a local profile mutation is pending',
+          );
+        }
+        return null;
+      }
+
       final user = await _authService.reloadCurrentUser().timeout(
         AppConstants.networkTimeout,
       );
-      if (user != null &&
-          _authService.firebaseUser?.uid == userId &&
-          user.profile != null) {
-        await _localCache.saveProfile(user.id, user.profile!);
+      if (user == null ||
+          _authService.firebaseUser?.uid != userId ||
+          _mutationRevisionFor(userId) != mutationRevisionAtStart) {
+        return null;
+      }
+      if (user.profile != null) {
+        final saved = await _serializeProfileCacheWrite(() async {
+          if (_authService.firebaseUser?.uid != userId ||
+              _mutationRevisionFor(userId) != mutationRevisionAtStart) {
+            return false;
+          }
+          final pending = await _syncQueue.hasPending(
+            type: 'user_profiles',
+            entityId: userId,
+            currentOwnerOnly: true,
+          );
+          if (pending) return false;
+          await _localCache.saveProfile(user.id, user.profile!);
+          return true;
+        });
+        if (!saved) return null;
       }
       return user;
     } on AuthenticationException catch (e) {
@@ -184,21 +243,38 @@ class ProfileService {
         'user-token-expired',
         'invalid-user-token',
       };
-      if (invalidatingCodes.contains(e.code)) await _authService.signOut();
+      if (invalidatingCodes.contains(e.code)) {
+        try {
+          await _authService.signOut();
+        } catch (signOutError, signOutStack) {
+          AppLogger.error(
+            'Failed to sign out after invalid profile session',
+            signOutError,
+            signOutStack,
+          );
+        }
+      }
+      if (rethrowErrors) rethrow;
       return null;
     } catch (e) {
+      if (rethrowErrors) rethrow;
       AppLogger.debug('Remote profile refresh unavailable: $e');
       return null;
     }
   }
 
   Future<User> updateUserName(User user, String name) async {
+    final mutationRevision = _markProfileMutation(user.id);
     final profile = user.profile;
     if (profile == null) return user;
     final updatedProfile = profile.copyWith(fullName: name);
     final updated = user.copyWith(profile: updatedProfile);
     await _enqueueProfileUpdate(user.id, {'full_name': name});
-    await _mirrorProfile(user.id, updatedProfile);
+    await _mirrorProfile(
+      user.id,
+      updatedProfile,
+      expectedRevision: mutationRevision,
+    );
     _analytics.track('profile_updated');
     return updated;
   }
@@ -213,6 +289,9 @@ class ProfileService {
     required String currency,
     required int amountDecimalPlaces,
   }) async {
+    // Mark the local mutation before the first await. A remote profile refresh
+    // that started earlier must not overwrite this user's newer preferences.
+    final mutationRevision = _markProfileMutation(user.id);
     final value = amountDecimalPlaces.clamp(0, 2);
     await cacheLocalPreferences(
       user.id,
@@ -236,18 +315,27 @@ class ProfileService {
       'currency': currency,
       'amount_decimal_places': value,
     });
-    await _mirrorProfile(user.id, updatedProfile);
+    await _mirrorProfile(
+      user.id,
+      updatedProfile,
+      expectedRevision: mutationRevision,
+    );
     _analytics.track('profile_updated');
     return updated;
   }
 
   Future<User> completeOnboarding(User user) async {
+    final mutationRevision = _markProfileMutation(user.id);
     final profile = user.profile;
     if (profile == null || profile.onboardingCompleted) return user;
     final updatedProfile = profile.copyWith(onboardingCompleted: true);
     final updated = user.copyWith(profile: updatedProfile);
     await _enqueueProfileUpdate(user.id, {'onboarding_completed': true});
-    await _mirrorProfile(user.id, updatedProfile);
+    await _mirrorProfile(
+      user.id,
+      updatedProfile,
+      expectedRevision: mutationRevision,
+    );
     _analytics.track('onboarding_completed');
     return updated;
   }
@@ -258,6 +346,14 @@ class ProfileService {
   /// Successive patches for the same user are merged by [SyncQueue.enqueue],
   /// so `onboarding_completed` and a later preference change both reach the
   /// server.
+  int _markProfileMutation(String userId) {
+    // Invalidate remote snapshots before *any* asynchronous local persistence
+    // starts, including the preferences mirror written before queue enqueue.
+    final revision = _mutationRevisionFor(userId) + 1;
+    _profileMutationRevisions[userId] = revision;
+    return revision;
+  }
+
   Future<void> _enqueueProfileUpdate(
     String userId,
     Map<String, dynamic> updates,
@@ -272,9 +368,16 @@ class ProfileService {
   }
 
   /// Best-effort cache mirror written *after* the durable queue entry.
-  Future<void> _mirrorProfile(String userId, UserProfile profile) async {
+  Future<void> _mirrorProfile(
+    String userId,
+    UserProfile profile, {
+    required int expectedRevision,
+  }) async {
     try {
-      await _localCache.saveProfile(userId, profile);
+      await _serializeProfileCacheWrite(() async {
+        if (_mutationRevisionFor(userId) != expectedRevision) return;
+        await _localCache.saveProfile(userId, profile);
+      });
     } catch (e, st) {
       AppLogger.error('Failed to mirror profile change to local cache', e, st);
     }

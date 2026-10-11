@@ -1,7 +1,6 @@
 import 'package:budgly/src/models/budget/period.dart';
-import 'package:budgly/src/pages/overview/revenue_provider.dart';
+import 'package:budgly/src/pages/overview/ui_state.dart';
 import 'package:budgly/src/pages/overview/widgets/collapsing_summary_header.dart';
-import 'package:budgly/src/state/action_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,13 +20,7 @@ void main() {
     account: account,
     period: const Period(year: 2026, month: 10),
     categorySummaries: const [],
-    revenue: const RevenueState(
-      revenue: 0,
-      inheritedRevenue: null,
-      isLoaded: true,
-      showEditor: false,
-      status: ActionStatus.idle(),
-    ),
+    revenue: const RevenueSummary(revenue: 0, inheritedRevenue: null),
     currencyCode: currencyCode,
     localeName: localeName,
     amountDecimalPlaces: amountDecimalPlaces,

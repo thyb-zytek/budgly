@@ -52,26 +52,23 @@ void main() {
       expect(result.last.date, DateTime(2026, 3, 15));
     });
 
-    test(
-      'recurring expense whose endDate is before the requested end still stops at endDate',
-      () {
-        final expense = buildExpense(
-          debitDate: DateTime(2026, 1, 15),
-          recurrence: RecurrenceType.monthly,
-          endDate: DateTime(2026, 2, 15),
-        );
+    test('recurring expense whose endDate is before the requested end still stops at endDate', () {
+      final expense = buildExpense(
+        debitDate: DateTime(2026, 1, 15),
+        recurrence: RecurrenceType.monthly,
+        endDate: DateTime(2026, 2, 15),
+      );
 
-        final result = expandExpenseOccurrencesBetween(
-          expense,
-          CalendarDateRange(
-            start: DateTime(2026, 3, 1),
-            endExclusive: DateTime(2026, 12, 31),
-          ),
-        );
+      final result = expandExpenseOccurrencesBetween(
+        expense,
+        CalendarDateRange(
+          start: DateTime(2026, 3, 1),
+          endExclusive: DateTime(2026, 12, 31),
+        ),
+      );
 
-        expect(result, isEmpty);
-      },
-    );
+      expect(result, isEmpty);
+    });
 
     test('one-off expense outside the range returns empty', () {
       final expense = buildExpense(debitDate: DateTime(2026, 1, 15));

@@ -7,8 +7,10 @@ import 'package:budgly/src/shared/ui/widgets/forms/form_actions.dart';
 import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
 import 'package:flutter/material.dart';
 
-typedef ChangePasswordCallback =
-    void Function(String oldPassword, String newPassword);
+typedef ChangePasswordCallback = void Function(
+  String oldPassword,
+  String newPassword,
+);
 
 class ChangePasswordSheet extends StatefulWidget {
   final ChangePasswordCallback onSubmit;

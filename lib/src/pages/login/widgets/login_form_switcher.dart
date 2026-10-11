@@ -43,7 +43,7 @@ class LoginFormSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formType = state.formType;
-    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Column(
       mainAxisSize: MainAxisSize.max,
@@ -101,9 +101,8 @@ class LoginFormSwitcher extends StatelessWidget {
           AuthForm.resetPassword,
         ].contains(formType))
           Padding(
-            padding: EdgeInsets.all(
-              BudglySpacing.xl,
-            ).add(EdgeInsets.only(bottom: isKeyboardOpen ? 8 : 0)),
+            padding: EdgeInsets.all(BudglySpacing.xl)
+                .add(EdgeInsets.only(bottom: isKeyboardOpen ? 8 : 0)),
             child: GoogleSignInButton(onPressed: onGoogleSignIn),
           ),
       ],

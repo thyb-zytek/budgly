@@ -3,6 +3,7 @@ import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/providers/supabase/categories.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../helpers.dart';
 
 /// Returns a scripted response per call, so a test can distinguish a
@@ -32,30 +33,27 @@ void main() {
         syncQueue: testSyncQueue,
       );
 
-  test(
-    'a cache-hit background revalidation reaches onRevalidated instead of being silently dropped',
-    () async {
-      final supabase = ScriptedCategorySupabase([
-        [category('remote1')],
-      ]);
-      final svc = service(supabase);
-      await svc.listCategoriesByAccount('a1');
-      expect(supabase.calls, 1);
-      svc.invalidateCache();
+  test('a cache-hit background revalidation reaches onRevalidated instead of being silently dropped', () async {
+    final supabase = ScriptedCategorySupabase([
+      [category('remote1')],
+    ]);
+    final svc = service(supabase);
+    await svc.listCategoriesByAccount('a1');
+    expect(supabase.calls, 1);
+    svc.invalidateCache();
 
-      final revalidated = <List<Category>>[];
-      final cached = await svc.listCategoriesByAccount(
-        'a1',
-        onRevalidated: revalidated.add,
-      );
-      expect(cached.map((c) => c.id), ['remote1']);
+    final revalidated = <List<Category>>[];
+    final cached = await svc.listCategoriesByAccount(
+      'a1',
+      onRevalidated: revalidated.add,
+    );
+    expect(cached.map((c) => c.id), ['remote1']);
 
-      await Future<void>.delayed(Duration.zero);
-      expect(supabase.calls, 2);
-      expect(revalidated, hasLength(1));
-      expect(revalidated.single.map((c) => c.id), ['remote1']);
-    },
-  );
+    await Future<void>.delayed(Duration.zero);
+    expect(supabase.calls, 2);
+    expect(revalidated, hasLength(1));
+    expect(revalidated.single.map((c) => c.id), ['remote1']);
+  });
 
   test(
     'RL-01 §3.2: a background revalidation does not leak the in-flight guard '

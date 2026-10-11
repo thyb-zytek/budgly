@@ -164,20 +164,17 @@ void main() {
       },
     );
 
-    test(
-      'source: Source.server is what the durable cleanup relies on to see uncached documents',
-      () async {
-        await seed(budget(year: 2026, month: 1));
+    test('source: Source.server is what the durable cleanup relies on to see uncached documents', () async {
+      await seed(budget(year: 2026, month: 1));
 
-        await provider.deleteByAccountId(accountId, source: Source.server);
+      await provider.deleteByAccountId(accountId, source: Source.server);
 
-        final remaining = await firestore
-            .collection('users')
-            .doc(uid)
-            .collection('account_budgets')
-            .get();
-        expect(remaining.docs, isEmpty);
-      },
-    );
+      final remaining = await firestore
+          .collection('users')
+          .doc(uid)
+          .collection('account_budgets')
+          .get();
+      expect(remaining.docs, isEmpty);
+    });
   });
 }

@@ -53,7 +53,15 @@ class AccountImageHelper {
       // reported (e.g. an oversized/unsupported file rejected by
       // validateUploadConstraints, or a network/storage error).
       AppLogger.error('Failed to upload account picture', e, stackTrace);
-      unawaited(accountsService.queuePictureUpload(account, image.file));
+      try {
+        await accountsService.queuePictureUpload(account, image.file);
+      } catch (queueError, queueStackTrace) {
+        AppLogger.error(
+          'Failed to queue account picture upload for retry',
+          queueError,
+          queueStackTrace,
+        );
+      }
       // Keep the persisted local file as the avatar until storage becomes
       // available again. The account metadata already carries its picture
       // filename, so a later account refresh can replace this local URL.

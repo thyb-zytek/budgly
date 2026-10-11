@@ -4,6 +4,7 @@ import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'sync_test_harness.dart';
 
 class _FakeAuth extends AuthService {

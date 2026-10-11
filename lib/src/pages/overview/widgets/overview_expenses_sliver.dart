@@ -81,9 +81,8 @@ class OverviewExpensesSliver extends ConsumerWidget {
             children: [
               Text(
                 translations.expensesByCategory,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               PeriodSlideSwitcher(
                 period: period,

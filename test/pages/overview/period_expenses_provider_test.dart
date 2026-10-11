@@ -53,41 +53,38 @@ class _FakeCategoriesService extends CategoriesService {
 void main() {
   const period = Period(year: 2026, month: 3);
 
-  test(
-    'initial load keeps category summaries when expenses and categories sessions load in sequence',
-    () async {
-      final category = Fixtures.category(id: 'c1', accountId: 'a1');
-      final expense = Fixtures.expense(
-        accountId: 'a1',
-        categoryId: 'c1',
-        amount: 100,
-        debitDate: DateTime(2026, 3, 10),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          expensesServiceProvider.overrideWithValue(
-            _FakeExpensesService([expense]),
-          ),
-          categoriesServiceProvider.overrideWithValue(
-            _FakeCategoriesService([category]),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+  test('initial load keeps category summaries when expenses and categories sessions load in sequence', () async {
+    final category = Fixtures.category(id: 'c1', accountId: 'a1');
+    final expense = Fixtures.expense(
+      accountId: 'a1',
+      categoryId: 'c1',
+      amount: 100,
+      debitDate: DateTime(2026, 3, 10),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        expensesServiceProvider.overrideWithValue(
+          _FakeExpensesService([expense]),
+        ),
+        categoriesServiceProvider.overrideWithValue(
+          _FakeCategoriesService([category]),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      final notifier = container.read(
-        periodExpensesProvider('a1', period).notifier,
-      );
-      await notifier.load();
+    final notifier = container.read(
+      periodExpensesProvider('a1', period).notifier,
+    );
+    await notifier.load();
 
-      final state = container.read(periodExpensesProvider('a1', period));
-      expect(state.isLoaded, isTrue);
-      expect(state.occurrences, hasLength(1));
-      expect(state.categorySummaries, hasLength(1));
-      expect(state.categorySummaries.single.category.id, 'c1');
-      expect(state.categorySummaries.single.total, 100);
-    },
-  );
+    final state = container.read(periodExpensesProvider('a1', period));
+    expect(state.isLoaded, isTrue);
+    expect(state.occurrences, hasLength(1));
+    expect(state.categorySummaries, hasLength(1));
+    expect(state.categorySummaries.single.category.id, 'c1');
+    expect(state.categorySummaries.single.total, 100);
+  });
 
   test(
     'a failing load reports the error but keeps the previously computed state',
@@ -162,47 +159,42 @@ void main() {
     },
   );
 
-  test(
-    'a change made elsewhere in CategoriesSession recomputes category summaries',
-    () async {
-      final expense = Fixtures.expense(
-        accountId: 'a1',
-        categoryId: 'c1',
-        amount: 100,
-        debitDate: DateTime(2026, 3, 12),
-      );
-      final category = Fixtures.category(id: 'c1', accountId: 'a1');
-      final container = ProviderContainer(
-        overrides: [
-          expensesServiceProvider.overrideWithValue(
-            _FakeExpensesService([expense]),
-          ),
-          categoriesServiceProvider.overrideWithValue(
-            _FakeCategoriesService([]),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+  test('a change made elsewhere in CategoriesSession recomputes category summaries', () async {
+    final expense = Fixtures.expense(
+      accountId: 'a1',
+      categoryId: 'c1',
+      amount: 100,
+      debitDate: DateTime(2026, 3, 12),
+    );
+    final category = Fixtures.category(id: 'c1', accountId: 'a1');
+    final container = ProviderContainer(
+      overrides: [
+        expensesServiceProvider.overrideWithValue(
+          _FakeExpensesService([expense]),
+        ),
+        categoriesServiceProvider.overrideWithValue(_FakeCategoriesService([])),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      final notifier = container.read(
-        periodExpensesProvider('a1', period).notifier,
-      );
-      await notifier.load();
-      expect(
-        container.read(periodExpensesProvider('a1', period)).categorySummaries,
-        isEmpty,
-      );
+    final notifier = container.read(
+      periodExpensesProvider('a1', period).notifier,
+    );
+    await notifier.load();
+    expect(
+      container.read(periodExpensesProvider('a1', period)).categorySummaries,
+      isEmpty,
+    );
 
-      container.read(categoriesSessionProvider.notifier).updateLocal(category);
+    container.read(categoriesSessionProvider.notifier).updateLocal(category);
 
-      final summaries = container
-          .read(periodExpensesProvider('a1', period))
-          .categorySummaries;
-      expect(summaries, hasLength(1));
-      expect(summaries.single.category.id, 'c1');
-      expect(summaries.single.total, 100);
-    },
-  );
+    final summaries = container
+        .read(periodExpensesProvider('a1', period))
+        .categorySummaries;
+    expect(summaries, hasLength(1));
+    expect(summaries.single.category.id, 'c1');
+    expect(summaries.single.total, 100);
+  });
 
   test('an expense outside the requested period is filtered out', () async {
     final expense = Fixtures.expense(

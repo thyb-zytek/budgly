@@ -1,23 +1,34 @@
+import 'dart:async';
+
 import 'package:budgly/src/core/navigation/app_routes.dart';
 import 'package:budgly/src/core/navigation/route_guards.dart';
 import 'package:budgly/src/state/profile_providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/pages/category_expenses/view.dart';
 import 'package:budgly/src/pages/login/view.dart';
 import 'package:budgly/src/pages/overview/view.dart';
-import 'package:budgly/src/pages/undebited_expenses/view.dart';
 import 'package:budgly/src/pages/settings/view.dart';
 import 'package:budgly/src/pages/tutorial/view.dart';
+import 'package:budgly/src/pages/undebited_expenses/view.dart';
 import 'package:budgly/src/shared/ui/widgets/bottom_navbar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:go_router/go_router.dart';
 
 class AppRouter {
-  AppRouter({required ChangeNotifier authSession})
-    : router = _createRouter(authSession);
+  AppRouter({
+    required Stream<Object?> authStateChanges,
+    required AuthUserReader readAuthUser,
+    required ProfileSessionReader readProfileSession,
+  }) : router = _createRouter(readAuthUser, readProfileSession) {
+    _authSubscription = authStateChanges.listen((_) {
+      if (!_disposed) router.refresh();
+    });
+  }
 
   final GoRouter router;
+  late final StreamSubscription<Object?> _authSubscription;
+  bool _disposed = false;
 
   static final GlobalKey<NavigatorState> rootNavigatorKey =
       GlobalKey<NavigatorState>();
@@ -26,16 +37,17 @@ class AppRouter {
   static final GlobalKey<NavigatorState> settingsNavigatorKey =
       GlobalKey<NavigatorState>();
 
-  static GoRouter _createRouter(ChangeNotifier authSession) => GoRouter(
+  static GoRouter _createRouter(
+    AuthUserReader readAuthUser,
+    ProfileSessionReader readProfileSession,
+  ) => GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.login,
-    refreshListenable: authSession,
     redirect: (context, state) {
-      final profileSession = ProviderScope.containerOf(
-        context,
-      ).read(profileSessionProvider);
+      final profileSession = readProfileSession();
       return RouteGuards.decideRedirect(
         location: state.matchedLocation,
+        authUser: readAuthUser(),
         profileUser: profileSession.currentUser,
         hasLoaded: profileSession.hasLoaded,
       );
@@ -115,4 +127,14 @@ class AppRouter {
       restorationId: state.pageKey.value,
     );
   }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    unawaited(_authSubscription.cancel());
+    router.dispose();
+  }
 }
+
+typedef AuthUserReader = fb.User? Function();
+typedef ProfileSessionReader = ProfileSessionState Function();

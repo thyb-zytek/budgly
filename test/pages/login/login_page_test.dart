@@ -10,6 +10,7 @@ import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/state/profile_providers.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,12 @@ class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(analytics: AnalyticsService());
   @override
   User? get currentUser => null;
+
+  @override
+  fb.User? get firebaseUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 }
 
 class _FakeProfileService extends ProfileService {
@@ -36,7 +43,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 }
 
 class _FakeAccountsService extends AccountsService {

@@ -217,11 +217,13 @@ void main() {
       await queue.markFailed('accounts:create:1');
     }
 
-    var notified = false;
-    manager.addListener(() => notified = true);
+    final notification = manager.statusStream.firstWhere(
+      (status) => status.hasStuckOperations,
+    );
     manager.registerHandler('categories', (op) async {});
     await manager.flush();
 
-    expect(notified, isTrue);
+    await notification;
+    expect(manager.hasStuckOperations, isTrue);
   });
 }

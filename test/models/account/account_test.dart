@@ -110,14 +110,11 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
-    test(
-      'two accounts with a null id are not equal because neither has a stable server identity',
-      () {
-        const a = Account(name: 'Perso');
-        const b = Account(name: 'Pro');
-        expect(a, isNot(equals(b)));
-      },
-    );
+    test('two accounts with a null id are not equal because neither has a stable server identity', () {
+      const a = Account(name: 'Perso');
+      const b = Account(name: 'Pro');
+      expect(a, isNot(equals(b)));
+    });
   });
 
   group('Account.initial', () {

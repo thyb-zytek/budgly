@@ -310,48 +310,125 @@ void main() {
     },
   );
 
-  test(
-    'loadInitialData does not reload accounts: reference data is owned by the profile session',
-    () async {
-      final accountsService = _FakeAccountsService([
-        Fixtures.account(id: 'a1'),
-      ]);
-      final account = Fixtures.account(id: 'a1');
-      final container = ProviderContainer(
-        overrides: [
-          accountsServiceProvider.overrideWithValue(accountsService),
-          categoriesServiceProvider.overrideWithValue(
-            _EmptyCategoriesService(),
+  test('loadInitialData does not reload accounts: reference data is owned by the profile session', () async {
+    final accountsService = _FakeAccountsService([Fixtures.account(id: 'a1')]);
+    final account = Fixtures.account(id: 'a1');
+    final container = ProviderContainer(
+      overrides: [
+        accountsServiceProvider.overrideWithValue(accountsService),
+        categoriesServiceProvider.overrideWithValue(_EmptyCategoriesService()),
+        expensesServiceProvider.overrideWithValue(
+          _FakeExpensesService(const []),
+        ),
+        accountBudgetsServiceProvider.overrideWithValue(
+          _FakeAccountBudgetsService(),
+        ),
+        accountsSessionProvider.overrideWithValue(
+          AccountsSessionState(accounts: [account], hasLoaded: true),
+        ),
+        categoriesSessionProvider.overrideWithValue(
+          const CategoriesSessionState(
+            categoriesByAccount: {'a1': []},
+            availableIcons: [],
+            iconsLoaded: false,
+            loadedAccounts: {'a1'},
           ),
-          expensesServiceProvider.overrideWithValue(
-            _FakeExpensesService(const []),
-          ),
-          accountBudgetsServiceProvider.overrideWithValue(
-            _FakeAccountBudgetsService(),
-          ),
-          accountsSessionProvider.overrideWithValue(
-            AccountsSessionState(accounts: [account], hasLoaded: true),
-          ),
-          categoriesSessionProvider.overrideWithValue(
-            const CategoriesSessionState(
-              categoriesByAccount: {'a1': []},
-              availableIcons: [],
-              iconsLoaded: false,
-              loadedAccounts: {'a1'},
-            ),
-          ),
-          profileSessionProvider.overrideWithValue(_defaultProfile),
-        ],
-      );
-      addTearDown(container.dispose);
+        ),
+        profileSessionProvider.overrideWithValue(_defaultProfile),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      await container.read(overviewProvider.notifier).loadInitialData();
+    await container.read(overviewProvider.notifier).loadInitialData();
 
-      expect(accountsService.loadCalls, 0);
-      expect(container.read(overviewProvider).hasLoaded, isTrue);
-      expect(container.read(overviewProvider).status.isLoading, isFalse);
-    },
-  );
+    expect(accountsService.loadCalls, 0);
+    expect(container.read(overviewProvider).hasLoaded, isTrue);
+    expect(container.read(overviewProvider).status.isLoading, isFalse);
+  });
+
+  test('A17: an initial load skipped because no account existed yet is retried '
+      'as soon as an account appears (cold start restored route)', () async {
+    final account = Fixtures.account(id: 'a1');
+    final period = Period.current();
+    final expense = Fixtures.expense(
+      accountId: 'a1',
+      categoryId: 'c1',
+      debitDate: period.startOfMonth.add(const Duration(days: 2)),
+    );
+    final expensesService = _FakeExpensesService([expense]);
+    // The accounts session is deliberately left real (not overridden) so
+    // accounts can be applied later, exactly like ProfileSession's reference
+    // preload completing after the Overview has already mounted.
+    final container = ProviderContainer(
+      overrides: [
+        accountsServiceProvider.overrideWithValue(
+          _FakeAccountsService([account]),
+        ),
+        categoriesServiceProvider.overrideWithValue(_EmptyCategoriesService()),
+        expensesServiceProvider.overrideWithValue(expensesService),
+        accountBudgetsServiceProvider.overrideWithValue(
+          _FakeAccountBudgetsService(),
+        ),
+        categoriesSessionProvider.overrideWithValue(
+          const CategoriesSessionState(
+            categoriesByAccount: <String, List<Category>>{},
+            availableIcons: [],
+            iconsLoaded: false,
+            loadedAccounts: <String>{},
+          ),
+        ),
+        profileSessionProvider.overrideWithValue(_defaultProfile),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // Mirror the real page: subscribing keeps the autoDispose Overview
+    // provider alive, exactly like the Overview widget's ref.watch.
+    final overviewSubscription = container.listen(overviewProvider, (_, _) {});
+    addTearDown(overviewSubscription.close);
+
+    final accountsSession = container.read(accountsSessionProvider.notifier);
+    final overview = container.read(overviewProvider.notifier);
+
+    // Cold start: the Overview loads before the reference preload has
+    // applied any account to AccountSelection.
+    await overview.loadInitialData();
+    expect(container.read(overviewProvider).hasLoaded, isTrue);
+    expect(container.read(accountSelectionProvider).selectedAccount, isNull);
+    expect(expensesService.periodLoadAccountIds, isEmpty);
+
+    // ProfileSession preload completes: accounts are applied, which must
+    // trigger the retry and actually load the page data. The retry is
+    // asynchronous and applies the expense to the shared session before the
+    // period provider reflects it, so poll on the rendered data, not on the
+    // service call.
+    accountsSession.setAccounts([account]);
+    var loaded = false;
+    for (var i = 0; i < 50 && !loaded; i++) {
+      await pumpEventQueue();
+      loaded = container
+          .read(periodExpensesProvider('a1', period))
+          .expenses
+          .isNotEmpty;
+    }
+    expect(loaded, isTrue, reason: 'retried load must populate the period');
+
+    expect(container.read(accountSelectionProvider).selectedAccount?.id, 'a1');
+    expect(expensesService.periodLoadAccountIds, contains('a1'));
+    expect(
+      container
+          .read(periodExpensesProvider('a1', period))
+          .expenses
+          .map((e) => e.id),
+      [expense.id],
+    );
+    expect(container.read(overviewProvider).hasLoaded, isTrue);
+    expect(container.read(overviewProvider).status.hasError, isFalse);
+    // Let the remaining legs of the retried future (undebited recompute reads
+    // local cache) finish before the container is disposed.
+    await pumpEventQueue();
+    await pumpEventQueue();
+  });
 
   group('createExpense', () {
     test(

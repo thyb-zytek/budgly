@@ -27,6 +27,15 @@ class ExpensesSession extends _$ExpensesSession {
     );
   }
 
+  int _sessionRevision = 0;
+  final Map<String, int> _accountRevisions = {};
+
+  int _accountRevision(String accountId) => _accountRevisions[accountId] ?? 0;
+
+  void _bumpAccountRevision(String accountId) {
+    _accountRevisions[accountId] = _accountRevision(accountId) + 1;
+  }
+
   List<Expense> getExpensesForAccount(String accountId) =>
       state.expensesByAccount[accountId] ?? const [];
 
@@ -43,10 +52,16 @@ class ExpensesSession extends _$ExpensesSession {
     String accountId, {
     bool forceRefresh = false,
   }) async {
+    final sessionRevision = _sessionRevision;
+    final accountRevision = _accountRevision(accountId);
     final expenses = await ref
         .read(expensesServiceProvider)
         .listExpensesForAccount(accountId, forceRefresh: forceRefresh);
-    _setAccount(accountId, expenses);
+    if (ref.mounted &&
+        sessionRevision == _sessionRevision &&
+        accountRevision == _accountRevision(accountId)) {
+      _setAccount(accountId, expenses);
+    }
     return expenses;
   }
 
@@ -56,6 +71,8 @@ class ExpensesSession extends _$ExpensesSession {
     String? categoryId,
     bool forceRefresh = false,
   }) async {
+    final sessionRevision = _sessionRevision;
+    final accountRevision = _accountRevision(accountId);
     final expenses = await ref
         .read(expensesServiceProvider)
         .listExpensesForPeriod(
@@ -63,52 +80,73 @@ class ExpensesSession extends _$ExpensesSession {
           period,
           categoryId: categoryId,
           forceRefresh: forceRefresh,
-          // RL-01 §3.2: the service may still be revalidating against the
-          // server in the background when this returns (cache-first hit).
-          // Push that later result into the session too, otherwise Overview
-          // (and any other PeriodExpenses watcher) never learns the server
-          // confirmed/changed the data and stays rendered from stale cache.
-          onRevalidated: (remote) => _mergeAccount(accountId, remote),
+          // Cache revalidation may complete after logout/account clearing.
+          // Never merge data once its owning session has been invalidated.
+          onRevalidated: (remote) {
+            if (ref.mounted &&
+                sessionRevision == _sessionRevision &&
+                accountRevision == _accountRevision(accountId)) {
+              _mergeAccount(accountId, remote);
+            }
+          },
         );
-    _mergeAccount(accountId, expenses);
+    if (ref.mounted &&
+        sessionRevision == _sessionRevision &&
+        accountRevision == _accountRevision(accountId)) {
+      _mergeAccount(accountId, expenses);
+    }
     return expenses;
   }
 
   Future<Expense> create(Expense expense) async {
+    final sessionRevision = _sessionRevision;
+    _bumpAccountRevision(expense.accountId);
     final created = await ref
         .read(expensesServiceProvider)
         .createExpense(expense);
-    _upsert(created);
+    if (ref.mounted && sessionRevision == _sessionRevision) _upsert(created);
     return created;
   }
 
   Future<Expense> update(Expense expense, {Expense? previous}) async {
+    final sessionRevision = _sessionRevision;
+    _bumpAccountRevision(expense.accountId);
     final updated = await ref
         .read(expensesServiceProvider)
         .updateExpense(expense, previous: previous);
-    _upsert(updated);
+    if (ref.mounted && sessionRevision == _sessionRevision) _upsert(updated);
     return updated;
   }
 
   Future<bool> delete(String expenseId, String accountId) async {
+    final sessionRevision = _sessionRevision;
+    _bumpAccountRevision(accountId);
     final result = await ref
         .read(expensesServiceProvider)
         .deleteExpense(expenseId, accountId);
-    if (result) _remove(expenseId, accountId);
+    if (result && ref.mounted && sessionRevision == _sessionRevision) {
+      _remove(expenseId, accountId);
+    }
     return result;
   }
 
   /// Pushes an already-known-fresh [Expense] (e.g. returned by a service call
   /// made by a feature-specific Notifier) into the shared session state
   /// without re-fetching. Mirrors `AccountsSession.updateLocal`.
-  void updateLocal(Expense expense) => _upsert(expense);
+  void updateLocal(Expense expense) {
+    _bumpAccountRevision(expense.accountId);
+    _upsert(expense);
+  }
 
   /// Removes a locally-deleted expense from the shared session state.
   /// Mirrors `AccountsSession`'s local-removal helpers.
-  void removeLocal(String expenseId, String accountId) =>
-      _remove(expenseId, accountId);
+  void removeLocal(String expenseId, String accountId) {
+    _bumpAccountRevision(accountId);
+    _remove(expenseId, accountId);
+  }
 
   void clearAccount(String accountId) {
+    _bumpAccountRevision(accountId);
     final next = Map<String, List<Expense>>.from(state.expensesByAccount)
       ..remove(accountId);
     state = ExpensesSessionState(
@@ -119,6 +157,8 @@ class ExpensesSession extends _$ExpensesSession {
   }
 
   void clear() {
+    _sessionRevision++;
+    _accountRevisions.clear();
     state = const ExpensesSessionState(
       expensesByAccount: {},
       loadedAccounts: {},

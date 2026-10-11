@@ -3,6 +3,7 @@ import 'package:budgly/src/services/profile/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../helpers.dart';
 
 /// RL-01 §1.3 — the local preference mirror is a per-uid cache of

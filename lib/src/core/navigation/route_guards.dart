@@ -19,11 +19,11 @@ class RouteGuards {
   ///   tutorial, a completed one bypasses it and lands on the Overview.
   static String? decideRedirect({
     required String location,
-    fb.FirebaseAuth? auth,
+    required fb.User? authUser,
     app_user.User? profileUser,
     bool hasLoaded = true,
   }) {
-    final user = (auth ?? fb.FirebaseAuth.instance).currentUser;
+    final user = authUser;
     final isLogin = location == AppRoutes.login;
 
     if (user == null || !_isVerified(user)) {

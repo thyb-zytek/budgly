@@ -1,17 +1,10 @@
 import 'package:budgly/l10n/app_localizations.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/pages/settings/accounts/accounts_settings_provider.dart';
-import 'package:budgly/src/shared/ui/widgets/image/account_image_picker.dart';
-import 'package:budgly/src/pages/settings/widgets/add_entity.dart';
+import 'package:budgly/src/pages/settings/accounts/widgets/accounts_tab_content.dart';
 import 'package:budgly/src/pages/settings/widgets/confirm_delete.dart';
-import 'package:budgly/src/pages/settings/widgets/entity_title.dart';
-import 'package:budgly/src/shared/domain/widgets/accounts/account_form.dart';
-import 'package:budgly/src/shared/domain/widgets/accounts/account_view.dart';
-import 'package:budgly/src/shared/ui/widgets/feedback/riverpod_feedback.dart';
-import 'package:budgly/src/shared/ui/widgets/layout/loading_indicator.dart';
-import 'package:budgly/src/state/accounts_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:budgly/src/state/accounts_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AccountsTab extends ConsumerStatefulWidget {
@@ -84,11 +77,6 @@ class _AccountsTabState extends ConsumerState<AccountsTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return _buildAccountsView(context);
-  }
-
-  Widget _buildAccountsView(BuildContext context) {
-    final tr = AppLocalizations.of(context)!;
 
     ref.listen(accountsSettingsProvider.select((s) => s.editingAccount), (
       previous,
@@ -99,171 +87,16 @@ class _AccountsTabState extends ConsumerState<AccountsTab>
       _formPicture = next?.pictureUrl;
     });
 
-    final persistedAccounts = ref.watch(
-      accountsSessionProvider.select((s) => s.accounts),
-    );
-    final localAccounts = ref.watch(
-      accountsSettingsProvider.select((s) => s.localAccounts),
-    );
-    final accounts = [...persistedAccounts, ...localAccounts];
-    final isLoading = ref.watch(
-      accountsSettingsProvider.select((s) => s.status.isLoading),
-    );
-    final editingAccountId = ref.watch(
-      accountsSettingsProvider.select((s) => s.editingAccount?.id),
-    );
-    final isCreatingAccount = ref.watch(
-      accountsSettingsProvider.select((s) => s.isCreatingAccount),
-    );
-
-    return _buildAccountsFeedback(
-      tr,
-      accounts,
-      isLoading,
-      editingAccountId,
-      isCreatingAccount,
-    );
-  }
-
-  Widget _buildAccountsFeedback(
-    AppLocalizations tr,
-    List<Account> accounts,
-    bool isLoading,
-    String? editingAccountId,
-    bool isCreatingAccount,
-  ) {
-    return RiverpodFeedback(
-      messageListenable: accountsSettingsProvider.select(
-        (s) => s.status.pendingMessage,
-      ),
-      onConsume: (ref) =>
-          ref.read(accountsSettingsProvider.notifier).consumeMessage(),
-      child: isLoading
-          ? const AppLoadingIndicator()
-          : Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(BudglySpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      EntityTitle(
-                        title: tr.accounts,
-                        subtitle: tr.accountsDescription,
-                      ),
-                      Expanded(
-                        child: accounts.isNotEmpty
-                            ? ListView.builder(
-                                controller: _scrollController,
-                                padding: const EdgeInsets.only(bottom: 100),
-                                itemCount: accounts.length,
-                                itemBuilder: (context, index) {
-                                  final account = accounts[index];
-                                  return Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: BudglySpacing.sm,
-                                    ),
-                                    child: Card(
-                                      key: ValueKey(
-                                        account.id ?? identityHashCode(account),
-                                      ),
-                                      child: Padding(
-                                        padding:
-                                            BudglyComponentStyles.cardPadding,
-                                        child:
-                                            (account.id != null &&
-                                                account.id != editingAccountId)
-                                            ? AccountView(
-                                                account: account,
-                                                onEdit: () => ref
-                                                    .read(
-                                                      accountsSettingsProvider
-                                                          .notifier,
-                                                    )
-                                                    .setEditingAccount(account),
-                                                onDelete: () =>
-                                                    _confirmDelete(account),
-                                              )
-                                            : AccountForm(
-                                                formKey: _formKey,
-                                                nameController: _nameController,
-                                                initialColor: _formColor,
-                                                initialPicture: _formPicture,
-                                                pickImage: AccountImagePicker
-                                                    .pickAndCropImage,
-                                                onColorChanged: (color) =>
-                                                    _formColor = color,
-                                                onPictureChanged: (picture) =>
-                                                    _formPicture = picture,
-                                                onSubmit: () {
-                                                  final notifier = ref.read(
-                                                    accountsSettingsProvider
-                                                        .notifier,
-                                                  );
-                                                  if (account.id == null) {
-                                                    notifier.createAccount(
-                                                      draftAccount: account,
-                                                      name:
-                                                          _nameController.text,
-                                                      color: _formColor,
-                                                      picture: _formPicture,
-                                                      isLocalPicture:
-                                                          _formPicture !=
-                                                              null &&
-                                                          !_formPicture!
-                                                              .startsWith(
-                                                                'http',
-                                                              ),
-                                                    );
-                                                  } else {
-                                                    notifier.updateAccount(
-                                                      account: account,
-                                                      name:
-                                                          _nameController.text,
-                                                      color: _formColor,
-                                                      picture: _formPicture,
-                                                      isLocalPicture:
-                                                          _formPicture !=
-                                                              null &&
-                                                          !_formPicture!
-                                                              .startsWith(
-                                                                'http',
-                                                              ),
-                                                    );
-                                                  }
-                                                },
-                                                onCancel: () => ref
-                                                    .read(
-                                                      accountsSettingsProvider
-                                                          .notifier,
-                                                    )
-                                                    .cancelEdit(),
-                                                withPulse: true,
-                                                withHint: true,
-                                              ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.all(
-                                  16,
-                                ).copyWith(top: 40),
-                                child: Text(tr.noAccountFound),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-                AddEntity(
-                  heroTag: 'add_account',
-                  label: tr.fabNewAccount,
-                  disabled: isCreatingAccount,
-                  onPressed: _addAccount,
-                ),
-              ],
-            ),
+    return AccountsTabContent(
+      formKey: _formKey,
+      scrollController: _scrollController,
+      nameController: _nameController,
+      formColor: _formColor,
+      formPicture: _formPicture,
+      onColorChanged: (color) => setState(() => _formColor = color),
+      onPictureChanged: (picture) => setState(() => _formPicture = picture),
+      onConfirmDelete: _confirmDelete,
+      onAddAccount: _addAccount,
     );
   }
 

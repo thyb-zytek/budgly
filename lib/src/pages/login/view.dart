@@ -97,7 +97,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: BudglySpacing.lg)
                 .copyWith(
-                  top: MediaQuery.of(context).viewInsets.bottom > 0 ? 64 : 112,
+                  top: MediaQuery.viewInsetsOf(context).bottom > 0 ? 64 : 112,
                 ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,7 +108,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   curve: Curves.easeOut,
                   alignment: Alignment.topCenter,
                   child: LoginAppbar(
-                    isCompact: MediaQuery.of(context).viewInsets.bottom > 0,
+                    isCompact: MediaQuery.viewInsetsOf(context).bottom > 0,
                   ),
                 ),
                 Padding(

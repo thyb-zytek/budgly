@@ -418,33 +418,27 @@ void main() {
       expect(dates, List.of(dates)..sort());
     });
 
-    test(
-      'uses the reporting current month as the cutoff, independent of a later Overview month',
-      () async {
-        final expenses = FakeUndebitedExpensesService(analytics: analytics())
-          ..accountExpenses = [
-            expense(name: 'August pending', debitDate: DateTime(2026, 8, 15)),
-            expense(
-              name: 'September pending',
-              debitDate: DateTime(2026, 9, 15),
-            ),
-            expense(name: 'October pending', debitDate: DateTime(2026, 10, 15)),
-          ];
-        final service = UndebitedExpensesService(expensesService: expenses);
+    test('uses the reporting current month as the cutoff, independent of a later Overview month', () async {
+      final expenses = FakeUndebitedExpensesService(analytics: analytics())
+        ..accountExpenses = [
+          expense(name: 'August pending', debitDate: DateTime(2026, 8, 15)),
+          expense(name: 'September pending', debitDate: DateTime(2026, 9, 15)),
+          expense(name: 'October pending', debitDate: DateTime(2026, 10, 15)),
+        ];
+      final service = UndebitedExpensesService(expensesService: expenses);
 
-        // The Overview may be browsing November, but the banner's reporting
-        // target remains the real current month: September 2026.
-        await service.refresh(
-          accountId: 'account-1',
-          current: const Period(year: 2026, month: 9),
-          showImmediately: true,
-        );
+      // The Overview may be browsing November, but the banner's reporting
+      // target remains the real current month: September 2026.
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        showImmediately: true,
+      );
 
-        expect(service.currentPeriod, const Period(year: 2026, month: 9));
-        expect(service.occurrences.map((o) => o.name), ['August pending']);
-        expect(service.shouldShow, isTrue);
-      },
-    );
+      expect(service.currentPeriod, const Period(year: 2026, month: 9));
+      expect(service.occurrences.map((o) => o.name), ['August pending']);
+      expect(service.shouldShow, isTrue);
+    });
 
     test('ignores expenses that start after the current period', () async {
       final expenses = FakeUndebitedExpensesService(analytics: analytics())
@@ -485,38 +479,34 @@ void main() {
       expect(service.count, 0);
     });
 
-    test(
-      'loads the previous period on cold start even when the store already has current-period data',
-      () async {
-        final expenses =
-            ColdStartUndebitedExpensesService(analytics: analytics())
-              ..accountExpenses = [
-                expense(
-                  id: 'sep',
-                  name: 'Current',
-                  debitDate: DateTime(2026, 9, 3),
-                  isDebited: true,
-                ),
-              ]
-              ..previousPeriodExpenses = [
-                expense(name: 'Rent', debitDate: DateTime(2026, 8, 15)),
-              ];
-        final service = UndebitedExpensesService(expensesService: expenses);
+    test('loads the previous period on cold start even when the store already has current-period data', () async {
+      final expenses = ColdStartUndebitedExpensesService(analytics: analytics())
+        ..accountExpenses = [
+          expense(
+            id: 'sep',
+            name: 'Current',
+            debitDate: DateTime(2026, 9, 3),
+            isDebited: true,
+          ),
+        ]
+        ..previousPeriodExpenses = [
+          expense(name: 'Rent', debitDate: DateTime(2026, 8, 15)),
+        ];
+      final service = UndebitedExpensesService(expensesService: expenses);
 
-        await service.refresh(
-          accountId: 'account-1',
-          current: const Period(year: 2026, month: 9),
-          showImmediately: true,
-        );
+      await service.refresh(
+        accountId: 'account-1',
+        current: const Period(year: 2026, month: 9),
+        showImmediately: true,
+      );
 
-        // The store was non-empty (current month) but the previous period had
-        // never been loaded: the banner must still detect the undebited rent.
-        expect(expenses.previousPeriodLoads, 1);
-        expect(service.count, 1);
-        expect(service.occurrences.single.name, 'Rent');
-        expect(service.shouldShow, isTrue);
-      },
-    );
+      // The store was non-empty (current month) but the previous period had
+      // never been loaded: the banner must still detect the undebited rent.
+      expect(expenses.previousPeriodLoads, 1);
+      expect(service.count, 1);
+      expect(service.occurrences.single.name, 'Rent');
+      expect(service.shouldShow, isTrue);
+    });
 
     test(
       'does not reload the previous period once it is already loaded',

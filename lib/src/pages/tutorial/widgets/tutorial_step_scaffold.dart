@@ -67,7 +67,7 @@ class TutorialStepScaffold extends StatelessWidget {
             BudglySpacing.xxl,
             BudglySpacing.md,
             BudglySpacing.xxl,
-            24 + MediaQuery.of(context).viewInsets.bottom,
+            24 + MediaQuery.viewInsetsOf(context).bottom,
           ),
           child: Column(
             spacing: BudglySpacing.sm,

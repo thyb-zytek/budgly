@@ -123,39 +123,33 @@ void main() {
     expect(service.getExpenseById('e1')?.amount, 125);
   });
 
-  test(
-    'an empty offline period is answered from the cache without waiting for the server',
-    () async {
-      final result = await service
-          .listExpensesForPeriod('a1', period)
-          .timeout(const Duration(seconds: 2));
+  test('an empty offline period is answered from the cache without waiting for the server', () async {
+    final result = await service
+        .listExpensesForPeriod('a1', period)
+        .timeout(const Duration(seconds: 2));
 
-      expect(result, isEmpty);
-    },
-  );
+    expect(result, isEmpty);
+  });
 
-  test(
-    'a write rejected by the server is reported and its optimistic state dropped',
-    () async {
-      final rejected = <String>[];
-      final subscription = service.rejectedWrites.listen(rejected.add);
-      addTearDown(subscription.cancel);
+  test('a write rejected by the server is reported and its optimistic state dropped', () async {
+    final rejected = <String>[];
+    final subscription = service.rejectedWrites.listen(rejected.add);
+    addTearDown(subscription.cancel);
 
-      firestore.online = true;
-      await service.createExpense(expense);
-      await Future<void>.delayed(Duration.zero);
-      firestore.rejectWrites = true;
+    firestore.online = true;
+    await service.createExpense(expense);
+    await Future<void>.delayed(Duration.zero);
+    firestore.rejectWrites = true;
 
-      await service.updateExpense(
-        expense.copyWith(amount: 999),
-        previous: expense,
-      );
-      await Future<void>.delayed(Duration.zero);
+    await service.updateExpense(
+      expense.copyWith(amount: 999),
+      previous: expense,
+    );
+    await Future<void>.delayed(Duration.zero);
 
-      expect(rejected, ['a1']);
-      expect(firestore.server.single.amount, 125);
-    },
-  );
+    expect(rejected, ['a1']);
+    expect(firestore.server.single.amount, 125);
+  });
 
   test('operations queued by older builds are still drained', () async {
     firestore.online = true;

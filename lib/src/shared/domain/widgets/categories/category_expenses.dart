@@ -62,7 +62,14 @@ class CategoryExpenses extends StatelessWidget {
             Row(
               spacing: 8,
               children: [
-                Expanded(child: CategoryView(category: category)),
+                Expanded(
+                  child: CategoryView(
+                    category: category,
+                    currencyCode: currencyCode,
+                    localeName: localeName,
+                    decimalPlaces: decimalPlaces,
+                  ),
+                ),
                 Text(
                   _format(summary.total),
                   style: theme.textTheme.titleLarge?.copyWith(

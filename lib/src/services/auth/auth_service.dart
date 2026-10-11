@@ -41,6 +41,11 @@ class AuthService {
   /// tests injecting a [MockFirebaseAuth].
   fb.User? get firebaseUser => _auth.currentUser;
 
+  /// Raw Firebase Auth state stream. Riverpod-owned consumers use this to
+  /// react to external sign-out/session changes without introducing a second
+  /// mutable auth state holder.
+  Stream<fb.User?> get authStateChanges => _auth.authStateChanges();
+
   Future<User> changePassword(String oldPassword, String newPassword) async {
     try {
       final fb.User? firebaseUser = _auth.currentUser;

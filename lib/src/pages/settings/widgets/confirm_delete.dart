@@ -31,7 +31,7 @@ class ConfirmDelete extends StatelessWidget {
         padding: EdgeInsets.only(
           left: BudglySpacing.xl,
           right: BudglySpacing.xl,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -98,7 +98,7 @@ Future<RecurringDeleteChoice?> showRecurringDeleteOptions(
         padding: EdgeInsets.only(
           left: BudglySpacing.xl,
           right: BudglySpacing.xl,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -166,7 +166,7 @@ Future<RecurringEditChoice?> showRecurringEditOptions(
         padding: EdgeInsets.only(
           left: BudglySpacing.xl,
           right: BudglySpacing.xl,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

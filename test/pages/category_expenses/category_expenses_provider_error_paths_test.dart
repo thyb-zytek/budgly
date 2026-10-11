@@ -24,8 +24,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Complements `category_expenses_provider_test.dart` (success paths only)
 /// with the branches that file leaves untested: `loadMore`'s two distinct
 /// failure branches (first page with/without a local fallback, and a later
-/// page), the error/"moved" paths of `saveEditing`, and the error paths of
-/// `deleteOccurrence`/`_deleteRecurring`/`toggleDebited`.
+/// page), the error/"moved" paths of `saveEditing` (including account
+/// reparenting, which moves the expense — or the whole recurring series — to
+/// another account), the debit guard on every delete entry point, and the
+/// error paths of `deleteOccurrence`/`_deleteRecurring`/`toggleDebited`.
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super(analytics: AnalyticsService());
@@ -33,6 +35,9 @@ class _FakeAuthService extends AuthService {
   User? get currentUser => null;
   @override
   fb.User? get firebaseUser => null;
+
+  @override
+  Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
 }
 
 class _FakeProfileService extends ProfileService {
@@ -62,7 +67,7 @@ class _FakeProfileService extends ProfileService {
   Future<User?> loadUserProfile({bool forceRefresh = false}) async => null;
 
   @override
-  Future<User?> refreshFromServer() async => null;
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async => null;
 }
 
 /// A configurable fake: each method either succeeds (using [values] as the
@@ -226,66 +231,58 @@ void main() {
       },
     );
 
-    test(
-      'a first-page failure falls back to whatever ExpensesSession already has locally',
-      () async {
-        final expense = _expense('e1', 'a1', 'c1');
-        final service = _ScriptedExpensesService([
-          expense,
-        ], analytics: AnalyticsService())..pageError = StateError('offline');
-        final container = _makeContainer(service);
-        addTearDown(container.dispose);
+    test('a first-page failure falls back to whatever ExpensesSession already has locally', () async {
+      final expense = _expense('e1', 'a1', 'c1');
+      final service = _ScriptedExpensesService([
+        expense,
+      ], analytics: AnalyticsService())..pageError = StateError('offline');
+      final container = _makeContainer(service);
+      addTearDown(container.dispose);
 
-        // Seed ExpensesSession the way the rest of the app does before the
-        // category screen's own (failing) page request runs.
-        await container
-            .read(expensesSessionProvider.notifier)
-            .loadAccount('a1');
+      // Seed ExpensesSession the way the rest of the app does before the
+      // category screen's own (failing) page request runs.
+      await container.read(expensesSessionProvider.notifier).loadAccount('a1');
 
-        final notifier = container.read(
-          categoryExpensesProvider('a1', 'c1', period).notifier,
-        );
-        await notifier.loadMore();
+      final notifier = container.read(
+        categoryExpensesProvider('a1', 'c1', period).notifier,
+      );
+      await notifier.loadMore();
 
-        final state = container.read(
-          categoryExpensesProvider('a1', 'c1', period),
-        );
-        expect(state.status.hasError, isFalse);
-        expect(state.occurrences, hasLength(1));
-        expect(state.hasMorePages, isFalse);
-      },
-    );
+      final state = container.read(
+        categoryExpensesProvider('a1', 'c1', period),
+      );
+      expect(state.status.hasError, isFalse);
+      expect(state.occurrences, hasLength(1));
+      expect(state.hasMorePages, isFalse);
+    });
 
-    test(
-      'a failure on a later page just logs and keeps the already-loaded occurrences',
-      () async {
-        final expense = _expense('e1', 'a1', 'c1');
-        final service =
-            _ScriptedExpensesService([], analytics: AnalyticsService())
-              ..pageResult = () =>
-                  ExpensePage(expenses: [expense], cursor: null, hasMore: true);
-        final container = _makeContainer(service);
-        addTearDown(container.dispose);
+    test('a failure on a later page just logs and keeps the already-loaded occurrences', () async {
+      final expense = _expense('e1', 'a1', 'c1');
+      final service =
+          _ScriptedExpensesService([], analytics: AnalyticsService())
+            ..pageResult = () =>
+                ExpensePage(expenses: [expense], cursor: null, hasMore: true);
+      final container = _makeContainer(service);
+      addTearDown(container.dispose);
 
-        final notifier = container.read(
-          categoryExpensesProvider('a1', 'c1', period).notifier,
-        );
-        await notifier.loadMore(); // first page succeeds, hasMore: true
+      final notifier = container.read(
+        categoryExpensesProvider('a1', 'c1', period).notifier,
+      );
+      await notifier.loadMore(); // first page succeeds, hasMore: true
 
-        service
-          ..pageResult = null
-          ..pageError = StateError('offline');
-        await notifier.loadMore(); // second page fails
+      service
+        ..pageResult = null
+        ..pageError = StateError('offline');
+      await notifier.loadMore(); // second page fails
 
-        final state = container.read(
-          categoryExpensesProvider('a1', 'c1', period),
-        );
-        // Unlike a first-page failure, this must not surface as a screen-level
-        // error: the user already has data on screen.
-        expect(state.status.hasError, isFalse);
-        expect(state.occurrences, hasLength(1));
-      },
-    );
+      final state = container.read(
+        categoryExpensesProvider('a1', 'c1', period),
+      );
+      // Unlike a first-page failure, this must not surface as a screen-level
+      // error: the user already has data on screen.
+      expect(state.status.hasError, isFalse);
+      expect(state.occurrences, hasLength(1));
+    });
   });
 
   group('saveEditing', () {
@@ -333,6 +330,7 @@ void main() {
           ExpenseEditFormData(
             name: 'Renamed',
             amount: 20,
+            accountId: 'a1',
             categoryId: 'c1',
             debitDate: DateTime(2026, 3, 5),
             endDate: null,
@@ -371,6 +369,7 @@ void main() {
           ExpenseEditFormData(
             name: 'Renamed',
             amount: 20,
+            accountId: 'a1',
             categoryId: 'c2', // different category
             debitDate: DateTime(2026, 3, 5),
             endDate: null,
@@ -384,6 +383,120 @@ void main() {
         );
         expect(state.occurrences, isEmpty);
         expect(state.editingOccurrence, isNull);
+      },
+    );
+
+    test('moving an expense to another account drops it from this page and '
+        'reparents it in the shared session', () async {
+      final expense = _expense('e1', 'a1', 'c1');
+      final occurrence = ExpenseOccurrence(
+        expense: expense,
+        date: DateTime(2026, 3, 5),
+        isDebited: false,
+      );
+      final service = _ScriptedExpensesService([
+        expense,
+      ], analytics: AnalyticsService());
+      final container = await withEditingOccurrence(service, occurrence);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(
+        categoryExpensesProvider('a1', 'c1', period).notifier,
+      );
+      final success = await notifier.saveEditing(
+        ExpenseEditFormData(
+          name: 'Renamed',
+          amount: 20,
+          accountId: 'a2', // different account
+          categoryId: 'c1',
+          debitDate: DateTime(2026, 3, 5),
+          endDate: null,
+          recurrence: RecurrenceType.none,
+        ),
+      );
+
+      expect(success, isTrue);
+      final state = container.read(
+        categoryExpensesProvider('a1', 'c1', period),
+      );
+      expect(state.occurrences, isEmpty);
+      expect(state.editingOccurrence, isNull);
+      expect(state.isSaving, isFalse);
+      // It moved rather than was deleted: still present in the session,
+      // under the new account and gone from the old one.
+      final moved = container
+          .read(expensesSessionProvider.notifier)
+          .getExpenseById('e1');
+      expect(moved, isNotNull);
+      expect(moved!.accountId, 'a2');
+      final oldAccount =
+          container.read(expensesSessionProvider).expensesByAccount['a1'] ??
+          const <Expense>[];
+      expect(oldAccount.any((e) => e.id == 'e1'), isFalse);
+      final newAccount =
+          container.read(expensesSessionProvider).expensesByAccount['a2'] ??
+          const <Expense>[];
+      expect(newAccount.any((e) => e.id == 'e1'), isTrue);
+    });
+
+    test(
+      'changing the account of a recurring expense moves the whole series to '
+      'the new account',
+      () async {
+        final expense = _expense(
+          'e1',
+          'a1',
+          'c1',
+          recurrence: RecurrenceType.monthly,
+        );
+        final occurrence = ExpenseOccurrence(
+          expense: expense,
+          date: DateTime(2026, 3, 5),
+          isDebited: false,
+        );
+        final service = _ScriptedExpensesService([
+          expense,
+        ], analytics: AnalyticsService());
+        final container = await withEditingOccurrence(service, occurrence);
+        addTearDown(container.dispose);
+
+        final notifier = container.read(
+          categoryExpensesProvider('a1', 'c1', period).notifier,
+        );
+        final success = await notifier.saveEditing(
+          ExpenseEditFormData(
+            name: 'Renamed',
+            amount: 20,
+            accountId: 'a2', // a series shares the account, so it all moves
+            categoryId: 'c1',
+            debitDate: DateTime(2026, 3, 5),
+            endDate: null,
+            recurrence: RecurrenceType.monthly,
+          ),
+        );
+
+        expect(success, isTrue);
+        final state = container.read(
+          categoryExpensesProvider('a1', 'c1', period),
+        );
+        expect(state.occurrences, isEmpty);
+        expect(state.editingOccurrence, isNull);
+        expect(state.isSaving, isFalse);
+        final moved = container
+            .read(expensesSessionProvider.notifier)
+            .getExpenseById('e1');
+        expect(moved, isNotNull);
+        expect(moved!.accountId, 'a2');
+        // The series must still be recurring after the move, not flattened.
+        expect(moved.recurrence, RecurrenceType.monthly);
+        final oldAccount =
+            container.read(expensesSessionProvider).expensesByAccount['a1'] ??
+            const <Expense>[];
+        expect(oldAccount.any((e) => e.id == 'e1'), isFalse);
+        final newAccount =
+            container.read(expensesSessionProvider).expensesByAccount['a2'] ??
+            const <Expense>[];
+        expect(newAccount.any((e) => e.id == 'e1'), isTrue);
       },
     );
 
@@ -409,6 +522,7 @@ void main() {
           ExpenseEditFormData(
             name: 'Renamed',
             amount: 20,
+            accountId: 'a1',
             categoryId: 'c1',
             debitDate: DateTime(2026, 3, 5),
             endDate: null,
@@ -455,12 +569,46 @@ void main() {
         expect(state.isSaving, isFalse);
       },
     );
+
+    test('a debited occurrence is never deleted: fails fast without touching '
+        'the service', () async {
+      final expense = _expense('e1', 'a1', 'c1');
+      final service = _ScriptedExpensesService([
+        expense,
+      ], analytics: AnalyticsService())..failDelete = true;
+      final container = _makeContainer(service);
+      addTearDown(container.dispose);
+      await container.read(expensesSessionProvider.notifier).loadAccount('a1');
+
+      final notifier = container.read(
+        categoryExpensesProvider('a1', 'c1', period).notifier,
+      );
+      final occurrence = ExpenseOccurrence(
+        expense: expense,
+        date: DateTime(2026, 3, 5),
+        isDebited: true,
+      );
+      final success = await notifier.deleteOccurrence(occurrence);
+
+      expect(success, isFalse);
+      final state = container.read(
+        categoryExpensesProvider('a1', 'c1', period),
+      );
+      // The guard runs before any service call: nothing failed and nothing
+      // is saving, proving deleteExpense was never reached (failDelete is on).
+      expect(state.status.hasError, isFalse);
+      expect(state.isSaving, isFalse);
+      expect(
+        container.read(expensesSessionProvider.notifier).getExpenseById('e1'),
+        isNotNull,
+      );
+    });
   });
 
-  group('deleteSingleOccurrence (recurring, routed through _deleteRecurring)', () {
-    test(
-      'a successful deletion refreshes ExpensesSession and republishes occurrences',
-      () async {
+  group(
+    'deleteSingleOccurrence (recurring, routed through _deleteRecurring)',
+    () {
+      test('a successful deletion refreshes ExpensesSession and republishes occurrences', () async {
         final expense = _expense(
           'e1',
           'a1',
@@ -494,12 +642,44 @@ void main() {
           state.occurrences.any((o) => o.date == DateTime(2026, 3, 5)),
           isFalse,
         );
-      },
-    );
+      });
 
-    test(
-      'a failed deletion reports a failure status and clears isSaving',
-      () async {
+      test(
+        'a failed deletion reports a failure status and clears isSaving',
+        () async {
+          final expense = _expense(
+            'e1',
+            'a1',
+            'c1',
+            recurrence: RecurrenceType.monthly,
+          );
+          final service = _ScriptedExpensesService([
+            expense,
+          ], analytics: AnalyticsService())..failUpdate = true;
+          final container = _makeContainer(service);
+          addTearDown(container.dispose);
+
+          final notifier = container.read(
+            categoryExpensesProvider('a1', 'c1', period).notifier,
+          );
+          final occurrence = ExpenseOccurrence(
+            expense: expense,
+            date: DateTime(2026, 3, 5),
+            isDebited: false,
+          );
+          final success = await notifier.deleteSingleOccurrence(occurrence);
+
+          expect(success, isFalse);
+          final state = container.read(
+            categoryExpensesProvider('a1', 'c1', period),
+          );
+          expect(state.status.hasError, isTrue);
+          expect(state.isSaving, isFalse);
+        },
+      );
+
+      test('a debited occurrence is never deleted: deleteSingleOccurrence '
+          'fails fast', () async {
         final expense = _expense(
           'e1',
           'a1',
@@ -511,6 +691,9 @@ void main() {
         ], analytics: AnalyticsService())..failUpdate = true;
         final container = _makeContainer(service);
         addTearDown(container.dispose);
+        await container
+            .read(expensesSessionProvider.notifier)
+            .loadAccount('a1');
 
         final notifier = container.read(
           categoryExpensesProvider('a1', 'c1', period).notifier,
@@ -518,7 +701,7 @@ void main() {
         final occurrence = ExpenseOccurrence(
           expense: expense,
           date: DateTime(2026, 3, 5),
-          isDebited: false,
+          isDebited: true,
         );
         final success = await notifier.deleteSingleOccurrence(occurrence);
 
@@ -526,11 +709,56 @@ void main() {
         final state = container.read(
           categoryExpensesProvider('a1', 'c1', period),
         );
-        expect(state.status.hasError, isTrue);
+        // Guard before service: no failure surfaced (failUpdate is on) and
+        // nothing is saving, so the recurring delete was never attempted.
+        expect(state.status.hasError, isFalse);
         expect(state.isSaving, isFalse);
-      },
-    );
-  });
+        expect(
+          container.read(expensesSessionProvider.notifier).getExpenseById('e1'),
+          isNotNull,
+        );
+      });
+
+      test('a debited occurrence is never deleted: deleteFutureOccurrences '
+          'fails fast', () async {
+        final expense = _expense(
+          'e1',
+          'a1',
+          'c1',
+          recurrence: RecurrenceType.monthly,
+        );
+        final service = _ScriptedExpensesService([
+          expense,
+        ], analytics: AnalyticsService())..failUpdate = true;
+        final container = _makeContainer(service);
+        addTearDown(container.dispose);
+        await container
+            .read(expensesSessionProvider.notifier)
+            .loadAccount('a1');
+
+        final notifier = container.read(
+          categoryExpensesProvider('a1', 'c1', period).notifier,
+        );
+        final occurrence = ExpenseOccurrence(
+          expense: expense,
+          date: DateTime(2026, 3, 5),
+          isDebited: true,
+        );
+        final success = await notifier.deleteFutureOccurrences(occurrence);
+
+        expect(success, isFalse);
+        final state = container.read(
+          categoryExpensesProvider('a1', 'c1', period),
+        );
+        expect(state.status.hasError, isFalse);
+        expect(state.isSaving, isFalse);
+        expect(
+          container.read(expensesSessionProvider.notifier).getExpenseById('e1'),
+          isNotNull,
+        );
+      });
+    },
+  );
 
   group('toggleDebited', () {
     test(

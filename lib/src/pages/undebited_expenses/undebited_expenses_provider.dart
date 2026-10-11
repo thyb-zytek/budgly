@@ -137,6 +137,16 @@ class UndebitedExpenses extends _$UndebitedExpenses {
   var _disposed = false;
   Timer? _bannerTimer;
 
+  /// Monotonic counter identifying the latest `_recompute` invocation.
+  ///
+  /// `_recompute` is async and yields while it checks banner dismissal in the
+  /// local cache. The expenses/accounts/profile sessions each trigger a
+  /// listener-based recompute, so stale invocations can overlap a newer one.
+  /// Each invocation captures the generation at entry and aborts before
+  /// applying state if a newer recompute has started in the meantime, so an
+  /// outdated snapshot can never overwrite the freshest one.
+  int _recomputeGen = 0;
+
   @override
   UndebitedExpensesState build() {
     _localCache = ref.read(localCacheProvider);
@@ -211,19 +221,19 @@ class UndebitedExpenses extends _$UndebitedExpenses {
           .toList(growable: false);
       await Future.wait(
         accounts.map((accountId) async {
-          await ref
-              .read(expensesSessionProvider.notifier)
-              .loadAccount(accountId);
-          if (_disposed) return;
           await _service.refresh(
             accountId: accountId,
             current: Period.fromDate(DateTime.now()),
             showImmediately: true,
           );
+          if (_disposed) return;
+          await ref
+              .read(expensesSessionProvider.notifier)
+              .loadAccount(accountId);
         }),
       );
       if (_disposed) return;
-      _recompute();
+      await _recompute();
       // _recompute() now sets bannerVisible internally
     } catch (e) {
       if (_disposed) return;
@@ -266,6 +276,7 @@ class UndebitedExpenses extends _$UndebitedExpenses {
   }
 
   Future<void> _recompute() async {
+    final generation = ++_recomputeGen;
     final profile = ref.read(profileSessionProvider);
     final all = _computeAllUndebited();
     final next = _filter(all);
@@ -283,6 +294,7 @@ class UndebitedExpenses extends _$UndebitedExpenses {
     final currentPeriod =
         _service.currentPeriod ?? Period.fromDate(DateTime.now());
     final bannerVisible = await _shouldShowBanner(currentPeriod);
+    if (generation != _recomputeGen) return; // superseded by a newer recompute
     if (removed.isEmpty) {
       state = state.copyWith(
         accounts: accounts,
@@ -324,14 +336,9 @@ class UndebitedExpenses extends _$UndebitedExpenses {
 
   Future<void> refresh({bool forceRefresh = false}) async {
     final accounts = ref.read(accountsSessionProvider).accounts;
-    for (final account in accounts) {
-      final id = account.id;
-      if (id == null) continue;
-      await ref
-          .read(expensesSessionProvider.notifier)
-          .loadAccount(id, forceRefresh: forceRefresh);
-      if (_disposed) return;
-    }
+    // A14: fill the period cache first, then project it into the shared
+    // session (see ensureDataLoaded), so a cold-start refresh is not masked by
+    // an account load that reads an as-yet-empty period cache.
     for (final account in accounts) {
       final id = account.id;
       if (id == null) continue;
@@ -342,7 +349,15 @@ class UndebitedExpenses extends _$UndebitedExpenses {
       );
       if (_disposed) return;
     }
-    _recompute();
+    for (final account in accounts) {
+      final id = account.id;
+      if (id == null) continue;
+      await ref
+          .read(expensesSessionProvider.notifier)
+          .loadAccount(id, forceRefresh: forceRefresh);
+      if (_disposed) return;
+    }
+    await _recompute();
     // _recompute() now sets bannerVisible internally
   }
 
@@ -380,6 +395,10 @@ class UndebitedExpenses extends _$UndebitedExpenses {
               .toList();
     state = state.copyWith(
       selectedAccountId: accountId,
+      // A15: selecting "All accounts" must clear the stored account id,
+      // otherwise copyWith keeps the previous account and the selector snaps
+      // back to the last account instead of staying on "All accounts".
+      clearSelectedAccount: accountId == null,
       selected: const {},
       removing: const {},
       selectionMode: false,
@@ -446,7 +465,7 @@ class UndebitedExpenses extends _$UndebitedExpenses {
     try {
       await action();
       await _reloadAccounts({occurrence.expense.accountId});
-      if (!_disposed) _recompute();
+      if (!_disposed) await _recompute();
     } catch (e) {
       if (!_disposed) state = state.copyWith(status: state.status.failure(e));
     } finally {
@@ -477,7 +496,7 @@ class UndebitedExpenses extends _$UndebitedExpenses {
           selectionMode: false,
           processing: false,
         );
-        _recompute();
+        await _recompute();
       }
     }
   }

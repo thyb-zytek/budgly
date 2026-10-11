@@ -94,7 +94,6 @@ class Login extends _$Login {
         return null;
       }
       await ref.read(profileSessionProvider.notifier).load(forceRefresh: true);
-      await _waitForProfileLoaded();
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
@@ -114,7 +113,6 @@ class Login extends _$Login {
           .read(authServiceProvider)
           .signUpWithEmailAndPassword(email, password);
       await ref.read(profileSessionProvider.notifier).load(forceRefresh: true);
-      await _waitForProfileLoaded();
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
@@ -130,7 +128,6 @@ class Login extends _$Login {
     return _runAuthentication(() async {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
       await ref.read(profileSessionProvider.notifier).load(forceRefresh: true);
-      await _waitForProfileLoaded();
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
@@ -139,18 +136,6 @@ class Login extends _$Login {
       );
       return user;
     }, google: true);
-  }
-
-  Future<void> _waitForProfileLoaded() async {
-    const maxAttempts = 50;
-    for (var i = 0; i < maxAttempts; i++) {
-      if (!ref.mounted) return;
-      final session = ref.read(profileSessionProvider);
-      if (session.hasLoaded && session.currentUser != null) {
-        return;
-      }
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
   }
 
   Future<void> resetPassword(String email) async {
@@ -189,7 +174,6 @@ class Login extends _$Login {
         await ref
             .read(profileSessionProvider.notifier)
             .load(forceRefresh: true);
-        await _waitForProfileLoaded();
         if (!ref.mounted) return;
         state = state.copyWith(
           isLoading: false,
@@ -250,9 +234,10 @@ class Login extends _$Login {
       if (!ref.mounted) return;
       state = state.copyWith(
         currentUser: null,
-        formType: state.formType == AuthForm.resetPassword
-            ? AuthForm.signIn
-            : AuthForm.signUp,
+        // Signing out always returns to the sign-in form. The only caller is
+        // the "Se connecter" button shown on the email-verification step, and
+        // it must lead to the sign-in page, not the sign-up page (A2).
+        formType: AuthForm.signIn,
         isLoading: false,
         errorCode: null,
         errorMessage: null,

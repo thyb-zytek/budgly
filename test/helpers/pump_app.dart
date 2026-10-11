@@ -2,6 +2,9 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'test_backend_client_overrides.dart';
 
 /// Minimal app wrapper for widget tests.
 ///
@@ -25,19 +28,25 @@ Future<void> pumpApp(
   });
 
   await tester.pumpWidget(
-    MaterialApp(
-      locale: locale,
-      themeMode: themeMode,
-      theme: ThemeData.light(useMaterial3: true),
-      darkTheme: ThemeData.dark(useMaterial3: true),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('en'), Locale('fr')],
-      home: Scaffold(body: child),
+    ProviderScope(
+      // Keep widget tests isolated from real Firebase/Supabase singletons.
+      // Individual tests can still add their own, more specific overrides in
+      // a nested ProviderScope.
+      overrides: testBackendClientOverrides(),
+      child: MaterialApp(
+        locale: locale,
+        themeMode: themeMode,
+        theme: ThemeData.light(useMaterial3: true),
+        darkTheme: ThemeData.dark(useMaterial3: true),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en'), Locale('fr')],
+        home: Scaffold(body: child),
+      ),
     ),
   );
   if (settle) {

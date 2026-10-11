@@ -17,7 +17,16 @@ class PreferencesTab extends ConsumerWidget {
     final tr = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final profileNotifier = ref.read(profileSessionProvider.notifier);
-    final profile = ref.watch(profileSessionProvider);
+    final profile = ref.watch(
+      profileSessionProvider.select(
+        (state) => (
+          themeMode: state.themeMode,
+          locale: state.locale,
+          currency: state.currency,
+          amountDecimalPlaces: state.amountDecimalPlaces,
+        ),
+      ),
+    );
 
     return Padding(
       padding: EdgeInsets.symmetric(

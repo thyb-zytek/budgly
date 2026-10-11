@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
 import 'package:budgly/src/services/categories/categories_service.dart';
@@ -24,6 +26,8 @@ class _FakeCategoriesService extends CategoriesService {
 
   final List<Category> values;
   bool shouldFailLoad = false;
+  Completer<List<Category>>? deferredLoad;
+  Completer<void>? loadStarted;
   int invalidateAccountCalls = 0;
   int invalidateCacheCalls = 0;
 
@@ -37,6 +41,13 @@ class _FakeCategoriesService extends CategoriesService {
   }) async {
     _lastOnRevalidated = onRevalidated;
     if (shouldFailLoad) throw Exception('boom');
+    final pending = deferredLoad;
+    if (pending != null) {
+      if (loadStarted != null && !loadStarted!.isCompleted) {
+        loadStarted!.complete();
+      }
+      return pending.future;
+    }
     return values.where((c) => c.accountId == accountId).toList();
   }
 
@@ -115,6 +126,34 @@ void main() {
 
     expect(notifier.getCategoriesForAccount('a1'), hasLength(1));
   });
+
+  test(
+    'clear prevents a stale category load from restoring the old account',
+    () async {
+      final service = _FakeCategoriesService([
+        Fixtures.category(id: 'c1', accountId: 'a1'),
+      ]);
+      final container = ProviderContainer(
+        overrides: [categoriesServiceProvider.overrideWithValue(service)],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(categoriesSessionProvider.notifier);
+      await notifier.load('a1');
+
+      final deferred = Completer<List<Category>>();
+      final started = Completer<void>();
+      service.deferredLoad = deferred;
+      service.loadStarted = started;
+      final loading = notifier.load('a1', forceRefresh: true);
+      await started.future;
+      notifier.clear();
+      deferred.complete([Fixtures.category(id: 'stale', accountId: 'a1')]);
+      await loading;
+
+      expect(notifier.getCategoriesForAccount('a1'), isEmpty);
+      expect(notifier.hasLoadedAccount('a1'), isFalse);
+    },
+  );
 
   test('loadIcons populates the shared icon list once', () async {
     final service = _FakeCategoriesService([]);

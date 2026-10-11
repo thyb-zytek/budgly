@@ -184,25 +184,22 @@ void main() {
       );
     }
 
-    test(
-      'forces a token refresh through the injected FirebaseAuth and retries once',
-      () async {
-        final log = <String>[];
-        final provider = UserProfileSupabase(
-          client: expiringClient(log),
-          auth: MockFirebaseAuth(signedIn: true, mockUser: MockUser(uid: 'u1')),
-        );
+    test('forces a token refresh through the injected FirebaseAuth and retries once', () async {
+      final log = <String>[];
+      final provider = UserProfileSupabase(
+        client: expiringClient(log),
+        auth: MockFirebaseAuth(signedIn: true, mockUser: MockUser(uid: 'u1')),
+      );
 
-        final profile = await provider.getProfile('u1');
+      final profile = await provider.getProfile('u1');
 
-        expect(profile?.email, 'test@budgly.app');
-        expect(
-          log,
-          hasLength(2),
-          reason: 'one failed attempt, then exactly one retry',
-        );
-      },
-    );
+      expect(profile?.email, 'test@budgly.app');
+      expect(
+        log,
+        hasLength(2),
+        reason: 'one failed attempt, then exactly one retry',
+      );
+    });
 
     test(
       'rethrows the JWT error when nobody is signed in (no refresh possible)',

@@ -4,6 +4,7 @@ import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/providers/supabase/accounts.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../helpers.dart';
 
 /// Returns a scripted response per call, so a test can distinguish the
@@ -36,37 +37,33 @@ void main() {
     syncQueue: testSyncQueue,
   );
 
-  test(
-    'a cache-hit background revalidation reaches onRevalidated instead of being silently dropped',
-    () async {
-      final supabase = ScriptedAccountSupabase([
-        [account('remote1')],
-      ]);
-      final svc = service(supabase);
-      // Seed the local cache so the first call takes the cache-first branch.
-      await svc
-          .loadAccounts(); // primes _loadedUserId + local cache miss -> awaits remote
-      expect(supabase.calls, 1);
-      // The priming call just marked the 1-minute refresh throttle as due;
-      // reset it so the next call takes the cache-hit + background-refresh
-      // branch under test instead of returning the cache with no refresh at
-      // all (unrelated to the bug this test targets).
-      svc.invalidateCache();
+  test('a cache-hit background revalidation reaches onRevalidated instead of being silently dropped', () async {
+    final supabase = ScriptedAccountSupabase([
+      [account('remote1')],
+    ]);
+    final svc = service(supabase);
+    // Seed the local cache so the first call takes the cache-first branch.
+    await svc.loadAccounts(); // primes _loadedUserId + local cache miss -> awaits remote
+    expect(supabase.calls, 1);
+    // The priming call just marked the 1-minute refresh throttle as due;
+    // reset it so the next call takes the cache-hit + background-refresh
+    // branch under test instead of returning the cache with no refresh at
+    // all (unrelated to the bug this test targets).
+    svc.invalidateCache();
 
-      final revalidated = <List<Account>>[];
-      final cached = await svc.loadAccounts(onRevalidated: revalidated.add);
-      // Cache now has 'remote1' from the priming call, so this call must
-      // return the cached snapshot immediately, *and* fire a background
-      // revalidation.
-      expect(cached.map((a) => a.id), ['remote1']);
+    final revalidated = <List<Account>>[];
+    final cached = await svc.loadAccounts(onRevalidated: revalidated.add);
+    // Cache now has 'remote1' from the priming call, so this call must
+    // return the cached snapshot immediately, *and* fire a background
+    // revalidation.
+    expect(cached.map((a) => a.id), ['remote1']);
 
-      // Let the unawaited background revalidation's microtasks run.
-      await Future<void>.delayed(Duration.zero);
-      expect(supabase.calls, 2);
-      expect(revalidated, hasLength(1));
-      expect(revalidated.single.map((a) => a.id), ['remote1']);
-    },
-  );
+    // Let the unawaited background revalidation's microtasks run.
+    await Future<void>.delayed(Duration.zero);
+    expect(supabase.calls, 2);
+    expect(revalidated, hasLength(1));
+    expect(revalidated.single.map((a) => a.id), ['remote1']);
+  });
 
   test(
     'RL-01 §3.2: a background revalidation does not leak the in-flight guard '

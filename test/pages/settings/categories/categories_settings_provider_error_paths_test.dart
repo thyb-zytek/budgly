@@ -141,8 +141,7 @@ void main() {
         expect(
           state.status.hasError,
           isFalse,
-          reason:
-              'a network failure while offline must not surface as a screen-level error',
+          reason: 'a network failure while offline must not surface as a screen-level error',
         );
         expect(state.status.isLoading, isFalse);
       },

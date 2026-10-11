@@ -133,8 +133,7 @@ Future<void> pickInputDate(
 
   if (!context.mounted || date == null) return;
 
-  controller.text = DateFormat.yMMMd(
-    AppLocalizations.of(context)?.localeName,
-  ).format(date);
+  controller.text = DateFormat.yMMMd(AppLocalizations.of(context)?.localeName)
+      .format(date);
   onPicked();
 }

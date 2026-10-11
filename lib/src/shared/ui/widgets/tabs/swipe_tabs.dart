@@ -1,6 +1,7 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:flutter/material.dart';
+
 import 'tab_switcher.dart';
 
 class SwipeTabs extends StatefulWidget {

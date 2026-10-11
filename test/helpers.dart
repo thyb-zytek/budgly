@@ -5,3 +5,4 @@ export 'helpers/fake_expense_firestore.dart';
 export 'helpers/offline_expense_firestore.dart';
 export 'helpers/pump_app.dart';
 export 'helpers/test_bootstrap.dart';
+export 'helpers/test_backend_client_overrides.dart';

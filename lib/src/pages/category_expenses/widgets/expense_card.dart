@@ -56,10 +56,14 @@ class ExpenseCard extends StatelessWidget {
     HapticFeedback.mediumImpact();
     onUserInteracted?.call();
 
+    // A debited expense must not be edited or deleted; it can only be put
+    // back on hold.
+    final isDebited = occurrence.isDebited;
     showExpenseQuickActionsSheet(
       context,
-      onEdit: occurrence.isDebited ? null : onEdit,
-      onDelete: onDelete,
+      onEdit: isDebited ? null : onEdit,
+      onDelete: isDebited ? null : onDelete,
+      onMarkPending: isDebited ? onToggleDebited : null,
     );
   }
 
@@ -198,7 +202,7 @@ class ExpenseCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (occurrence.isException)
+                      if (occurrence.isCarriedOver)
                         RecurrenceBadge(label: tr.occurrenceCarriedOverBadge)
                       else if (isRecurring)
                         RecurrenceBadge(

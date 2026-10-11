@@ -24,9 +24,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    // SyncManager only exposes a private constructor: tests share the
-    // singleton, like every other test for this service, and rely on
-    // `resetForTest()` for isolation (see sync_manager_test.dart).
+    // Keep an explicit SyncManager instance and reset it for isolation.
     manager = testSyncManager;
     queue = testSyncQueue;
     await manager.resetForTest();
@@ -110,39 +108,36 @@ void main() {
     await manager.flush();
   });
 
-  test(
-    'a handler registered during another provider build defers notification',
-    () async {
-      // Cold-start state: the sync manager is started, the banner is observing
-      // syncStatusProvider, and a service (like AccountsService) registers its
-      // handler from inside its own provider build. The flush triggered by
-      // registerHandler must not write to syncStatusProvider while that provider
-      // is still building.
-      manager.start();
-      container.read(syncStatusProvider);
-      await pumpEventQueue(); // let start()'s initial flush settle
+  test('a handler registered during another provider build defers notification', () async {
+    // Cold-start state: the sync manager is started, the banner is observing
+    // syncStatusProvider, and a service (like AccountsService) registers its
+    // handler from inside its own provider build. The flush triggered by
+    // registerHandler must not write to syncStatusProvider while that provider
+    // is still building.
+    manager.start();
+    container.read(syncStatusProvider);
+    await pumpEventQueue(); // let start()'s initial flush settle
+    // ignore: avoid_print
+    print(
+      'PROBE isSyncing=${manager.isSyncing} phase=${SchedulerBinding.instance.schedulerPhase}',
+    );
+
+    final registeringProvider = Provider<Object?>((ref) {
       // ignore: avoid_print
-      print(
-        'PROBE isSyncing=${manager.isSyncing} phase=${SchedulerBinding.instance.schedulerPhase}',
-      );
-
-      final registeringProvider = Provider<Object?>((ref) {
-        // ignore: avoid_print
-        print('PROBE inside-build started=${manager.isSyncing}');
-        manager.registerHandler('accounts', (op) async {});
-        // ignore: avoid_print
-        print('PROBE after-register isSyncing=${manager.isSyncing}');
-        return const Object();
-      });
-
+      print('PROBE inside-build started=${manager.isSyncing}');
+      manager.registerHandler('accounts', (op) async {});
       // ignore: avoid_print
-      print('PROBE after-read isSyncing=${manager.isSyncing}');
+      print('PROBE after-register isSyncing=${manager.isSyncing}');
+      return const Object();
+    });
 
-      // Used to throw: "The provider X modified syncStatusProvider while building."
-      expect(container.read(registeringProvider), isNotNull);
+    // ignore: avoid_print
+    print('PROBE after-read isSyncing=${manager.isSyncing}');
 
-      await pumpEventQueue();
-      expect(container.read(syncStatusProvider).isSyncing, isFalse);
-    },
-  );
+    // Used to throw: "The provider X modified syncStatusProvider while building."
+    expect(container.read(registeringProvider), isNotNull);
+
+    await pumpEventQueue();
+    expect(container.read(syncStatusProvider).isSyncing, isFalse);
+  });
 }

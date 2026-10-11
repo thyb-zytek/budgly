@@ -31,20 +31,17 @@ void main() {
       expect(const Period(year: 2026, month: 12).lastDay.day, 31);
     });
 
-    test(
-      'P0 regression: Overview selecting March then opening category keeps March',
-      () {
-        // The bug: detail screen replaced selectedPeriod with Period.current()
-        // Simulate ViewModel keeping explicit period param
-        const selected = Period(year: 2026, month: 3);
-        const current = Period(year: 2026, month: 5);
-        // category expenses provider receives period via constructor and never overwrites it
-        const vmPeriod = selected;
-        expect(vmPeriod, isNot(current));
-        expect(vmPeriod, selected);
-        expect(vmPeriod.month, 3);
-      },
-    );
+    test('P0 regression: Overview selecting March then opening category keeps March', () {
+      // The bug: detail screen replaced selectedPeriod with Period.current()
+      // Simulate ViewModel keeping explicit period param
+      const selected = Period(year: 2026, month: 3);
+      const current = Period(year: 2026, month: 5);
+      // category expenses provider receives period via constructor and never overwrites it
+      const vmPeriod = selected;
+      expect(vmPeriod, isNot(current));
+      expect(vmPeriod, selected);
+      expect(vmPeriod.month, 3);
+    });
 
     test('swipe navigation: addMonths handles large deltas', () {
       const base = Period(year: 2026, month: 6);

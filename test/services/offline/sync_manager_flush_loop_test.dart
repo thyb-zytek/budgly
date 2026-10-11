@@ -34,36 +34,33 @@ void main() {
     await queue.clear();
   });
 
-  test(
-    'an operation enqueued during a running pass is replayed by a trailing pass',
-    () async {
-      final firstStarted = Completer<void>();
-      final releaseFirst = Completer<void>();
-      final replayed = <String>[];
+  test('an operation enqueued during a running pass is replayed by a trailing pass', () async {
+    final firstStarted = Completer<void>();
+    final releaseFirst = Completer<void>();
+    final replayed = <String>[];
 
-      manager.registerHandler('accounts', (operation) async {
-        replayed.add(operation.entityId);
-        if (operation.entityId == 'a1') {
-          firstStarted.complete();
-          await releaseFirst.future;
-        }
-      });
+    manager.registerHandler('accounts', (operation) async {
+      replayed.add(operation.entityId);
+      if (operation.entityId == 'a1') {
+        firstStarted.complete();
+        await releaseFirst.future;
+      }
+    });
 
-      await enqueueAccount('a1');
-      final first = manager.flush();
-      await firstStarted.future;
+    await enqueueAccount('a1');
+    final first = manager.flush();
+    await firstStarted.future;
 
-      // The running pass already read the queue: a2 is invisible to it.
-      await enqueueAccount('a2');
-      final second = manager.flush();
+    // The running pass already read the queue: a2 is invisible to it.
+    await enqueueAccount('a2');
+    final second = manager.flush();
 
-      releaseFirst.complete();
-      await Future.wait([first, second]);
+    releaseFirst.complete();
+    await Future.wait([first, second]);
 
-      expect(replayed, ['a1', 'a2']);
-      expect(await queue.all(), isEmpty);
-    },
-  );
+    expect(replayed, ['a1', 'a2']);
+    expect(await queue.all(), isEmpty);
+  });
 
   test(
     'concurrent forced flushes never run two passes at the same time',

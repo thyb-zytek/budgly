@@ -37,24 +37,20 @@ void main() {
   });
 
   group('purgeObsoleteCacheEntries', () {
-    test(
-      'removes every pre-versioning LocalCache key, including quarantined blobs',
-      () async {
-        SharedPreferences.setMockInitialValues({
-          'offline.accounts.user-1': 'not-json',
-          'offline.accounts.user-1.corrupt': 'not-json',
-          'offline.categories.acc-1': '[]',
-          'offline.profile.user-1': '{}',
-          'undebited.banner.dismissedAt.acc-1':
-              '2026-3|2026-03-15T00:00:00.000',
-        });
+    test('removes every pre-versioning LocalCache key, including quarantined blobs', () async {
+      SharedPreferences.setMockInitialValues({
+        'offline.accounts.user-1': 'not-json',
+        'offline.accounts.user-1.corrupt': 'not-json',
+        'offline.categories.acc-1': '[]',
+        'offline.profile.user-1': '{}',
+        'undebited.banner.dismissedAt.acc-1': '2026-3|2026-03-15T00:00:00.000',
+      });
 
-        await cache.purgeObsoleteCacheEntries();
+      await cache.purgeObsoleteCacheEntries();
 
-        final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getKeys(), isEmpty);
-      },
-    );
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getKeys(), isEmpty);
+    });
 
     test('never touches the current schema version', () async {
       const account = Account(id: 'a1', userId: 'user-1', name: 'Main');

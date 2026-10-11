@@ -102,47 +102,43 @@ void main() {
             const Period(year: 2026, month: 6),
           )?.revenue,
           2800,
-          reason:
-              'June is explicit, but its own inheritance query is for before June',
+          reason: 'June is explicit, but its own inheritance query is for before June',
         );
       },
     );
 
-    test(
-      'transitions entre années: Déc 2025 2000 -> Jan 2026 hérite, Juin 2026 3000',
-      () {
-        final budgets = [b(2025, 12, 2000)];
-        expect(
-          firstRevenueBefore(
-            budgets,
-            const Period(year: 2026, month: 1),
-          )?.revenue,
-          2000,
-        );
-        expect(
-          firstRevenueBefore(
-            budgets,
-            const Period(year: 2026, month: 6),
-          )?.revenue,
-          2000,
-        );
-        final withJune = [b(2025, 12, 2000), b(2026, 6, 3000)];
-        expect(
-          firstRevenueBefore(
-            withJune,
-            const Period(year: 2026, month: 7),
-          )?.revenue,
-          3000,
-        );
-        expect(
-          firstRevenueBefore(
-            withJune,
-            const Period(year: 2026, month: 5),
-          )?.revenue,
-          2000,
-        );
-      },
-    );
+    test('transitions entre années: Déc 2025 2000 -> Jan 2026 hérite, Juin 2026 3000', () {
+      final budgets = [b(2025, 12, 2000)];
+      expect(
+        firstRevenueBefore(
+          budgets,
+          const Period(year: 2026, month: 1),
+        )?.revenue,
+        2000,
+      );
+      expect(
+        firstRevenueBefore(
+          budgets,
+          const Period(year: 2026, month: 6),
+        )?.revenue,
+        2000,
+      );
+      final withJune = [b(2025, 12, 2000), b(2026, 6, 3000)];
+      expect(
+        firstRevenueBefore(
+          withJune,
+          const Period(year: 2026, month: 7),
+        )?.revenue,
+        3000,
+      );
+      expect(
+        firstRevenueBefore(
+          withJune,
+          const Period(year: 2026, month: 5),
+        )?.revenue,
+        2000,
+      );
+    });
 
     test('mois sans revenu explicite hérite du plus récent', () {
       final budgets = [b(2026, 1, 1000), b(2026, 3, 2000), b(2026, 8, 4000)];

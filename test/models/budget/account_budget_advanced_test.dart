@@ -126,24 +126,21 @@ void main() {
         expect(a, equals(b));
       });
 
-      test(
-        'budgets for a different period are not equal, even with the same revenue',
-        () {
-          const a = AccountBudget(
-            accountId: 'a1',
-            year: 2026,
-            month: 6,
-            revenue: 1000,
-          );
-          const b = AccountBudget(
-            accountId: 'a1',
-            year: 2026,
-            month: 7,
-            revenue: 1000,
-          );
-          expect(a, isNot(equals(b)));
-        },
-      );
+      test('budgets for a different period are not equal, even with the same revenue', () {
+        const a = AccountBudget(
+          accountId: 'a1',
+          year: 2026,
+          month: 6,
+          revenue: 1000,
+        );
+        const b = AccountBudget(
+          accountId: 'a1',
+          year: 2026,
+          month: 7,
+          revenue: 1000,
+        );
+        expect(a, isNot(equals(b)));
+      });
 
       test(
         'a null id does not break equality: composite key still applies',

@@ -1,5 +1,7 @@
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
+import 'package:budgly/src/models/user/user.dart';
+import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/accounts/accounts_service_provider.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
@@ -55,6 +57,31 @@ class _FakeProfileService extends ProfileService {
         syncManager: testSyncManager,
         syncQueue: testSyncQueue,
       );
+}
+
+class _ExternalLogoutProfileService extends ProfileService {
+  _ExternalLogoutProfileService({required this.authService, required this.user})
+    : super(
+        authService: authService,
+        analytics: AnalyticsService(),
+        syncManager: testSyncManager,
+        syncQueue: testSyncQueue,
+      );
+
+  final AuthService authService;
+  final User user;
+
+  @override
+  Future<User?> loadUserProfile({bool forceRefresh = false}) async {
+    return _isCurrentUser() ? user : null;
+  }
+
+  @override
+  Future<User?> refreshFromServer({bool rethrowErrors = false}) async {
+    return _isCurrentUser() ? user : null;
+  }
+
+  bool _isCurrentUser() => authService.firebaseUser?.uid == user.id;
 }
 
 class _TrackingAccountsService extends AccountsService {
@@ -177,6 +204,62 @@ void main() {
       expect(container.read(accountsSessionProvider).hasLoaded, isFalse);
       expect(container.read(categoriesSessionProvider).loadedAccounts, isEmpty);
       expect(container.read(profileSessionProvider).currentUser, isNull);
+    },
+  );
+  test(
+    'external Firebase sign-out clears every session without a notifier bridge',
+    () async {
+      final firebase = MockFirebaseAuth(
+        signedIn: true,
+        mockUser: MockUser(uid: 'user-a'),
+      );
+      final auth = AuthService(auth: firebase, analytics: AnalyticsService());
+      final accounts = _TrackingAccountsService();
+      final categories = _TrackingCategoriesService();
+      final expenses = _TrackingExpensesService();
+      final budgets = _TrackingBudgetsService();
+      final user = User(
+        id: 'user-a',
+        provider: AuthProvider.email,
+        profile: UserProfile(
+          id: 'user-a',
+          email: 'a@budgly.app',
+          fullName: 'User A',
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(auth),
+          profileServiceProvider.overrideWithValue(
+            _ExternalLogoutProfileService(authService: auth, user: user),
+          ),
+          accountsServiceProvider.overrideWithValue(accounts),
+          categoriesServiceProvider.overrideWithValue(categories),
+          expensesServiceProvider.overrideWithValue(expenses),
+          accountBudgetsServiceProvider.overrideWithValue(budgets),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(profileSessionProvider);
+      await pumpEventQueue();
+      await pumpEventQueue();
+      await pumpEventQueue();
+
+      expect(container.read(profileSessionProvider).currentUser?.id, 'user-a');
+
+      await firebase.signOut();
+      await pumpEventQueue();
+      await pumpEventQueue();
+
+      final session = container.read(profileSessionProvider);
+      expect(session.currentUser, isNull);
+      expect(session.hasLoaded, isFalse);
+      expect(accounts.cleared, isTrue);
+      expect(categories.cleared, isTrue);
+      expect(expenses.cleared, isTrue);
+      expect(budgets.cleared, isTrue);
     },
   );
 }

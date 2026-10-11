@@ -22,6 +22,7 @@ class TextInput extends StatefulWidget {
   final void Function(String)? onFieldSubmitted;
   final void Function(String)? onChange;
   final Widget? suffix;
+  final int? maxLines;
 
   const TextInput({
     super.key,
@@ -40,6 +41,7 @@ class TextInput extends StatefulWidget {
     this.onFieldSubmitted,
     this.onChange,
     this.suffix,
+    this.maxLines = 1,
   });
 
   @override
@@ -125,6 +127,7 @@ class _TextInputState extends State<TextInput> {
       ),
       child: TextFormField(
         controller: widget.controller,
+        maxLines: widget.maxLines,
         focusNode: _focusNode,
         enabled: widget.enabled,
         autofillHints: widget.type.autofillHints,

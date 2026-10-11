@@ -240,8 +240,10 @@ class _OverviewPageState extends ConsumerState<OverviewPage>
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
-    final overview = ref.watch(overviewProvider);
-    final body = !overview.hasLoaded
+    final hasLoaded = ref.watch(
+      overviewProvider.select((state) => state.hasLoaded),
+    );
+    final body = !hasLoaded
         ? const AppLoadingIndicator()
         : OverviewContent(
             slideDirection: _slideDirection,

@@ -192,6 +192,39 @@ void main() {
     expect(state().editingAccount, isNull);
   });
 
+  // Regression: the account editor renders one AccountForm per edited row and
+  // per draft, and they all share the page's single `formKey` GlobalKey.
+  // Letting an edit and a draft coexist mounts two widgets on the same key
+  // ("Multiple widgets used the same GlobalKey"). Each entry point must
+  // therefore leave at most one form on screen.
+  test('setEditingAccount discards the local draft', () async {
+    await notifier().addAccount();
+    expect(state().isCreatingAccount, isTrue);
+
+    notifier().setEditingAccount(Fixtures.account(id: 'a1', name: 'Compte'));
+
+    expect(state().localAccounts, isEmpty);
+    expect(state().editingAccount?.id, 'a1');
+  });
+
+  test('cancelEdit discards the local draft too', () async {
+    await notifier().addAccount();
+
+    notifier().cancelEdit();
+
+    expect(state().localAccounts, isEmpty);
+    expect(state().editingAccount, isNull);
+  });
+
+  test('addAccount closes an in-progress edit', () async {
+    notifier().setEditingAccount(Fixtures.account(id: 'a1', name: 'Compte'));
+
+    await notifier().addAccount();
+
+    expect(state().editingAccount, isNull);
+    expect(state().isCreatingAccount, isTrue);
+  });
+
   test('loadAccounts loads the accounts list', () async {
     await notifier().loadAccounts();
 

@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/models/category/category.dart';
@@ -12,6 +13,9 @@ class CategoryView extends ConsumerWidget {
   final Category category;
   final Color? color;
   final bool showThreshold;
+  final String? currencyCode;
+  final String? localeName;
+  final int? decimalPlaces;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -22,15 +26,22 @@ class CategoryView extends ConsumerWidget {
     this.onDelete,
     this.color,
     this.showThreshold = true,
+    this.currencyCode,
+    this.localeName,
+    this.decimalPlaces,
   });
 
-  String _formatThreshold(WidgetRef ref, double threshold) {
-    final profile = ref.watch(profileSessionProvider);
+  String _formatThreshold({
+    required double threshold,
+    required String currency,
+    required String localeName,
+    required int decimalPlaces,
+  }) {
     return formatCurrency(
       amount: threshold,
-      currencyCode: profile.currency,
-      localeName: profile.locale.toLanguageTag(),
-      decimalPlaces: profile.amountDecimalPlaces,
+      currencyCode: currency,
+      localeName: localeName,
+      decimalPlaces: decimalPlaces,
     );
   }
 
@@ -39,10 +50,40 @@ class CategoryView extends ConsumerWidget {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
     final threshold = category.monthlyThreshold;
+    final needsProfileFormatting =
+        showThreshold &&
+        threshold != null &&
+        (currencyCode == null || localeName == null || decimalPlaces == null);
+    final profileFormatting = needsProfileFormatting
+        ? ref.watch(
+            profileSessionProvider.select(
+              (profile) => (
+                currency: profile.currency,
+                localeName: profile.locale.languageCode,
+                decimalPlaces: profile.amountDecimalPlaces,
+              ),
+            ),
+          )
+        : null;
+    final currency =
+        currencyCode ??
+        profileFormatting?.currency ??
+        AppConstants.defaultCurrency;
+    final resolvedLocaleName =
+        localeName ??
+        profileFormatting?.localeName ??
+        AppConstants.defaultLocale;
+    final resolvedDecimalPlaces =
+        decimalPlaces ?? profileFormatting?.decimalPlaces ?? 2;
     final thresholdLabel = threshold == null
         ? tr.thresholdNotSet
         : showThreshold
-        ? _formatThreshold(ref, threshold)
+        ? _formatThreshold(
+            threshold: threshold,
+            currency: currency,
+            localeName: resolvedLocaleName,
+            decimalPlaces: resolvedDecimalPlaces,
+          )
         : '';
 
     return Row(

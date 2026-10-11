@@ -291,13 +291,10 @@ void main() {
       },
     );
 
-    test(
-      'two expenses with different ids are not equal, even with the same fields',
-      () {
-        final a = buildExpense(id: 'e1');
-        final b = buildExpense(id: 'e2');
-        expect(a, isNot(equals(b)));
-      },
-    );
+    test('two expenses with different ids are not equal, even with the same fields', () {
+      final a = buildExpense(id: 'e1');
+      final b = buildExpense(id: 'e2');
+      expect(a, isNot(equals(b)));
+    });
   });
 }

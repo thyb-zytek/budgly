@@ -7,24 +7,30 @@ import 'package:flutter/material.dart';
 Future<void> showExpenseQuickActionsSheet(
   BuildContext context, {
   required VoidCallback? onEdit,
-  required VoidCallback onDelete,
+  required VoidCallback? onDelete,
+  VoidCallback? onMarkPending,
 }) {
   return showAppBottomSheet(
     context,
     useRootNavigator: true,
-    builder: (context) =>
-        ExpenseQuickActionsSheet(onEdit: onEdit, onDelete: onDelete),
+    builder: (context) => ExpenseQuickActionsSheet(
+      onEdit: onEdit,
+      onDelete: onDelete,
+      onMarkPending: onMarkPending,
+    ),
   );
 }
 
 class ExpenseQuickActionsSheet extends StatelessWidget {
   final VoidCallback? onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final VoidCallback? onMarkPending;
 
   const ExpenseQuickActionsSheet({
     super.key,
     required this.onEdit,
     required this.onDelete,
+    this.onMarkPending,
   });
 
   @override
@@ -32,6 +38,8 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
     final edit = onEdit;
+    final delete = onDelete;
+    final markPending = onMarkPending;
 
     return SafeArea(
       child: Padding(
@@ -44,6 +52,19 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
         child: Row(
           spacing: 12,
           children: [
+            // A debited expense can no longer be edited or deleted: it can
+            // only be put back on hold, so that is the sole action offered.
+            if (markPending != null)
+              Expanded(
+                child: FilledButton(
+                  style: ButtonType.secondary.filledStyle(theme, dense: true),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    markPending();
+                  },
+                  child: Text(tr.expenseMarkedAsPending),
+                ),
+              ),
             if (edit != null)
               Expanded(
                 child: FilledButton(
@@ -55,16 +76,17 @@ class ExpenseQuickActionsSheet extends StatelessWidget {
                   child: Text(tr.edit),
                 ),
               ),
-            Expanded(
-              child: FilledButton(
-                style: ButtonType.error.filledStyle(theme, dense: true),
-                onPressed: () {
-                  Navigator.pop(context);
-                  onDelete();
-                },
-                child: Text(tr.delete),
+            if (delete != null)
+              Expanded(
+                child: FilledButton(
+                  style: ButtonType.error.filledStyle(theme, dense: true),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    delete();
+                  },
+                  child: Text(tr.delete),
+                ),
               ),
-            ),
           ],
         ),
       ),

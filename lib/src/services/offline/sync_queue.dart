@@ -177,26 +177,30 @@ class SyncQueue {
 
   Future<List<PendingSync>> _read() async {
     final operations = await _readRaw();
-    final ownerUserId = _ownerUserIdProvider?.call();
-    if (ownerUserId == null || ownerUserId.isEmpty) return operations;
+    final ownerProvider = _ownerUserIdProvider;
+    if (ownerProvider == null) return operations;
 
-    // Queue v2 did not persist session ownership. On the first run after this
-    // contract is introduced, existing pending work is attributed to the
-    // currently authenticated user, so durable local work is preserved
-    // without being replayed under a different session. New entries always
-    // capture the owner at enqueue time.
-    final migrated = <PendingSync>[];
-    var changed = false;
-    for (final operation in operations) {
-      if (operation.ownerUserId == null) {
-        migrated.add(operation.copyWith(ownerUserId: ownerUserId));
-        changed = true;
-      } else {
-        migrated.add(operation);
-      }
+    // Legacy entries predate owner_user_id. Per the migration policy, assign
+    // them to the authenticated user when first read in an authenticated
+    // session. If the app starts signed out, keep them ownerless; the first
+    // authenticated read after login will claim and persist them. Never claim
+    // entries while the owner is null/empty, and never change an existing
+    // owner. _read is only invoked inside _serialized queue operations.
+    final currentOwner = ownerProvider();
+    if (currentOwner == null || currentOwner.trim().isEmpty) {
+      return operations;
     }
-    if (changed) await _write(migrated);
-    return migrated;
+
+    var migrated = false;
+    final ownedOperations = operations.map((operation) {
+      final owner = operation.ownerUserId;
+      if (owner != null && owner.trim().isNotEmpty) return operation;
+      migrated = true;
+      return operation.copyWith(ownerUserId: currentOwner);
+    }).toList();
+
+    if (migrated) await _write(ownedOperations);
+    return ownedOperations;
   }
 
   Future<void> _write(List<PendingSync> operations) async {
@@ -229,8 +233,9 @@ class SyncQueue {
         .toList();
   }
 
-  /// Operations that belong to the current session (or predate ownership).
-  /// Without an owner provider, every operation is considered current.
+  /// Operations with a provable owner matching the current session.
+  /// Without an owner provider (unit tests/standalone tools), every operation
+  /// is considered current. Ownerless legacy entries are deliberately excluded.
   Future<List<PendingSync>> allForCurrentOwner() async {
     final operations = await all();
     final provider = _ownerUserIdProvider;
@@ -238,8 +243,7 @@ class SyncQueue {
     final current = provider();
     return operations
         .where(
-          (operation) =>
-              operation.ownerUserId == null || operation.ownerUserId == current,
+          (operation) => current != null && operation.ownerUserId == current,
         )
         .toList();
   }
@@ -424,11 +428,19 @@ class SyncQueue {
     });
   }
 
-  Future<bool> hasPending({required String type, String? entityId}) async {
+  Future<bool> hasPending({
+    required String type,
+    String? entityId,
+    bool currentOwnerOnly = false,
+  }) async {
     final operations = await all();
+    final owner = _ownerUserIdProvider?.call();
     return operations.any((operation) {
       if (operation.type != type) return false;
-      return entityId == null || operation.entityId == entityId;
+      if (entityId != null && operation.entityId != entityId) return false;
+      if (!currentOwnerOnly || _ownerUserIdProvider == null) return true;
+      if (owner == null || owner.isEmpty) return false;
+      return operation.ownerUserId == owner;
     });
   }
 

@@ -4,9 +4,13 @@ import 'package:budgly/src/services/budget/account_budgets_service_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/test_backend_client_overrides.dart';
+
 void main() {
   test('creates AccountBudgetsService through Riverpod', () {
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: testBackendClientOverrides(),
+    );
     addTearDown(container.dispose);
 
     expect(

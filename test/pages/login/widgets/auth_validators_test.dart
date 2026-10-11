@@ -2,6 +2,7 @@ import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/pages/login/widgets/auth_validators.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import '../../../helpers/pump_app.dart';
 
 void main() {

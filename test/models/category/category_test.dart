@@ -126,13 +126,10 @@ void main() {
       },
     );
 
-    test(
-      'two categories with different ids are not equal, even with the same fields',
-      () {
-        const a = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
-        const b = Category(id: 'cat-2', name: 'Food', accountId: 'acc-1');
-        expect(a, isNot(equals(b)));
-      },
-    );
+    test('two categories with different ids are not equal, even with the same fields', () {
+      const a = Category(id: 'cat-1', name: 'Food', accountId: 'acc-1');
+      const b = Category(id: 'cat-2', name: 'Food', accountId: 'acc-1');
+      expect(a, isNot(equals(b)));
+    });
   });
 }
