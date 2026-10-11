@@ -80,6 +80,8 @@ The start is included and the end is excluded. Firestore queries therefore use `
 
 `ExpenseOccurrenceCalculator` is the single projection engine for recurring occurrences. It accepts `CalendarDateRange`, jumps directly to the first relevant occurrence and applies keyed occurrence exceptions without creating a separate Firestore collection.
 
+Because a keyed exception can move a single occurrence to another category, a category-scoped query must keep its recurring sub-query broad (no `categoryId` filter on the document) and let the calculator resolve each occurrence's effective category. Only non-recurring (one-off) expenses can be filtered by `categoryId` directly. This keeps the Overview and the category detail page consistent.
+
 Undebited historical occurrences are handled by `UndebitedExpensesService`. The initial Firestore scan is bounded to expenses whose source series begins before the current period; occurrence expansion then determines which historical occurrences actually require action.
 
 ## Offline-first contract

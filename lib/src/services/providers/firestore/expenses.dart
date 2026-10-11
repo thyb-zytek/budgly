@@ -55,10 +55,14 @@ class ExpenseFirestore {
     oneOffQuery = oneOffQuery.limit(limit);
 
     final oneOffFuture = oneOffQuery.get();
+    // Recurring occurrences can carry a persisted category exception, so a
+    // series whose base document belongs to another category can still be
+    // displayed in this one. Keep the recurring query broad (no category
+    // filter) and let ExpenseOccurrenceCalculator resolve and filter the
+    // effective category, exactly like listByAccountAndPeriod.
     final recurringFuture = includeRecurring
         ? _collection
               .where('accountId', isEqualTo: accountId)
-              .where('categoryId', isEqualTo: categoryId)
               .where('recurrence', isNotEqualTo: 'none')
               .where('debitDate', isLessThan: endExclusive)
               .get()
