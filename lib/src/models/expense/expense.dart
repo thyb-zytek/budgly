@@ -2,6 +2,7 @@ import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
+import 'package:budgly/src/models/expense/stored_calendar_date.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' hide Category;
 
@@ -97,8 +98,10 @@ class Expense {
       categoryId: map['categoryId'] as String,
       name: map['name'] as String? ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      debitDate: (map['debitDate'] as Timestamp).toDate(),
-      endDate: (map['endDate'] as Timestamp?)?.toDate(),
+      debitDate: calendarDateFromTimestamp(map['debitDate'] as Timestamp),
+      endDate: map['endDate'] == null
+          ? null
+          : calendarDateFromTimestamp(map['endDate'] as Timestamp),
       isDebited: map['isDebited'] as bool? ?? false,
       debitedOccurrences: rawDebited is List
           ? List<String>.from(rawDebited.map((value) => value.toString()))
@@ -125,8 +128,8 @@ class Expense {
       'categoryId': categoryId,
       'name': name,
       'amount': amount,
-      'debitDate': Timestamp.fromDate(debitDate),
-      'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
+      'debitDate': calendarDateToTimestamp(debitDate),
+      'endDate': endDate != null ? calendarDateToTimestamp(endDate!) : null,
       'isDebited': isDebited,
       'debitedOccurrences': debitedOccurrences,
       'occurrenceExceptions': occurrenceExceptions

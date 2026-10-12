@@ -1,3 +1,4 @@
+import 'package:budgly/src/models/expense/stored_calendar_date.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
@@ -210,7 +211,9 @@ void main() {
             .doc('previous')
             .get();
         expect(
-          (previousSnapshot.data()?['endDate'] as Timestamp).toDate(),
+          calendarDateFromTimestamp(
+            previousSnapshot.data()?['endDate'] as Timestamp,
+          ),
           DateTime(2026, 8, 31),
         );
 

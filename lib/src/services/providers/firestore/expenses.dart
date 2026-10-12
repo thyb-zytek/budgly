@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/expense/stored_calendar_date.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:budgly/src/services/providers/firestore/expense_page.dart';
@@ -39,8 +40,10 @@ class ExpenseFirestore {
     DocumentSnapshot<Map<String, dynamic>>? startAfter,
     bool includeRecurring = true,
   }) async {
-    final start = Timestamp.fromDate(period.startOfMonth);
-    final endExclusive = Timestamp.fromDate(period.startOfNextMonth);
+    // Widened bounds so documents stored in the legacy "local midnight"
+    // format match too; the decoded dates are filtered below.
+    final start = calendarDateQueryStart(period.startOfMonth);
+    final endExclusive = calendarDateQueryEndExclusive(period.startOfNextMonth);
 
     Query<Map<String, dynamic>> oneOffQuery = _collection
         .where('accountId', isEqualTo: accountId)
@@ -73,6 +76,7 @@ class ExpenseFirestore {
 
     final expenses = oneOffSnapshot.docs
         .map((doc) => Expense.fromMap(doc.id, doc.data()))
+        .where((expense) => period.contains(expense.debitDate))
         .toList();
 
     if (recurringSnapshot != null) {
@@ -104,8 +108,10 @@ class ExpenseFirestore {
     String? categoryId,
     Source source = Source.server,
   }) async {
-    final start = Timestamp.fromDate(period.startOfMonth);
-    final endExclusive = Timestamp.fromDate(period.startOfNextMonth);
+    // Widened bounds so documents stored in the legacy "local midnight"
+    // format match too; the decoded dates are filtered below.
+    final start = calendarDateQueryStart(period.startOfMonth);
+    final endExclusive = calendarDateQueryEndExclusive(period.startOfNextMonth);
 
     Query<Map<String, dynamic>> oneOffQuery = _collection
         .where('accountId', isEqualTo: accountId)
@@ -141,7 +147,7 @@ class ExpenseFirestore {
     ];
 
     return expenses.where((expense) {
-      if (!expense.isRecurring) return true;
+      if (!expense.isRecurring) return period.contains(expense.debitDate);
       final endExclusive = expense.endDateExclusive;
       return expense.debitDate.isBefore(period.startOfNextMonth) &&
           (endExclusive == null || endExclusive.isAfter(period.startOfMonth));
@@ -169,12 +175,18 @@ class ExpenseFirestore {
   }) async {
     final snapshot = await _collection
         .where('accountId', isEqualTo: accountId)
-        .where('debitDate', isLessThan: Timestamp.fromDate(endExclusive))
+        .where(
+          'debitDate',
+          isLessThan: calendarDateQueryEndExclusive(endExclusive),
+        )
         .orderBy('debitDate', descending: true)
         .get(GetOptions(source: source))
         .timeout(AppConstants.networkTimeout);
+    // The query bound also matches legacy values of the day [endExclusive]
+    // itself: filter on the decoded calendar date.
     return snapshot.docs
         .map((doc) => Expense.fromMap(doc.id, doc.data()))
+        .where((expense) => expense.debitDate.isBefore(endExclusive))
         .toList();
   }
 
