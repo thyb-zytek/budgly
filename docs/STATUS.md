@@ -1,6 +1,30 @@
 # Budgly — État des lieux
 
-Dernière mise à jour : 2026-10-11
+Dernière mise à jour : 2026-10-12
+
+## Correctifs d'audit — 2026-10-12 — NON VALIDÉS PAR EXÉCUTION
+
+Écrits sans SDK Flutter/Dart disponible : format, `build_runner`, analyse et tests restent à lancer
+(voir commandes dans le message de livraison). Ne pas considérer ces points comme validés avant ce run.
+
+- **D1 — file de synchro** : `PendingSync.revision` (absent du JSON si 0, donc format rétro-compatible).
+  `enqueue` donne une révision strictement supérieure à toute opération remplacée (même id ou même
+  entité) ; `SyncQueue.applyBatch(replayedRevisions:)` ignore le retrait/l'échec d'une opération dont la
+  révision a changé pendant le rejeu ; `SyncManager._runFlush` transmet les révisions rejouées. Évite la
+  perte d'une mutation enregistrée pendant son propre rejeu. Tests : `sync_queue_revision_guard_test.dart`.
+- **D2 — arithmétique calendaire** : `endDateExclusive`, `RecurringExpenseVersioning.split` et
+  `deleteFutureOccurrences` n'utilisent plus `Duration(days: 1)` (24 h écoulées ≠ 1 jour au changement
+  d'heure). Tests : `test/regression/calendar_arithmetic_dst_test.dart` (à lancer aussi avec
+  `TZ=Europe/Paris` et `TZ=America/New_York` : la CI tourne en UTC et ne discrimine pas).
+- **D6 — dates métier indépendantes du fuseau** : `debitDate`/`endDate` sont écrites en minuit UTC
+  (`stored_calendar_date.dart`). Lecture rétro-compatible des anciennes valeurs (minuit local de
+  l'auteur) par heuristique : heure UTC >= 12:00 → jour + 1. Requêtes élargies de 14 h au début et
+  post-filtrées sur la date décodée. Limites : ambiguïté pour des écritures anciennes faites à
+  UTC+10..+14 / UTC-10..-12 ; données écrites à l'étranger avant ce correctif peuvent rester décalées
+  d'un jour. À vérifier sur données réelles. Tests : `stored_calendar_date_test.dart`.
+- **D7 — rafraîchissement hors ligne** : `listExpensesForAccount(forceRefresh)` ne renvoie plus une liste
+  vide quand la lecture serveur échoue ; il lit le cache local Firestore, complété par le cache de
+  période et les mutations en attente. Tests ajoutés à `expense_offline_writes_test.dart`.
 
 ## Checkpoint Groupe 1 — issue #34 — validé par exécution le 2026-10-11
 
