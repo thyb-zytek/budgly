@@ -38,18 +38,6 @@ void main() {
         ),
       );
       expect(find.text('A'), findsOneWidget);
-      // Menu content is clipped to the rounded container so an active
-      // item's highlight never overflows the corners.
-      final button = tester.widget<PopupMenuButton<String>>(
-        find.byType(PopupMenuButton<String>),
-      );
-      expect(button.clipBehavior, Clip.antiAlias);
-      // The legacy compact closed-field footprint is preserved by default.
-      final selector = tester.widget<Selector<String>>(
-        find.byType(Selector<String>),
-      );
-      expect(selector.contentPadding, isNull);
-      expect(selector.itemPadding, isNull);
       await tester.tap(find.byType(Selector<String>));
       await tester.pumpAndSettle();
       // dropdown opens; select b

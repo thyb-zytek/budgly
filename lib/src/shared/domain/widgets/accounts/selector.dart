@@ -144,9 +144,6 @@ class AccountSelector extends StatelessWidget {
         side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
       ),
       menuPadding: const EdgeInsets.all(8),
-      // Clip the menu content (including the active item's highlight) to
-      // the rounded shape, mirroring the shared [Selector].
-      clipBehavior: Clip.antiAlias,
       onSelected: (item) => _handleSelect(item, onSelectAll ?? () {}),
       itemBuilder: (context) => [
         if (allOption != null)

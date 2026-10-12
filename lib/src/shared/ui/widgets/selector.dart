@@ -9,19 +9,6 @@ class Selector<T> extends StatefulWidget {
   final Color? backgroundColor;
   final double? maxHeight;
 
-  /// Padding of the closed field container.
-  ///
-  /// Defaults to the legacy compact `4 / 4` padding. Callers that render the
-  /// selector as a full-size field (e.g. next to the date fields) pass a
-  /// larger value to match the sibling inputs' footprint.
-  final EdgeInsetsGeometry? contentPadding;
-
-  /// Extra padding applied around the item content inside the closed field.
-  ///
-  /// Defaults to `BudglySpacing.sm` horizontally. Callers that already provide
-  /// their own spacing pass `EdgeInsets.zero`.
-  final EdgeInsetsGeometry? itemPadding;
-
   const Selector({
     super.key,
     required this.items,
@@ -30,8 +17,6 @@ class Selector<T> extends StatefulWidget {
     required this.itemBuilder,
     this.backgroundColor,
     this.maxHeight,
-    this.contentPadding,
-    this.itemPadding,
   });
 
   @override
@@ -71,14 +56,8 @@ class _SelectorState<T> extends State<Selector<T>> {
       ),
       menuPadding: const EdgeInsets.all(8),
       offset: const Offset(0, 8),
-      // Clip the menu content (including the rectangular highlight Flutter
-      // paints on the item matching [initialValue]) to the rounded shape,
-      // so an active item never overflows the container's corners.
-      clipBehavior: Clip.antiAlias,
       child: Container(
-        padding:
-            widget.contentPadding ??
-            const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         decoration: BoxDecoration(
           color: widget.backgroundColor ?? colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(16),
@@ -88,9 +67,7 @@ class _SelectorState<T> extends State<Selector<T>> {
           children: [
             Expanded(
               child: Padding(
-                padding:
-                    widget.itemPadding ??
-                    EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
+                padding: EdgeInsets.symmetric(horizontal: BudglySpacing.sm),
                 child: widget.itemBuilder(context, currentItem),
               ),
             ),
