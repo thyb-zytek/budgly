@@ -23,61 +23,23 @@ class VerifyEmail extends StatefulWidget {
   State<VerifyEmail> createState() => _VerifyEmailState();
 }
 
-class _VerifyEmailState extends State<VerifyEmail> with WidgetsBindingObserver {
-  /// Polling gives up after this many failed reloads so an unverified account
-  /// cannot poll forever (battery/network) and Firebase Auth rate limits on
-  /// `reload()` (getAccountInfo) stay respected: 10 ticks x 3 s = 30 s.
-  static const _maxReloadAttempts = 10;
-  static const _pollInterval = Duration(seconds: 3);
-
+class _VerifyEmailState extends State<VerifyEmail> {
   Timer? _timer;
-  int _reloadAttempts = 0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    // Check straight away so an account verified elsewhere (or between the
-    // sign-up and this screen) redirects immediately, without waiting for the
-    // first poll tick.
-    widget.onReload();
     _startReloadTimer();
   }
 
   void _startReloadTimer() {
-    _timer?.cancel();
-    _reloadAttempts = 0;
-    _timer = Timer.periodic(_pollInterval, (timer) {
-      if (_reloadAttempts >= _maxReloadAttempts) {
-        timer.cancel();
-        _timer = null;
-        return;
-      }
-      _reloadAttempts++;
+    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
       widget.onReload();
     });
   }
 
-  void _handleResendPressed() {
-    // A freshly sent email deserves a fresh polling window: otherwise the
-    // auto-redirect would silently stop once the previous budget is spent.
-    _startReloadTimer();
-    widget.onResendPressed();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // The verification link is opened in a browser or an in-app browser, so
-    // by the time the user returns to the app the account is usually already
-    // verified: reload at once instead of waiting for the next tick.
-    if (state == AppLifecycleState.resumed) {
-      widget.onReload();
-    }
-  }
-
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
   }
@@ -102,7 +64,7 @@ class _VerifyEmailState extends State<VerifyEmail> with WidgetsBindingObserver {
           Padding(
             padding: EdgeInsets.only(top: BudglySpacing.xl),
             child: FilledButton(
-              onPressed: _handleResendPressed,
+              onPressed: widget.onResendPressed,
               child: Text(tr.resendVerificationEmail),
             ),
           ),

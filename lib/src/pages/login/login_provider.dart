@@ -179,17 +179,12 @@ class Login extends _$Login {
           isLoading: false,
           currentUser: user,
           isGoogleSignIn: false,
-          // Success clears a stale error left by a previous failed poll.
-          errorCode: null,
-          errorMessage: null,
         );
       } else {
         state = state.copyWith(
           currentUser: user,
           isLoading: false,
           isGoogleSignIn: false,
-          errorCode: null,
-          errorMessage: null,
         );
       }
     } on AuthenticationException catch (e) {
@@ -214,15 +209,6 @@ class Login extends _$Login {
   Future<void> resendEmailVerification() async {
     try {
       await ref.read(authServiceProvider).sendEmailVerification();
-      if (!ref.mounted) return;
-      // The email was actually sent: a stale error from a previous failed
-      // attempt must not stay on the verification screen. Failures keep
-      // setting the error through the catch branches below.
-      state = state.copyWith(
-        errorCode: null,
-        errorMessage: null,
-        isGoogleSignIn: false,
-      );
     } on AuthenticationException catch (e) {
       if (!ref.mounted) return;
       state = state.copyWith(
