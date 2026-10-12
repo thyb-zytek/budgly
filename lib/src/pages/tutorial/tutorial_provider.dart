@@ -356,7 +356,7 @@ class Tutorial extends _$Tutorial {
     );
   }
 
-  Future<bool> addCategory(String name, {String monthlyThreshold = ''}) async {
+  Future<bool> addCategory(String name) async {
     if (name.trim().isEmpty || state.createdAccount?.id == null) return false;
     state = state.copyWith(isAddingCategory: true);
     try {
@@ -368,7 +368,6 @@ class Tutorial extends _$Tutorial {
               color: state.categoryColor,
               icon: state.categoryIcon,
               accountId: state.createdAccount!.id!,
-              monthlyThreshold: parseAmount(monthlyThreshold),
             ),
           );
       if (!ref.mounted) return false;

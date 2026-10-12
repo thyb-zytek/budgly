@@ -32,34 +32,6 @@ void main() {
     expect(find.text('Annuler'), findsNothing);
   });
 
-  testWidgets('compact form shows the optional monthly threshold field', (
-    tester,
-  ) async {
-    final controller = TextEditingController(text: 'Loisirs');
-    final threshold = TextEditingController(text: '300');
-    addTearDown(controller.dispose);
-    addTearDown(threshold.dispose);
-    final icon = Fixtures.categoryIcon();
-
-    await pumpApp(
-      tester,
-      CategoryForm(
-        formKey: GlobalKey<FormState>(),
-        nameController: controller,
-        monthlyThresholdController: threshold,
-        initialColor: const Color(0xFF66BB6A),
-        initialIcon: icon,
-        availableIcons: <CategoryIcon>[icon],
-        compact: true,
-      ),
-    );
-
-    expect(find.text('Seuil mensuel'), findsOneWidget);
-    expect(find.text('300'), findsOneWidget);
-    expect(find.text('Valider'), findsNothing);
-    expect(find.text('Annuler'), findsNothing);
-  });
-
   testWidgets('submit callback is invoked by the action row', (tester) async {
     final controller = TextEditingController(text: 'Loisirs');
     addTearDown(controller.dispose);

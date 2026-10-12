@@ -11,9 +11,7 @@ import 'package:flutter/material.dart';
 class CategoryForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameController;
-  final FocusNode? nameFocusNode;
   final TextEditingController? monthlyThresholdController;
-  final VoidCallback? onNameSubmitted;
   final CategoryIcon initialIcon;
   final Color initialColor;
   final List<CategoryIcon> availableIcons;
@@ -33,9 +31,7 @@ class CategoryForm extends StatefulWidget {
     required this.initialIcon,
     required this.initialColor,
     required this.availableIcons,
-    this.nameFocusNode,
     this.monthlyThresholdController,
-    this.onNameSubmitted,
     this.onIconChanged,
     this.onColorChanged,
     this.onSubmit,
@@ -68,7 +64,7 @@ class _CategoryFormState extends State<CategoryForm>
     super.initState();
     _tempIcon = widget.initialIcon;
     _tempColor = widget.initialColor;
-    _nameFocusNode = widget.nameFocusNode ?? FocusNode();
+    _nameFocusNode = FocusNode();
     initPulseHintAnimations();
     if (widget.nameController.text.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -95,7 +91,7 @@ class _CategoryFormState extends State<CategoryForm>
   @override
   void dispose() {
     disposePulseHintAnimations();
-    if (widget.nameFocusNode == null) _nameFocusNode.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -141,34 +137,18 @@ class _CategoryFormState extends State<CategoryForm>
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
     if (widget.compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      return Row(
         spacing: 8,
         children: [
-          Row(
-            spacing: 8,
-            children: [
-              _icon(),
-              Expanded(
-                child: TextInput(
-                  focusNode: _nameFocusNode,
-                  controller: widget.nameController,
-                  labelText: tr.categoryName,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: widget.onNameSubmitted == null
-                      ? null
-                      : (_) => widget.onNameSubmitted!(),
-                ),
-              ),
-            ],
-          ),
-          if (widget.monthlyThresholdController != null)
-            TextInput(
-              controller: widget.monthlyThresholdController!,
-              labelText: tr.monthlyThreshold,
-              hintText: tr.thresholdOptionalHint,
-              type: InputType.currency,
+          _icon(),
+          Expanded(
+            child: TextInput(
+              focusNode: _nameFocusNode,
+              controller: widget.nameController,
+              labelText: tr.categoryName,
+              textInputAction: TextInputAction.done,
             ),
+          ),
         ],
       );
     }
