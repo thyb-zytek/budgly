@@ -63,7 +63,10 @@ class Expense {
   DateTime? get endDateExclusive {
     final end = endDate;
     if (end == null) return null;
-    return end.add(const Duration(days: 1));
+    // Calendar arithmetic, not `end.add(Duration(days: 1))`: that adds 24
+    // elapsed hours, which lands at 01:00 on the day after a spring-forward
+    // change and would let that day's occurrence slip past the inclusive end.
+    return DateTime(end.year, end.month, end.day + 1);
   }
 
   ExpenseOccurrenceException? exceptionAt(DateTime date) {

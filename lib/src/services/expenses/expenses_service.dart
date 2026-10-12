@@ -431,7 +431,12 @@ class ExpensesService {
     if (targetDay.isAtSameMomentAs(originalDay)) {
       return deleteExpense(expense.id!, expense.accountId);
     }
-    final previousEnd = targetDay.subtract(const Duration(days: 1));
+    // Calendar arithmetic, see RecurringExpenseVersioning.split.
+    final previousEnd = DateTime(
+      targetDay.year,
+      targetDay.month,
+      targetDay.day - 1,
+    );
     final targetKey = Expense.isoDate(targetDay);
     final previousDebited = expense.debitedOccurrences
         .where((k) => k.compareTo(targetKey) < 0)

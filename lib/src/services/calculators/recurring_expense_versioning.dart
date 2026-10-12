@@ -38,7 +38,13 @@ class RecurringExpenseVersioning {
 
     final effectiveKey = Expense.isoDate(effectiveDay);
     final previous = original.copyWith(
-      endDate: effectiveDay.subtract(const Duration(days: 1)),
+      // Calendar arithmetic: `subtract(Duration(days: 1))` removes 24 elapsed
+      // hours, which lands on the wrong day after a spring-forward change.
+      endDate: DateTime(
+        effectiveDay.year,
+        effectiveDay.month,
+        effectiveDay.day - 1,
+      ),
       debitedOccurrences: [
         for (final key in original.debitedOccurrences)
           if (key.compareTo(effectiveKey) < 0) key,
