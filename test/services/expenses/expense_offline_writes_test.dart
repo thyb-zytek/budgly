@@ -1,4 +1,5 @@
 import 'package:budgly/src/models/budget/period.dart';
+import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -166,4 +167,49 @@ void main() {
     expect(firestore.server.single.id, 'e1');
     expect(await testSyncQueue.all(), isEmpty);
   });
+
+  test('an offline account refresh after an occurrence edit still lists the series', () async {
+    final series = Fixtures.expense(
+      id: 'r1',
+      accountId: 'a1',
+      categoryId: 'c1',
+      debitDate: DateTime(2026, 1, 15),
+      recurrence: RecurrenceType.monthly,
+    );
+    await service.createExpense(series);
+
+    // Every mutation drops the account's period cache; the server read of the
+    // forced refresh then fails offline. The answer must come from Firestore's
+    // local cache instead of being empty (which would blank the session).
+    await service.deleteSingleOccurrence(
+      expense: series,
+      occurrenceDate: DateTime(2026, 3, 15),
+    );
+
+    final listed = await service
+        .listExpensesForAccount('a1', forceRefresh: true)
+        .timeout(const Duration(seconds: 2));
+
+    expect(listed.map((e) => e.id), ['r1']);
+    expect(listed.single.exceptionAt(DateTime(2026, 3, 15))?.deleted, isTrue);
+  });
+
+  test(
+    'an offline account refresh does not resurrect a pending delete',
+    () async {
+      firestore.online = true;
+      await service.createExpense(expense);
+      await Future<void>.delayed(Duration.zero);
+      firestore.online = false;
+
+      await service.deleteExpense('e1', 'a1');
+
+      final listed = await service.listExpensesForAccount(
+        'a1',
+        forceRefresh: true,
+      );
+
+      expect(listed, isEmpty);
+    },
+  );
 }

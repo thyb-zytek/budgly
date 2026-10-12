@@ -540,9 +540,43 @@ class ExpensesService {
       return List.unmodifiable(merged);
     } catch (e) {
       _analytics.track('expense_load_failed', {'error': e.toString()});
-      // Offline fallback: the period cache remains the source of truth.
-      return getExpensesForAccount(accountId);
+      return _localAccountExpenses(accountId);
     }
+  }
+
+  /// Answer of an account-wide forced refresh whose server read failed.
+  ///
+  /// The in-memory period cache alone is not enough: every mutation drops it
+  /// for the whole account (`removeAccount`), so falling back to it right after
+  /// an offline edit would hand an empty list to the session and blank the
+  /// account's expenses. Firestore's own local cache is the offline source of
+  /// truth (it already contains the pending local writes); it is reconciled
+  /// with what the period cache still knows and with the unacknowledged
+  /// mutations tracked here, exactly like a server answer is.
+  Future<List<Expense>> _localAccountExpenses(String accountId) async {
+    final byId = <String, Expense>{};
+    try {
+      final cached = await _expenseFirestore.listByAccountId(
+        accountId,
+        source: Source.cache,
+      );
+      for (final expense in cached) {
+        if (expense.id != null) byId[expense.id!] = expense;
+      }
+    } catch (e) {
+      AppLogger.debug('Local expense cache unavailable: $e');
+    }
+    for (final expense in getExpensesForAccount(accountId)) {
+      if (expense.id != null) byId.putIfAbsent(expense.id!, () => expense);
+    }
+    for (final pending in _periodData.pendingForAccount(accountId)) {
+      if (pending.id != null) byId[pending.id!] = pending;
+    }
+    final merged = [
+      for (final expense in byId.values)
+        if (!_periodData.isPendingDelete(expense.id)) expense,
+    ]..sort((a, b) => b.debitDate.compareTo(a.debitDate));
+    return List.unmodifiable(merged);
   }
 
   /// Immediate, local best-effort removal (what the cache knows about). It
