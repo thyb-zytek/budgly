@@ -82,7 +82,7 @@ The start is included and the end is excluded. Firestore queries therefore use `
 
 Because a keyed exception can move a single occurrence to another category, a category-scoped query must keep its recurring sub-query broad (no `categoryId` filter on the document) and let the calculator resolve each occurrence's effective category. Only non-recurring (one-off) expenses can be filtered by `categoryId` directly. This keeps the Overview and the category detail page consistent.
 
-Undebited historical occurrences are handled by `UndebitedExpensesService`. The initial Firestore scan is bounded to expenses whose source series begins before the current period; occurrence expansion then determines which historical occurrences actually require action.
+Undebited historical occurrences are handled by `UndebitedExpensesService`. The initial Firestore scan is bounded to expenses whose source series begins before the current period; occurrence expansion then determines which historical occurrences actually require action. The displayed set is projected by `UndebitedExpenses` from the shared expenses session, so on first arrival the account is force-loaded: the session must reflect the whole account history before the current period, not only the periods the Overview already cached, otherwise older undebited occurrences are silently dropped.
 
 ## Offline-first contract
 
