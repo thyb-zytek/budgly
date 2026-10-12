@@ -15,6 +15,7 @@ class PendingSync {
     this.ownerUserId,
     this.permanent = false,
     this.lastError,
+    this.revision = 0,
   });
 
   final String id;
@@ -35,6 +36,13 @@ class PendingSync {
   /// Short description of the last failure, for diagnostics only.
   final String? lastError;
 
+  /// Incremented each time a newer mutation is coalesced into the operation
+  /// that already holds this [id]. A replay pass remembers the revision it
+  /// read: its outcome (success, failure) only applies if the queued operation
+  /// still has that revision, so an edit made while the operation was being
+  /// replayed is never discarded with it.
+  final int revision;
+
   String get entityId => (payload['id'] ?? '').toString();
 
   bool get isReady =>
@@ -47,6 +55,7 @@ class PendingSync {
     String? ownerUserId,
     bool? permanent,
     String? lastError,
+    int? revision,
     bool clearNextAttemptAt = false,
   }) => PendingSync(
     id: id,
@@ -60,6 +69,7 @@ class PendingSync {
     ownerUserId: ownerUserId ?? this.ownerUserId,
     permanent: permanent ?? this.permanent,
     lastError: lastError ?? this.lastError,
+    revision: revision ?? this.revision,
   );
 
   Map<String, dynamic> toJson() => {
@@ -72,6 +82,7 @@ class PendingSync {
     'owner_user_id': ownerUserId,
     if (permanent) 'permanent': true,
     if (lastError != null) 'last_error': lastError,
+    if (revision > 0) 'revision': revision,
   };
 
   factory PendingSync.fromJson(Map<String, dynamic> json) => PendingSync(
@@ -86,6 +97,7 @@ class PendingSync {
     ownerUserId: json['owner_user_id']?.toString(),
     permanent: json['permanent'] == true,
     lastError: json['last_error']?.toString(),
+    revision: (json['revision'] as num?)?.toInt() ?? 0,
   );
 }
 
@@ -265,6 +277,7 @@ class SyncQueue {
     await _serialized(() async {
       final operations = await _read();
       final entityId = (payload['id'] ?? '').toString();
+
       final entityOperations = operations
           .where(
             (item) =>
@@ -276,6 +289,23 @@ class SyncQueue {
           .toList();
 
       final previous = entityOperations.isEmpty ? null : entityOperations.last;
+
+      // Any operation about the same entity (or reusing the same operation id)
+      // that is superseded here may be in flight in a replay pass that read it
+      // earlier: give the new operation a strictly greater revision so that
+      // pass can neither remove nor fail it, see [applyBatch].
+      int nextRevision(String operationId) {
+        var highest = -1;
+        for (final item in operations) {
+          final sameOperation = item.id == operationId;
+          final sameEntity = entityOperations.any((e) => identical(e, item));
+          if ((sameOperation || sameEntity) && item.revision > highest) {
+            highest = item.revision;
+          }
+        }
+        return highest + 1;
+      }
+
       final previousIsPatchable =
           previous?.operation == 'create' || previous?.operation == 'update';
 
@@ -283,14 +313,16 @@ class SyncQueue {
         // Keep the create identity but merge the payloads: a later update
         // may carry only the fields it changed, and side-channel keys such as
         // a queued local picture must survive the coalescing.
-        operations.removeWhere((item) => item.id == previous!.id);
+        final revision = nextRevision(previous!.id);
+        operations.removeWhere((item) => item.id == previous.id);
         operations.add(
           PendingSync(
-            id: previous!.id,
+            id: previous.id,
             type: type,
             operation: 'create',
             payload: {...previous.payload, ...payload},
             ownerUserId: ownerUserId,
+            revision: revision,
           ),
         );
       } else if (previous?.operation == 'create' && operation == 'delete') {
@@ -298,6 +330,7 @@ class SyncQueue {
         // persisted before the process crashed. Never cancel it here: replay
         // create -> delete so the remote state converges to the user's
         // latest intent instead of leaving an orphaned row behind.
+        final revision = nextRevision(id);
         operations.removeWhere(
           (item) =>
               item.type == type &&
@@ -312,6 +345,7 @@ class SyncQueue {
             operation: operation,
             payload: Map<String, dynamic>.from(payload),
             ownerUserId: ownerUserId,
+            revision: revision,
           ),
         );
       } else {
@@ -320,6 +354,7 @@ class SyncQueue {
         final mergedPayload = previousIsPatchable && operation == 'update'
             ? {...previous!.payload, ...payload}
             : Map<String, dynamic>.from(payload);
+        final revision = nextRevision(id);
         if (entityId.isNotEmpty) {
           operations.removeWhere(
             (item) =>
@@ -335,6 +370,7 @@ class SyncQueue {
             operation: operation,
             payload: mergedPayload,
             ownerUserId: ownerUserId,
+            revision: revision,
           ),
         );
       }
@@ -365,10 +401,18 @@ class SyncQueue {
   /// [permanentFailures] maps an operation id to a short error description for
   /// failures the server will keep rejecting: they are flagged instead of
   /// being scheduled for another backoff attempt.
+  ///
+  /// [replayedRevisions] maps an operation id to the [PendingSync.revision] the
+  /// replay pass read. When the queued operation has moved on since (a newer
+  /// edit was coalesced into it while it was being replayed), the outcome
+  /// belongs to the superseded content and is ignored: the operation stays
+  /// queued, untouched, and is replayed again with its latest payload. An id
+  /// absent from the map applies to whatever revision is queued.
   Future<void> applyBatch({
     Iterable<String> removeIds = const <String>[],
     Iterable<String> failedIds = const <String>[],
     Map<String, String> permanentFailures = const <String, String>{},
+    Map<String, int> replayedRevisions = const <String, int>{},
   }) async {
     final idsToRemove = removeIds.toSet();
     final permanent = Map<String, String>.from(permanentFailures)
@@ -382,16 +426,23 @@ class SyncQueue {
       final operations = await _read();
       var changed = false;
 
+      bool isCurrent(PendingSync operation) {
+        final replayed = replayedRevisions[operation.id];
+        return replayed == null || replayed == operation.revision;
+      }
+
       if (idsToRemove.isNotEmpty) {
         final before = operations.length;
         operations.removeWhere(
-          (operation) => idsToRemove.contains(operation.id),
+          (operation) =>
+              idsToRemove.contains(operation.id) && isCurrent(operation),
         );
         changed = changed || operations.length != before;
       }
 
       for (var index = 0; index < operations.length; index++) {
         final operation = operations[index];
+        if (!isCurrent(operation)) continue;
         final permanentError = permanent[operation.id];
         if (permanentError != null) {
           operations[index] = operation.copyWith(

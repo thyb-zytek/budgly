@@ -366,10 +366,16 @@ class SyncManager with WidgetsBindingObserver {
       // batch used to trigger one SharedPreferences JSON rewrite per item.
       // Keeping the handler execution sequential preserves dependency order,
       // while committing the outcomes once removes the storage amplification.
+      // An edit coalesced into an operation while it was being replayed gives
+      // it a new revision: its outcome then concerns superseded content and
+      // must not remove or fail the newer one (see SyncQueue.applyBatch).
       await _queue.applyBatch(
         removeIds: completedIds,
         failedIds: failedIds,
         permanentFailures: permanentFailures,
+        replayedRevisions: {
+          for (final operation in ordered) operation.id: operation.revision,
+        },
       );
 
       if (operations.isNotEmpty) {
