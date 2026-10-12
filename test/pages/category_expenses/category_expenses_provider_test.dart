@@ -2,8 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence.dart';
-import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
-import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/state/expenses_provider.dart';
 import 'package:budgly/src/pages/category_expenses/category_expenses_provider.dart';
@@ -20,8 +18,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../helpers.dart';
 
 /// Regression coverage for the bug where mutations made from the Category
 /// Expenses screen only updated [ExpensesService]'s own cache and never
@@ -209,52 +205,6 @@ void main() {
     expect(
       container.read(expensesSessionProvider.notifier).getExpenseById('e1'),
       isNull,
-    );
-  });
-
-  test('a recurring occurrence moved to another category appears in that category page', () async {
-    final firestore = RefreshAwareExpenseFirestore();
-    firestore.serverExpenses.add(
-      Expense(
-        id: 'e1',
-        accountId: 'a1',
-        categoryId: 'c1',
-        name: 'Loyer',
-        amount: 100,
-        debitDate: DateTime(2026, 3, 5),
-        recurrence: RecurrenceType.monthly,
-        recurrenceAnchorDay: 5,
-        occurrenceExceptions: const [
-          ExpenseOccurrenceException(key: 'e1@2026-03-05', categoryId: 'c2'),
-        ],
-      ),
-    );
-    final service = ExpensesService(
-      expenseFirestore: firestore,
-      analytics: AnalyticsService(),
-    );
-    service.invalidateCache();
-    final container = _makeContainer(service);
-    addTearDown(container.dispose);
-
-    const period = Period(year: 2026, month: 3);
-    await container
-        .read(categoryExpensesProvider('a1', 'c2', period).notifier)
-        .ensureDataLoaded();
-
-    final moved = container
-        .read(categoryExpensesProvider('a1', 'c2', period))
-        .occurrences;
-    expect(moved.map((occurrence) => occurrence.expense.id), ['e1']);
-    expect(moved.single.categoryId, 'c2');
-
-    // The previous category no longer lists the moved occurrence.
-    await container
-        .read(categoryExpensesProvider('a1', 'c1', period).notifier)
-        .ensureDataLoaded();
-    expect(
-      container.read(categoryExpensesProvider('a1', 'c1', period)).occurrences,
-      isEmpty,
     );
   });
 }

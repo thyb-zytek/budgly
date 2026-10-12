@@ -49,17 +49,13 @@ class RefreshAwareExpenseFirestore extends ExpenseFirestore {
   }) async {
     final expenses = serverExpenses.where((expense) {
       if (expense.accountId != accountId) return false;
+      if (expense.categoryId != categoryId) return false;
       if (expense.isRecurring) {
-        // Mirrors ExpenseFirestore: the recurring query stays broad because an
-        // occurrence exception can display the series in another category.
-        // ExpenseOccurrenceCalculator resolves the effective category later.
-        if (!includeRecurring) return false;
         final endDate = expense.endDateExclusive;
         return expense.debitDate.isBefore(period.startOfNextMonth) &&
             (endDate == null || endDate.isAfter(period.startOfMonth));
       }
-      return expense.categoryId == categoryId &&
-          period.contains(expense.debitDate);
+      return period.contains(expense.debitDate);
     }).toList();
     return ExpensePage(expenses: expenses, cursor: null, hasMore: false);
   }

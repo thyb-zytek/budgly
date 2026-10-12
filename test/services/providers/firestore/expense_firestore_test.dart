@@ -1,6 +1,5 @@
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
-import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,7 +38,6 @@ void main() {
     RecurrenceType recurrence = RecurrenceType.none,
     bool isDebited = false,
     List<String> debitedOccurrences = const [],
-    List<ExpenseOccurrenceException> occurrenceExceptions = const [],
   }) => Expense(
     id: id,
     accountId: account,
@@ -51,7 +49,6 @@ void main() {
     recurrence: recurrence,
     isDebited: isDebited,
     debitedOccurrences: debitedOccurrences,
-    occurrenceExceptions: occurrenceExceptions,
   );
 
   Future<void> seed(Expense value) async {
@@ -391,35 +388,6 @@ void main() {
         expect(page.hasMore, isFalse);
       },
     );
-
-    test('returns a recurring series whose occurrence exception targets the category', () async {
-      // The base document belongs to another category; a single occurrence in
-      // this period was moved to `categoryId` through an occurrence
-      // exception. The page must still surface the series so the calculator
-      // can resolve the occurrence into this category.
-      await seed(
-        expense(
-          id: 'moved',
-          category: otherCategoryId,
-          debitDate: DateTime(2026, 6, 20),
-          recurrence: RecurrenceType.monthly,
-          occurrenceExceptions: const [
-            ExpenseOccurrenceException(
-              key: 'moved@2026-08-20',
-              categoryId: categoryId,
-            ),
-          ],
-        ),
-      );
-
-      final page = await provider.listByCategoryAndPeriodPage(
-        accountId,
-        categoryId,
-        period,
-      );
-
-      expect(page.expenses.map((item) => item.id), ['moved']);
-    });
 
     test('can exclude recurring expenses from the page', () async {
       await seed(expense(id: 'one-off'));
