@@ -2,10 +2,21 @@
 
 Dernière mise à jour : 2026-10-12
 
-## Correctifs d'audit — 2026-10-12 — NON VALIDÉS PAR EXÉCUTION
+## Correctifs d'audit — 2026-10-12 — VALIDÉS PAR EXÉCUTION
 
-Écrits sans SDK Flutter/Dart disponible : format, `build_runner`, analyse et tests restent à lancer
-(voir commandes dans le message de livraison). Ne pas considérer ces points comme validés avant ce run.
+Validés localement sur la révision courante (Flutter 3.47.7 / Dart 3.13.5) :
+
+| Porte | Commande | Résultat |
+|---|---|---|
+| Format | `dart format --output=none --set-exit-if-changed lib test integration_test tool` | ✅ 0 fichier à reformater (460 analysés) |
+| Génération | `dart run build_runner build` | ✅ 0 sortie écrite (code généré à jour) |
+| Analyse | `flutter analyze` | ✅ 0 problème |
+| Tests unitaires + widgets | `flutter test` | ✅ **1 338 / 1 338** |
+| Tests d'intégration | `flutter test integration_test` (rapport du 2026-10-12 23:25) | ✅ **13 / 13** |
+| Couverture | `coverage_report.json` / `coverage_report.log` (2026-10-12 23:25) | **77,3 %** (8 845 / 11 441 lignes) |
+
+Fuseau : le run local s'est exécuté sous **Europe/Paris** (fuseau de la machine). Le forçage `TZ=…`
+n'est pas fiable sous Windows ; le passage sous `America/New_York` reste à faire en CI ou sur un autre poste.
 
 - **D1 — file de synchro** : `PendingSync.revision` (absent du JSON si 0, donc format rétro-compatible).
   `enqueue` donne une révision strictement supérieure à toute opération remplacée (même id ou même
@@ -14,8 +25,9 @@ Dernière mise à jour : 2026-10-12
   perte d'une mutation enregistrée pendant son propre rejeu. Tests : `sync_queue_revision_guard_test.dart`.
 - **D2 — arithmétique calendaire** : `endDateExclusive`, `RecurringExpenseVersioning.split` et
   `deleteFutureOccurrences` n'utilisent plus `Duration(days: 1)` (24 h écoulées ≠ 1 jour au changement
-  d'heure). Tests : `test/regression/calendar_arithmetic_dst_test.dart` (à lancer aussi avec
-  `TZ=Europe/Paris` et `TZ=America/New_York` : la CI tourne en UTC et ne discrimine pas).
+  d'heure). Tests : `test/regression/calendar_arithmetic_dst_test.dart`, exécuté sous Europe/Paris
+  (fuseau local) le 2026-10-12. Le passage sous `America/New_York` reste à faire : le forçage `TZ` est
+  inopérant sous Windows et la CI tourne en UTC.
 - **D6 — dates métier indépendantes du fuseau** : `debitDate`/`endDate` sont écrites en minuit UTC
   (`stored_calendar_date.dart`). Lecture rétro-compatible des anciennes valeurs (minuit local de
   l'auteur) par heuristique : heure UTC >= 12:00 → jour + 1. Requêtes élargies de 14 h au début et
@@ -25,6 +37,22 @@ Dernière mise à jour : 2026-10-12
 - **D7 — rafraîchissement hors ligne** : `listExpensesForAccount(forceRefresh)` ne renvoie plus une liste
   vide quand la lecture serveur échoue ; il lit le cache local Firestore, complété par le cache de
   période et les mutations en attente. Tests ajoutés à `expense_offline_writes_test.dart`.
+
+### Tests de service ajoutés après lecture du lcov du 2026-10-12 — VALIDÉS PAR EXÉCUTION
+
+`test/services/expenses/recurring_series_service_test.dart` cible des lignes à 0 coup dans le lcov :
+`updateRecurringExpenseFromOccurrence` / `modifyFutureOccurrences` (scission de série, partage des
+exceptions, jour de fin autour des changements d'heure), élagage des exceptions et des occurrences
+débitées par `deleteFutureOccurrences`, `unmarkOccurrenceDebited` / `toggleOccurrenceDebited`, et les
+opérations d'expenses héritées des anciennes versions (`ExpenseSyncHandler.handlePendingSync`).
+Fichiers voisins ajoutés pour d'autres lignes à 0 coup du même lcov :
+`test/services/offline/provider_sync_replay_test.dart` (rejeu hors ligne des comptes et catégories :
+create idempotent, update recréé si la ligne a disparu, delete → nettoyage durable et purge des enfants en
+file) et `test/services/expenses/expenses_service_account_scope_test.dart` (`listExpensesForAccountBefore`,
+suppressions et purges par compte / catégorie : jamais un autre compte). `moveOccurrenceToDate` est dans
+`recurring_series_service_test.dart`.
+Exécutés le 2026-10-12 (inclus dans les 1 338 tests unitaires/widgets verts) ; la couverture a été
+régénérée à 77,3 %.
 
 ## Checkpoint Groupe 1 — issue #34 — validé par exécution le 2026-10-11
 
@@ -63,8 +91,8 @@ re-vérifiés : format 0 écart, analyse 0 problème, suites du périmètre vert
 
 ## Statut global
 
-> Le tableau ci-dessous décrit la baseline historique. La révision courante (travail du 2026-10-08 au
-> 2026-10-11 inclus) a depuis été validée par exécution : voir « Checkpoint Groupe 1 — issue #34 » ci-dessus.
+> Le tableau ci-dessous décrit la baseline historique. La révision courante a depuis été validée par
+> exécution : voir « Correctifs d'audit — 2026-10-12 » et « Checkpoint Groupe 1 — issue #34 » ci-dessus.
 
 **Base technique validée par exécution.** Le plan de correction de l'audit offline-first / Riverpod / MVVM du
 2026-09-24 (`AUDIT_PLAN.md`) a été validé localement le 2026-09-29 avec le SDK Flutter 3.47.5 :
@@ -158,6 +186,9 @@ La baseline du 2026-09-29 et le checkpoint W6/W7 du 2026-10-06 ont été exécut
 Le checkpoint lots 6/7 (2026-10-10) était en attente de validation locale à sa date ; il est couvert par
 le run du 2026-10-11 (**1 253 / 1 253**, `flutter analyze` 0 problème) décrit dans le checkpoint Groupe 1
 ci-dessus.
+La révision courante a été revalidée le 2026-10-12 (Flutter 3.47.7 / Dart 3.13.5) : format 0 écart,
+`build_runner` 0 sortie, `flutter analyze` 0 problème, **1 338 / 1 338** tests unitaires/widgets,
+**13 / 13** tests d'intégration, couverture **77,3 %** (8 845 / 11 441).
 Le refactor du 2026-09-29 a été validé après correction de trois défauts : un import `AppLogger` manquant dans
 `state/profile_providers.dart` (erreur de production), 21 erreurs de compilation dans deux fichiers de test
 suite au changement de contrat de `ExpenseFormData` (`debitDate` devenu non-nullable), et un helper de test qui
