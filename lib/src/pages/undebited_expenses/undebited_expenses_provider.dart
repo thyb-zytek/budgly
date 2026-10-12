@@ -227,9 +227,14 @@ class UndebitedExpenses extends _$UndebitedExpenses {
             showImmediately: true,
           );
           if (_disposed) return;
+          // First arrival must expose the *complete* set of undebited
+          // occurrences, not only the periods the Overview happens to have
+          // cached. Force the account load so the shared session is projected
+          // from the server's full history (every period before the current
+          // one); offline it falls back to the local store.
           await ref
               .read(expensesSessionProvider.notifier)
-              .loadAccount(accountId);
+              .loadAccount(accountId, forceRefresh: true);
         }),
       );
       if (_disposed) return;
