@@ -1,6 +1,6 @@
 # Budgly — État des lieux
 
-Dernière mise à jour : 2026-10-12
+Dernière mise à jour : 2026-10-13
 
 ## Correctifs d'audit — 2026-10-12 — VALIDÉS PAR EXÉCUTION
 
@@ -53,6 +53,19 @@ suppressions et purges par compte / catégorie : jamais un autre compte). `moveO
 `recurring_series_service_test.dart`.
 Exécutés le 2026-10-12 (inclus dans les 1 338 tests unitaires/widgets verts) ; la couverture a été
 régénérée à 77,3 %.
+
+### Tests ajoutés le 2026-10-13 — VALIDÉS PAR EXÉCUTION
+
+Ajoutés puis exécutés localement (Flutter 3.47.7 / Dart 3.13.5) : `flutter test` **1 367 / 1 367**,
+`flutter analyze` 0 problème, `dart format` 0 écart. Le cas « a finished load is not reused by the next one »
+de `profile_service_load_test.dart` a été corrigé : avec un cache chaud la 2e lecture ne fait qu'une
+revalidation en arrière-plan, le test force donc un `forceRefresh` pour observer l'appel distant au premier plan.
+`test/core/errors/app_user_message_resolve_test.dart` (chaque `AppMessageKey` se résout en `en` et `fr`),
+`test/state/expenses_session_mutations_test.dart` (`ExpensesSession.create/update/delete`, garde de session
+et de révision après `clear()` / changement local), `test/services/profile/profile_service_load_test.dart`
+(`loadUserProfile` : cache puis revalidation, appel partagé, `forceRefresh`) et deux cas
+`sendEmailVerification` dans `auth_service_test.dart`. `AuthService.signOut` et `signInWithGoogle` restent non
+testés : `GoogleSignIn` n'a qu'un constructeur privé et nécessiterait un mock de plateforme.
 
 ## Checkpoint Groupe 1 — issue #34 — validé par exécution le 2026-10-11
 
