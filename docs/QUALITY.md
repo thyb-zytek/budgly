@@ -21,13 +21,13 @@ couverture de tests :
 
 ## Résultats du checkpoint de hardening — 2026-10-10
 
-Le rapport du run local et les correctifs préparés sont détaillés dans [`TEST_FAILURE_ANALYSIS_2026-10-10.md`](TEST_FAILURE_ANALYSIS_2026-10-10.md). Les résultats 1 202/1 239 sont ceux du code **avant** les corrections de tests et ne certifient pas ce checkpoint. **Mise à jour 2026-10-11 :** le checkpoint Groupe 1 de l'issue #34 (`STATUS.md`) a été validé par exécution locale — `flutter test` **1 253 / 1 253** sur la révision courante, qui couvre aussi les correctifs des lots 6/7, `flutter analyze` 0 problème, `dart format` 0 écart. **Mise à jour 2026-10-12 :** la révision des correctifs d'audit D1/D2/D6/D7 et les tests de service ajoutés ont été validés par un run complet (Flutter 3.47.7 / Dart 3.13.5) — `flutter test` **1 338 / 1 338**, intégration **13 / 13**, `flutter analyze` 0 problème, `dart format` 0 écart, `dart run build_runner build` 0 sortie, couverture **77,3 %**.
+Le rapport du run local et les correctifs préparés sont détaillés dans [`TEST_FAILURE_ANALYSIS_2026-10-10.md`](TEST_FAILURE_ANALYSIS_2026-10-10.md). Les résultats 1 202/1 239 sont ceux du code **avant** les corrections de tests et ne certifient pas ce checkpoint. **Mise à jour 2026-10-11 :** le checkpoint Groupe 1 de l'issue #34 (`STATUS.md`) a été validé par exécution locale — `flutter test` **1 253 / 1 253** sur la révision courante, qui couvre aussi les correctifs des lots 6/7, `flutter analyze` 0 problème, `dart format` 0 écart. **Mise à jour 2026-10-12 :** la révision des correctifs d'audit D1/D2/D6/D7 et les tests de service ajoutés ont été validés par un run complet (Flutter 3.47.7 / Dart 3.13.5) — `flutter test` **1 338 / 1 338**, intégration **13 / 13**, `flutter analyze` 0 problème, `dart format` 0 écart, `dart run build_runner build` 0 sortie, couverture **77,3 %**. **Mise à jour 2026-10-13 :** des tests ajoutés (résolution des messages applicatifs, mutations de la session expenses, chargement du profil, `sendEmailVerification`) portent la suite à `flutter test` **1 367 / 1 367**, `flutter analyze` 0 problème, `dart format` 0 écart ; la couverture n'a pas été remesurée depuis le 2026-10-12.
 
 ## 1. Stratégie de tests
 
-> La suite de tests a été relancée le 2026-10-12 sur Flutter 3.47.7 / Dart 3.13.5 : `dart format` 0 écart,
-> `build_runner` 0 sortie écrite, `flutter analyze` 0 problème, `flutter test` 1 338 / 1 338 verts et
-> 13 / 13 tests d'intégration.
+> La suite a été relancée le 2026-10-13 sur Flutter 3.47.7 / Dart 3.13.5 : `dart format` 0 écart,
+> `flutter analyze` 0 problème, `flutter test` **1 367 / 1 367** verts (1 338 le 2026-10-12) et
+> 13 / 13 tests d'intégration. La couverture n'a pas été remesurée depuis le 2026-10-12.
 > **La métrique de couverture de référence de l'archive est celle des artefacts `coverage_report.json` / `.log`
 > générés le 2026-10-12 : 77,3 % de lignes (8 845 / 11 441).** L'ancienne référence du 2026-10-06 était de
 > 70,6 % (7 773 / 11 015).
