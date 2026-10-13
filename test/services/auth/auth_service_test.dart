@@ -194,6 +194,40 @@ void main() {
         await service(auth).sendEmailVerification();
       },
     );
+
+    test(
+      'sendEmailVerification does nothing when nobody is signed in',
+      () async {
+        await service(MockFirebaseAuth(signedIn: false))
+            .sendEmailVerification();
+      },
+    );
+
+    test(
+      'sendEmailVerification maps provider errors onto AuthenticationException',
+      () async {
+        final mockUser = MockUser(
+          uid: 'u1',
+          email: 'test@budgly.app',
+          isEmailVerified: false,
+        );
+        final auth = MockFirebaseAuth(signedIn: true, mockUser: mockUser);
+        whenCalling(Invocation.method(#sendEmailVerification, null))
+            .on(mockUser)
+            .thenThrow(fb.FirebaseAuthException(code: 'too-many-requests'));
+
+        await expectLater(
+          service(auth).sendEmailVerification(),
+          throwsA(
+            isA<AuthenticationException>().having(
+              (e) => e.code,
+              'code',
+              'too-many-requests',
+            ),
+          ),
+        );
+      },
+    );
   });
 
   group('profile + reload', () {
