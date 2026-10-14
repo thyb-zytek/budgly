@@ -242,3 +242,9 @@ A change is complete when:
 - the appropriate broader validation has been run when available;
 - relevant documentation is updated when architecture or contracts changed;
 - no competing old/new pattern remains active unless the transition is intentional and documented.
+
+## 15. Commit messages
+
+- Write commit subjects and bodies in English.
+- Follow the repository's established format: an appropriate emoji prefix, a conventional type and optional scope, then a concise imperative description (for example, `:memo: docs(readme): simplify project documentation`).
+- Keep each commit focused on one coherent change.
