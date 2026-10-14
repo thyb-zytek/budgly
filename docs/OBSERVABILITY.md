@@ -10,7 +10,7 @@
 
 PostHog est réservé aux événements produit explicites. Le tracking automatique des erreurs est désactivé ; Crashlytics est le canal technique de référence.
 
-- Tous les événements passent par `AnalyticsService.instance.track(eventName, properties)`
+- Tous les événements passent par `AnalyticsService.track(eventName, properties)` ; le service est fourni par Riverpod (`analytics_service_provider.dart`), il n'y a plus d'accès `AnalyticsService.instance` dans `lib`
 - **Allowlist stricte** : seuls les événements listés dans `_allowedEvents` sont envoyés
 - **Filtrage PII** : les clés suivantes sont automatiquement supprimées des propriétés :
   `amount`, `name`, `email`, `description`, `merchant`, `transaction`, `financial_data`, `picture`, `picture_url`, `avatar_url`, `full_name`
@@ -271,7 +271,7 @@ Crashlytics envoyant le rapport au démarrage suivant).
 
 ## 6. Ce qui reste à faire (hors scope de ce commit)
 
-- Auditer au cas par cas les ~31 `catch (_)` qui ignoraient l'erreur : leur
+- Auditer au cas par cas les `catch (_)` qui ignorent l'erreur (9 occurrences dans `lib` au 2026-10-13, `grep -rnE "catch \(_\)" lib`) : leur
   faire appeler `AppLogger.error(...)` avec l'exception réelle plutôt que de
   rester silencieux, pour que Crashlytics ait une trace exploitable
   (actuellement seuls les appels déjà passés par `AppLogger` bénéficient du

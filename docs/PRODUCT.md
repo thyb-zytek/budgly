@@ -7,7 +7,7 @@
 
 
 > **Document macroscopique** — synthétise le concept, les fonctionnalités
-> disponibles (v1.1.0) et la feuille de route. Peut servir de contexte à un
+> disponibles et la feuille de route. Peut servir de contexte à un
 > prompt pour toute personne intervenant sur le projet.
 
 ---
@@ -68,7 +68,7 @@ comptabilité.
 
 | Domaine | Choix |
 |---|---|
-| Framework | Flutter (Dart ^3.12.2), Android + iOS |
+| Framework | Flutter (Dart ^3.13.0, voir `pubspec.yaml`), Android + iOS |
 | Architecture | Riverpod pragmatique : `View → Notifier → Service → persistence/backend` |
 | Identité | Firebase Auth (email/mot de passe + Google Sign-In) |
 | Comptes, catégories, profil, images | Supabase PostgreSQL + Storage |
@@ -91,7 +91,7 @@ Principes cardinaux :
 
 ---
 
-## 3. Fonctionnalités disponibles (v1.1.0)
+## 3. Fonctionnalités disponibles
 
 ### Gestion de base
 
@@ -162,10 +162,14 @@ Principes cardinaux :
 
 ## 4. Fonctionnalités planifiées (feuille de route)
 
-> Les brouillons détaillés sont dans `issue_drafts/`. Ce qui est déjà livré
-> (issue-12, issue-14) figure en section 3.
+> Le répertoire `issue_drafts/` cité auparavant n'existe plus dans le dépôt : le détail est dans les issues
+> GitHub. Ce qui est déjà livré (issue-12, issue-14) figure en section 3.
 
-### 4.1 Seuils de dépenses par catégorie — issue-13
+### 4.1 Seuils de dépenses par catégorie — issue-13 (implémenté dans le code)
+
+> Présent dans le code : `CategoryThresholdCalculator`, `CategoryThresholdBar`, migration Supabase
+> `007_add_category_monthly_threshold.sql` ; décision de conception en section « Décisions de conception produit »
+> ci-dessous. Spécification d'origine conservée ci-après.
 
 **Objectif :** avertir quand on approche ou dépasse un plafond mensuel optionnel
 par catégorie.
@@ -260,7 +264,7 @@ Objectif du produit : aider chacun à **gérer son mois gratuitement** et à
 saisie, en gérant nativement les dépenses récurrentes et les échéances non
 débitées, et en apportant des analyses factuelles et non culpabilisantes.
 
-**État actuel (v1.1.0).** Le socle est livré : comptes, catégories, dépenses
+**État actuel** (version : voir `pubspec.yaml`). Le socle est livré : comptes, catégories, dépenses
 simples et récurrentes (avec occurrences gérées individuellement), revenus et
 budgets mensuels, saisie offline avec synchronisation différée (SyncQueue pour
 Supabase, cache natif pour Firestore), onboarding, paramètres, profil avec
@@ -271,7 +275,7 @@ comptes/catégories/profil/images, Firestore pour dépenses/budgets).
 **Feuille de route.** Seuils de dépenses par catégorie (issue-13), module
 Financial Insights en 5 volets (issues 15-19), prévision financière et budget
 hebdomadaire (issue-21), boucle flottante de saisie express (issue-20), plans
-Free/Premium avec RevenueCat (issue-plans). Les brouillons d'issues fournissent
+Free/Premium avec RevenueCat (issue-plans). Les issues GitHub fournissent
 pour chacun le périmètre, l'architecture cible, l'UX, les tests et les critères
 d'acceptation.
 
@@ -343,7 +347,7 @@ de #15 ; enrichit l'Overview sans nouvelle page.
   limites (1/5 comptes, 5/15 catégories, 50/mois, historique 3 mois/3 ans),
   `TopBanner` générique + upsell, formulaire d'abonnement (RevenueCat à
   arbitrer), publicités via `hasAds`, downgrade sans perte de données, migration
-  Supabase `007`.
+  Supabase (numéro à attribuer : `007` est déjà prise par les seuils de catégorie).
 
 Pourquoi en dernier : chaque feature Premium est déjà livrée et démontrable, ce
 qui donne du sens à l'upsell et au comparatif Free/Premium.
