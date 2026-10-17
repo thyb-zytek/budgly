@@ -1,6 +1,7 @@
 import 'package:budgly/src/models/expense/stored_calendar_date.dart';
 import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -431,6 +432,66 @@ void main() {
       expect(first.hasMore, isTrue);
       expect(second.expenses.map((item) => item.id), ['middle']);
       expect(second.hasMore, isTrue);
+    });
+
+    test('includes a recurring series when an occurrence exception moves an '
+        'occurrence into the requested category', () async {
+      await seed(
+        Expense(
+          id: 'recurring',
+          accountId: accountId,
+          categoryId: categoryId,
+          name: 'Loyer',
+          amount: 10,
+          debitDate: DateTime(2026, 6, 20),
+          recurrence: RecurrenceType.monthly,
+          occurrenceExceptions: const [
+            ExpenseOccurrenceException(
+              key: 'recurring@2026-08-20',
+              categoryId: otherCategoryId,
+            ),
+          ],
+        ),
+      );
+
+      // The series document belongs to category-1, but one of its August
+      // occurrences was individually moved to category-2.
+      final page = await provider.listByCategoryAndPeriodPage(
+        accountId,
+        otherCategoryId,
+        period,
+      );
+
+      expect(page.expenses.map((item) => item.id), ['recurring']);
+    });
+
+    test('excludes a recurring series whose category exceptions never land in '
+        'the requested category and period', () async {
+      await seed(
+        Expense(
+          id: 'recurring',
+          accountId: accountId,
+          categoryId: categoryId,
+          name: 'Loyer',
+          amount: 10,
+          debitDate: DateTime(2026, 6, 20),
+          recurrence: RecurrenceType.monthly,
+          occurrenceExceptions: const [
+            ExpenseOccurrenceException(
+              key: 'recurring@2026-09-20',
+              categoryId: otherCategoryId,
+            ),
+          ],
+        ),
+      );
+
+      final page = await provider.listByCategoryAndPeriodPage(
+        accountId,
+        otherCategoryId,
+        period,
+      );
+
+      expect(page.expenses, isEmpty);
     });
   });
 

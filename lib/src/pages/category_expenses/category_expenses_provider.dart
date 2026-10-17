@@ -361,12 +361,29 @@ class CategoryExpenses extends _$CategoryExpenses {
 
   void setRecurringEditScope(RecurringEditScope scope) => _editScope = scope;
 
+  /// The stored series document behind [occurrence].
+  ///
+  /// `ExpenseOccurrence.expense` is the projected occurrence: it carries the
+  /// persisted exception overrides (name, amount, category) when the
+  /// occurrence was already edited individually. Occurrence-scoped recurring
+  /// mutations must edit the series' own values, otherwise those overrides
+  /// would be persisted at the series level and silently rewrite every other
+  /// occurrence.
+  Expense _seriesDocument(ExpenseOccurrence occurrence) {
+    final id = occurrence.expense.id;
+    if (id == null) return occurrence.expense;
+    for (final expense in _expenses) {
+      if (expense.id == id) return expense;
+    }
+    return occurrence.expense;
+  }
+
   Future<bool> saveEditing(ExpenseEditFormData data) async {
     final occurrence = state.editingOccurrence;
     if (state.isSaving || occurrence == null) return false;
     state = state.copyWith(isSaving: true);
     try {
-      final original = occurrence.expense;
+      final original = _seriesDocument(occurrence);
       final newAccountId = data.accountId ?? original.accountId;
       final newCategoryId = data.categoryId ?? original.categoryId;
       final accountChanged = newAccountId != original.accountId;
@@ -545,7 +562,7 @@ class CategoryExpenses extends _$CategoryExpenses {
       _deleteRecurring(
         occurrence,
         () => _expensesService.deleteSingleOccurrence(
-          expense: occurrence.expense,
+          expense: _seriesDocument(occurrence),
           occurrenceDate: occurrence.date,
         ),
       );
@@ -554,7 +571,7 @@ class CategoryExpenses extends _$CategoryExpenses {
       _deleteRecurring(
         occurrence,
         () => _expensesService.deleteFutureOccurrences(
-          expense: occurrence.expense,
+          expense: _seriesDocument(occurrence),
           occurrenceDate: occurrence.date,
         ),
       );
@@ -642,7 +659,7 @@ class CategoryExpenses extends _$CategoryExpenses {
     state = state.copyWith(isSaving: true);
     try {
       final updated = await _expensesService.toggleOccurrenceDebited(
-        occurrence.expense,
+        _seriesDocument(occurrence),
         occurrence.date,
       );
       if (!ref.mounted) return true;

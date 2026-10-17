@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/stored_calendar_date.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -58,10 +59,14 @@ class ExpenseFirestore {
     oneOffQuery = oneOffQuery.limit(limit);
 
     final oneOffFuture = oneOffQuery.get();
+    // Recurring occurrences can carry a persisted category exception: the
+    // base document may belong to another category even though one of its
+    // occurrences is displayed in this one. Keep the recurring query broad
+    // and resolve the effective category from the occurrence projection,
+    // exactly like `listByAccountAndPeriod` does.
     final recurringFuture = includeRecurring
         ? _collection
               .where('accountId', isEqualTo: accountId)
-              .where('categoryId', isEqualTo: categoryId)
               .where('recurrence', isNotEqualTo: 'none')
               .where('debitDate', isLessThan: endExclusive)
               .get()
@@ -85,9 +90,16 @@ class ExpenseFirestore {
             .map((doc) => Expense.fromMap(doc.id, doc.data()))
             .where((expense) {
               final endExclusive = expense.endDateExclusive;
-              return expense.debitDate.isBefore(period.startOfNextMonth) &&
+              final overlapsPeriod =
+                  expense.debitDate.isBefore(period.startOfNextMonth) &&
                   (endExclusive == null ||
                       endExclusive.isAfter(period.startOfMonth));
+              if (!overlapsPeriod) return false;
+              if (expense.categoryId == categoryId) return true;
+              return expandExpenseOccurrencesBetween(
+                expense,
+                period.range,
+              ).any((occurrence) => occurrence.categoryId == categoryId);
             }),
       );
     }
