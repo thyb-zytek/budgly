@@ -1,10 +1,14 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/extensions/currency.dart';
 import 'package:budgly/src/core/theme/design_tokens.dart';
+import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/pages/tutorial/tutorial_provider.dart';
 import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
+import 'package:budgly/src/state/profile_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CreationRecap extends StatelessWidget {
+class CreationRecap extends ConsumerWidget {
   final TutorialState state;
   final String accountName;
   const CreationRecap({
@@ -13,8 +17,32 @@ class CreationRecap extends StatelessWidget {
     required this.accountName,
   });
 
+  String _formatThreshold(
+    BuildContext context,
+    Category category,
+    WidgetRef ref,
+  ) {
+    final profile = ref.watch(
+      profileSessionProvider.select(
+        (p) => (
+          currency: p.currency,
+          locale: p.locale.languageCode,
+          decimal: p.amountDecimalPlaces,
+        ),
+      ),
+    );
+    final threshold = category.monthlyThreshold ?? 0;
+    final formatted = formatCurrency(
+      amount: threshold,
+      currencyCode: profile.currency,
+      localeName: profile.locale,
+      decimalPlaces: profile.decimal,
+    );
+    return formatted;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final tr = AppLocalizations.of(context)!;
     final picture = state.accountPicture;
@@ -105,6 +133,16 @@ class CreationRecap extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (category.monthlyThreshold != null &&
+                        category.monthlyThreshold! > 0)
+                      Text(
+                        '${tr.monthlyThreshold}: ${_formatThreshold(context, category, ref)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                   ],
                 );
               }).toList(),

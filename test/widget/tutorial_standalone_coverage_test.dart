@@ -81,12 +81,16 @@ void main() {
         labels: {'fr': 'Maison'},
       ),
       accountId: 'a1',
+      monthlyThreshold: 250,
     );
     await pumpApp(
       tester,
       TutorialCategoryTile(category: withIcon, onDelete: () {}),
     );
     expect(find.text('Alimentation'), findsOneWidget);
+    // The shared CategoryView renders the monthly threshold, matching the
+    // settings category tab.
+    expect(find.textContaining('Seuil'), findsOneWidget);
   });
 
   testWidgets('tutorial step badge renders custom size and child', (

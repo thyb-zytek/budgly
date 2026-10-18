@@ -87,6 +87,7 @@ class _FakeCategoriesService extends CategoriesService {
 
   final List<CategoryIcon> availableIcons;
   final Map<String, List<Category>> byAccount;
+  Category? lastCreated;
 
   @override
   Future<List<CategoryIcon>> loadAvailableIcons({
@@ -99,6 +100,13 @@ class _FakeCategoriesService extends CategoriesService {
     bool forceRefresh = false,
     void Function(List<Category>)? onRevalidated,
   }) async => byAccount[accountId] ?? const [];
+
+  @override
+  Future<Category> createCategory(Category category) async {
+    final created = category.copyWith(id: 'generated-${byAccount.length}');
+    lastCreated = created;
+    return created;
+  }
 }
 
 class _FakeAccountBudgetsService extends AccountBudgetsService {
@@ -238,5 +246,31 @@ void main() {
     expect(container.read(accountsSessionProvider).accounts, isEmpty);
     expect(container.read(tutorialProvider).createdAccount, isNull);
     expect(container.read(tutorialProvider).isInitializing, isFalse);
+  });
+
+  test('addCategory persists the optional monthly threshold', () async {
+    final fakeCategories = _FakeCategoriesService();
+    final container = _makeContainer(
+      accounts: _FakeAccountsService([existingAccount]),
+      categories: fakeCategories,
+    );
+    addTearDown(container.dispose);
+
+    await _waitForInitialization(container);
+    expect(container.read(tutorialProvider).createdAccount?.id, 'a1');
+
+    final added = await container
+        .read(tutorialProvider.notifier)
+        .addCategory('Loisirs', monthlyThreshold: '50');
+    expect(added, isTrue);
+    expect(fakeCategories.lastCreated?.name, 'Loisirs');
+    expect(fakeCategories.lastCreated?.monthlyThreshold, 50);
+    expect(container.read(tutorialProvider).createdCategories, hasLength(1));
+
+    // An empty threshold must stay null rather than becoming 0.
+    await container
+        .read(tutorialProvider.notifier)
+        .addCategory('Transport', monthlyThreshold: '');
+    expect(fakeCategories.lastCreated?.monthlyThreshold, isNull);
   });
 }
