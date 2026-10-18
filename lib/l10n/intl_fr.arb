@@ -164,7 +164,6 @@
       }
     }
   },
-  "tapToCustomize": "Appuyez pour personnaliser",
   "recurrence": "Récurrence",
   "recurrenceHelp": "Cette dépense sera automatiquement recréée selon la fréquence choisie.",
   "recurrenceNone": "Aucune",
@@ -299,8 +298,10 @@
   "tutorialWelcomeDescription": "Configure ton premier compte pour commencer à suivre tes dépenses.",
   "tutorialStepAccounts": "Créer un compte",
   "tutorialStepAccountsDescription": "Un compte représente un compte bancaire ou un portefeuille.",
+  "tutorialStepAccountsHint": "Appuie sur l'avatar pour le personnaliser",
   "tutorialStepCategories": "Ajouter une catégorie",
   "tutorialStepCategoriesDescription": "Classe tes dépenses pour mieux comprendre tes habitudes.",
+  "tutorialStepCategoriesHint": "Appuie sur l'icône pour la personnaliser",
   "tutorialStepBudget": "Définir ton budget",
   "tutorialStepBudgetDescription": "Définis tes revenus mensuels pour suivre ce qu'il te reste. Tu peux passer cette étape.",
   "tutorialGetStarted": "Commencer",

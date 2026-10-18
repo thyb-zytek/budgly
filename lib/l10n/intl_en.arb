@@ -164,7 +164,6 @@
       }
     }
   },
-  "tapToCustomize": "Tap to customize",
   "recurrence": "Recurrence",
   "recurrenceHelp": "This expense will be automatically recreated at the chosen frequency.",
   "recurrenceNone": "None",
@@ -299,8 +298,10 @@
   "tutorialWelcomeDescription": "Set up your first account to start tracking your expenses.",
   "tutorialStepAccounts": "Create an account",
   "tutorialStepAccountsDescription": "An account represents a bank account or wallet.",
+  "tutorialStepAccountsHint": "Tap the avatar to customize it",
   "tutorialStepCategories": "Add a category",
   "tutorialStepCategoriesDescription": "Categorize your expenses to better understand your spending.",
+  "tutorialStepCategoriesHint": "Tap the icon to customize it",
   "tutorialStepBudget": "Set your budget",
   "tutorialStepBudgetDescription": "Define your monthly revenue to track what's remaining. You can skip this step.",
   "tutorialGetStarted": "Get started",

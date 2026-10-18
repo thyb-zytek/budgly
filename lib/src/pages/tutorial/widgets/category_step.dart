@@ -3,12 +3,9 @@ import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/pages/tutorial/tutorial_provider.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_category_tile.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
-import 'package:budgly/src/shared/domain/widgets/categories/category_customization_sheet.dart';
-import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
-import 'package:budgly/src/shared/ui/mixins/pulse_hint_animation.dart';
-import 'package:budgly/src/shared/ui/widgets/inputs/input.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_form.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' hide TextInput;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CategoryStep extends ConsumerStatefulWidget {
@@ -19,62 +16,39 @@ class CategoryStep extends ConsumerStatefulWidget {
   ConsumerState<CategoryStep> createState() => _CategoryStepState();
 }
 
-class _CategoryStepState extends ConsumerState<CategoryStep>
-    with TickerProviderStateMixin, PulseHintAnimationMixin {
+class _CategoryStepState extends ConsumerState<CategoryStep> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final FocusNode _nameFocusNode;
   late final TextEditingController _nameController;
-
-  @override
-  bool get withPulse => false;
-  @override
-  bool get withHint => true;
-  @override
-  bool get hintEnabled => true;
+  late final TextEditingController _thresholdController;
 
   @override
   void initState() {
     super.initState();
     _nameFocusNode = FocusNode();
     _nameController = TextEditingController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _nameFocusNode.requestFocus();
-    });
-    initPulseHintAnimations();
+    _thresholdController = TextEditingController();
   }
 
   @override
   void dispose() {
-    disposePulseHintAnimations();
     _nameFocusNode.dispose();
     _nameController.dispose();
+    _thresholdController.dispose();
     super.dispose();
   }
 
-  Future<void> _openCustomizationPicker(BuildContext context) async {
-    cancelHint();
-    final state = ref.read(tutorialProvider);
-    final notifier = ref.read(tutorialProvider.notifier);
-    await showCategoryCustomizationSheet(
-      context,
-      availableIcons: state.availableIcons,
-      initialIcon: state.categoryIcon ?? AppConstants.defaultCategoryIcon,
-      initialColor: state.categoryColor,
-      previewBuilder: (context, icon, color) =>
-          CategoryIconView(icon: icon, color: color, size: 80),
-      onIconChanged: (icon) => notifier.setCategoryCustomization(icon: icon),
-      onColorChanged: (color) =>
-          notifier.setCategoryCustomization(color: color),
-    );
-    if (mounted) onHintEnabled();
-  }
-
-  Future<void> _handleValidate() async {
+  Future<void> _handleAdd() async {
     if (_nameController.text.trim().isEmpty) return;
     final ok = await ref
         .read(tutorialProvider.notifier)
-        .addCategory(_nameController.text);
+        .addCategory(
+          _nameController.text,
+          monthlyThreshold: _thresholdController.text,
+        );
     if (!mounted || !ok) return;
     _nameController.clear();
+    _thresholdController.clear();
     HapticFeedback.selectionClick();
     _nameFocusNode.requestFocus();
   }
@@ -82,7 +56,6 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
   @override
   Widget build(BuildContext context) {
     final tr = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     final categoryState = ref.watch(
       tutorialProvider.select(
         (state) => (
@@ -90,6 +63,7 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
           categoryColor: state.categoryColor,
           isAddingCategory: state.isAddingCategory,
           createdCategories: state.createdCategories,
+          availableIcons: state.availableIcons,
         ),
       ),
     );
@@ -103,37 +77,28 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 16,
         children: [
-          Row(
-            spacing: 16,
-            children: [
-              PulseHint(
-                pulseAnimation: pulseAnimation,
-                hintAnimation: hintAnimation,
-                child: CategoryIconView(
-                  icon: currentIcon,
-                  color: categoryState.categoryColor,
-                  size: 56,
-                  onTap: () => _openCustomizationPicker(context),
-                  showEditBadge: true,
-                ),
-              ),
-              Expanded(
-                child: TextInput(
-                  focusNode: _nameFocusNode,
-                  controller: _nameController,
-                  labelText: tr.categoryName,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _handleValidate(),
-                ),
-              ),
-            ],
-          ),
-          Text(
-            tr.tapToCustomize,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+          // Reuse the shared category form (same widget as the settings tab),
+          // minus its action row: the tutorial drives creation with its own
+          // "add" button below.
+          CategoryForm(
+            formKey: _formKey,
+            focusNode: _nameFocusNode,
+            nameController: _nameController,
+            monthlyThresholdController: _thresholdController,
+            initialIcon: currentIcon,
+            initialColor: categoryState.categoryColor,
+            availableIcons: categoryState.availableIcons,
+            onIconChanged: (icon) => ref
+                .read(tutorialProvider.notifier)
+                .setCategoryCustomization(icon: icon),
+            onColorChanged: (color) => ref
+                .read(tutorialProvider.notifier)
+                .setCategoryCustomization(color: color),
+            onSubmit: _handleAdd,
+            withPulse: false,
+            withHint: true,
+            showActions: false,
+            leadingHint: tr.tutorialStepCategoriesHint,
           ),
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: _nameController,
@@ -152,7 +117,7 @@ class _CategoryStepState extends ConsumerState<CategoryStep>
                       label: Text(tr.add),
                     )
                   : FilledButton(
-                      onPressed: valid ? _handleValidate : null,
+                      onPressed: valid ? _handleAdd : null,
                       child: Text(tr.add),
                     );
             },

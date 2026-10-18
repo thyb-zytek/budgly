@@ -1,7 +1,6 @@
 import 'package:budgly/l10n/app_localizations.dart';
 import 'package:budgly/src/core/errors/app_user_message.dart';
 import 'package:budgly/src/core/logging/logger.dart';
-import 'package:budgly/src/core/theme/design_tokens.dart';
 import 'package:budgly/src/core/theme/snackbar.dart';
 import 'package:budgly/src/pages/tutorial/tutorial_provider.dart';
 import 'package:budgly/src/pages/tutorial/widgets/tutorial_step_scaffold.dart';
@@ -98,42 +97,26 @@ class _AccountStepState extends ConsumerState<AccountStep> {
       subtitle: tr.tutorialStepAccountsDescription,
       content: AbsorbPointer(
         absorbing: _isSubmitting,
-        child: Column(
-          spacing: BudglySpacing.md,
-          children: [
-            AccountForm(
-              formKey: _formKey,
-              nameController: _nameController,
-              initialColor: _color,
-              initialPicture: _picture,
-              pickImage: AccountImagePicker.pickAndCropImage,
-              onColorChanged: (color) {
-                _color = color;
-                notifier.setAccountCustomization(
-                  color: color,
-                  picture: _picture,
-                );
-              },
-              onPictureChanged: (picture) {
-                _picture = picture;
-                notifier.setAccountCustomization(
-                  color: _color,
-                  picture: picture,
-                );
-              },
-              compact: true,
-              withPulse: createdAccount?.id == null,
-              withHint: createdAccount?.id == null,
-              enabled: !_isSubmitting,
-            ),
-            Text(
-              tr.tapToCustomize,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        child: AccountForm(
+          formKey: _formKey,
+          nameController: _nameController,
+          initialColor: _color,
+          initialPicture: _picture,
+          pickImage: AccountImagePicker.pickAndCropImage,
+          onColorChanged: (color) {
+            _color = color;
+            notifier.setAccountCustomization(color: color, picture: _picture);
+          },
+          onPictureChanged: (picture) {
+            _picture = picture;
+            notifier.setAccountCustomization(color: _color, picture: picture);
+          },
+          onSubmit: _submit,
+          showActions: false,
+          withPulse: createdAccount?.id == null,
+          withHint: createdAccount?.id == null,
+          enabled: !_isSubmitting,
+          leadingHint: tr.tutorialStepAccountsHint,
         ),
       ),
       primaryAction: ValueListenableBuilder<TextEditingValue>(
