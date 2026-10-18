@@ -509,7 +509,15 @@ class UndebitedExpenses extends _$UndebitedExpenses {
   Future<void> _reloadAccounts(Iterable<String> accountIds) async {
     for (final accountId in accountIds.toSet()) {
       if (_disposed) return;
-      await ref.read(expensesSessionProvider.notifier).loadAccount(accountId);
+      // Handling an occurrence drops that account's period-scoped store, so a
+      // non-forced load answers from a partial (often empty) projection and
+      // would overwrite the shared session's full history: every other
+      // undebited occurrence of the account would vanish from the list. Reload
+      // the full account history instead, like the first visit does; offline,
+      // the local store remains the fallback.
+      await ref
+          .read(expensesSessionProvider.notifier)
+          .loadAccount(accountId, forceRefresh: true);
     }
   }
 }
