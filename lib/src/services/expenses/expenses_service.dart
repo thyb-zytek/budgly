@@ -530,11 +530,21 @@ class ExpensesService {
           if (expense.id != null) expense.id!,
       };
       // Merge with unconfirmed local mutations so a slow sync never drops a
-      // just-created/updated expense the server has not returned yet.
+      // just-created/updated expense the server has not returned yet. An
+      // unacknowledged update also wins over the server version of the same
+      // expense: the write is not awaited (see ExpenseSyncHandler), so a
+      // snapshot taken right after a mutation can still predate it and must
+      // not revert what the user just did (same policy as
+      // ExpensePeriodCache.mergeServer).
+      final pendingById = <String, Expense>{
+        for (final pending in _periodData.pendingForAccount(accountId))
+          if (pending.id != null) pending.id!: pending,
+      };
       final merged = <Expense>[
         for (final expense in serverExpenses)
-          if (!_periodData.isPendingDelete(expense.id)) expense,
-        for (final pending in _periodData.pendingForAccount(accountId))
+          if (!_periodData.isPendingDelete(expense.id))
+            pendingById[expense.id] ?? expense,
+        for (final pending in pendingById.values)
           if (!serverIds.contains(pending.id)) pending,
       ]..sort((a, b) => b.debitDate.compareTo(a.debitDate));
       return List.unmodifiable(merged);

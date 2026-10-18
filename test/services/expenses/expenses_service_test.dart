@@ -13,12 +13,19 @@ import 'package:flutter_test/flutter_test.dart';
 class PendingWriteExpenseFirestore extends ExpenseFirestore {
   final List<Expense> serverExpenses = [];
   bool acknowledgeCreate = false;
+  bool acknowledgeUpdate = false;
 
   /// Like the real SDK, an unacknowledged write is a Future that stays pending
   /// (it never resolves to `null`).
   @override
   Future<Expense?> create(Expense expense) =>
       acknowledgeCreate ? Future.value(expense) : Completer<Expense?>().future;
+
+  /// See [create]: an update is never awaited by the application either, so
+  /// the write stays pending exactly like the real SDK offline or on a slow
+  /// network.
+  @override
+  Future<bool> update(Expense expense) => Completer<bool>().future;
 
   @override
   Future<List<Expense>> listByAccountAndPeriod(
@@ -179,6 +186,27 @@ void main() {
     );
 
     expect(listed.map((e) => e.id), ['e1']);
+  });
+
+  test('forced account list keeps an unacknowledged local update over a stale '
+      'server answer', () async {
+    final original = expense();
+    firestore.serverExpenses.add(original);
+
+    // The user edits the expense. The write is queued, never awaited, so a
+    // server query fired right after the mutation can still answer with the
+    // pre-edit document.
+    await service.updateExpense(
+      original.copyWith(name: 'Loyer'),
+      previous: original,
+    );
+
+    final listed = await service.listExpensesForAccount(
+      'a1',
+      forceRefresh: true,
+    );
+
+    expect(listed.map((e) => e.name), ['Loyer']);
   });
 
   test('a stale server refresh does not drop a previously-created expense '
