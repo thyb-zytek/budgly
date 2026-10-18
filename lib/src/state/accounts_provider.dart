@@ -55,12 +55,39 @@ class AccountsSession extends _$AccountsSession {
   }
 
   void _applyAccounts(List<Account> accounts) {
-    final next = List<Account>.from(accounts)
+    final next = List<Account>.from(_preservePictureUrls(accounts))
       ..sort((a, b) => a.name.compareTo(b.name));
     state = AccountsSessionState(
       accounts: List.unmodifiable(next),
       hasLoaded: true,
     );
+  }
+
+  /// Keeps a signed picture URL the session already resolved when the same
+  /// account is applied again from a source that never carries it.
+  ///
+  /// Signed URLs are ephemeral and are deliberately not persisted, so a
+  /// cache-first load (including one that hits the refresh throttle and so
+  /// schedules no revalidation) returns accounts whose `pictureUrl` is null
+  /// even though the avatar is already resolved in memory. Without this, such a
+  /// snapshot would blank the avatar until the next un-throttled refresh. A
+  /// modified picture (different [Account.picture]) is never carried over.
+  List<Account> _preservePictureUrls(List<Account> accounts) {
+    final known = <String, Account>{
+      for (final account in state.accounts)
+        if (account.id != null && account.pictureUrl != null)
+          account.id!: account,
+    };
+    if (known.isEmpty) return accounts;
+    return [
+      for (final account in accounts)
+        if (account.pictureUrl == null &&
+            account.picture != null &&
+            known[account.id]?.picture == account.picture)
+          account.copyWith(pictureUrl: known[account.id]!.pictureUrl)
+        else
+          account,
+    ];
   }
 
   void updateLocal(Account account) {
