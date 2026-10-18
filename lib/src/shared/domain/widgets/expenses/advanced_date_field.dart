@@ -15,7 +15,7 @@ class AdvancedDateField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 6,
+      spacing: 4,
       children: [SectionLabel(label), child],
     );
   }

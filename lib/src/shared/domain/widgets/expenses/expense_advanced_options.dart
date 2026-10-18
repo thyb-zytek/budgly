@@ -68,25 +68,35 @@ class ExpenseAdvancedOptions extends StatelessWidget {
     final isExpanded = data.showAdvancedOptions;
     return InkWell(
       onTap: onToggleAdvanced,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BudglyRadius.medium,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: BudglySpacing.md,
+          vertical: BudglySpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest.withValues(
             alpha: 0.6,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BudglyRadius.medium,
           border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
           ),
         ),
         child: Row(
           spacing: BudglySpacing.sm,
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Icon(
-              Icons.event_repeat_rounded,
-              size: 18,
-              color: theme.colorScheme.primary,
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: BudglySpacing.sm,
+                vertical: BudglySpacing.sm,
+              ),
+              child: Icon(
+                Icons.event_repeat_rounded,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
             ),
             Expanded(
               child: Column(
@@ -114,7 +124,7 @@ class ExpenseAdvancedOptions extends StatelessWidget {
                   if (!isExpanded)
                     Text(
                       tr.expenseAdvancedOptionsHint,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -149,7 +159,7 @@ class ExpenseAdvancedOptions extends StatelessWidget {
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: BudglySpacing.sm,
+            spacing: BudglySpacing.lg,
             children: [
               SectionLabel(tr.recurrence),
               RecurrenceSelector(

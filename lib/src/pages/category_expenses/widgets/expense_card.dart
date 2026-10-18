@@ -185,14 +185,14 @@ class ExpenseCard extends StatelessWidget {
                     ),
                   ),
                   Row(
-                    spacing: 6,
+                    spacing: BudglySpacing.sm,
                     children: [
                       Icon(
                         Icons.event_outlined,
                         size: 14,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      Flexible(
+                      Expanded(
                         child: Text(
                           '$dateLabel ${_formatDate(displayDate)}',
                           maxLines: 1,

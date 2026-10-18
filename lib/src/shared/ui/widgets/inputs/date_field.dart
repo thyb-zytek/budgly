@@ -66,7 +66,7 @@ class DateField extends StatelessWidget {
         child: Row(
           spacing: 8,
           children: [
-            Icon(icon, color: theme.colorScheme.onSurfaceVariant, size: 28),
+            Icon(icon, color: theme.colorScheme.onSurfaceVariant, size: 20),
             Expanded(
               child: value != null
                   ? Text(

@@ -51,13 +51,34 @@ class _SelectorState<T> extends State<Selector<T>> {
           ? BoxConstraints(maxHeight: widget.maxHeight!)
           : null,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BudglyRadius.medium,
         side: BorderSide(color: colorScheme.outlineVariant, width: 1),
       ),
-      menuPadding: const EdgeInsets.all(8),
-      offset: const Offset(0, 8),
+      borderRadius: BudglyRadius.medium,
+      splashRadius: 16,
+      menuPadding: EdgeInsets.all(BudglySpacing.sm),
+      offset: const Offset(0, 16),
+      itemBuilder: (context) => [
+        for (final item in widget.items)
+          PopupMenuItem<T>(
+            key: ValueKey<T>(item),
+            value: item,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: ClipRRect(
+              borderRadius: BudglyRadius.medium,
+              child: widget.itemBuilder(context, item),
+            ),
+          ),
+      ],
+      onSelected: (item) {
+        setState(() => _isOpen = false);
+        widget.onSelect(item);
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: EdgeInsets.symmetric(
+          vertical: BudglySpacing.sm,
+          horizontal: BudglySpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: widget.backgroundColor ?? colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(16),
@@ -80,19 +101,6 @@ class _SelectorState<T> extends State<Selector<T>> {
           ],
         ),
       ),
-      itemBuilder: (context) => [
-        for (final item in widget.items)
-          PopupMenuItem<T>(
-            key: ValueKey<T>(item),
-            value: item,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: widget.itemBuilder(context, item),
-          ),
-      ],
-      onSelected: (item) {
-        setState(() => _isOpen = false);
-        widget.onSelect(item);
-      },
     );
   }
 }
