@@ -24,7 +24,7 @@ if ! grep -Eq '^[[:space:]]*sdk:[[:space:]]*\^3\.13\.0[[:space:]]*$' pubspec.yam
   exit 1
 fi
 
-if ! grep -Eq '^[[:space:]]*dart:[[:space:]]*">=3\.13\.0-0 <4\.0\.0"[[:space:]]*$' pubspec.lock; then
+if ! grep -Eq '^[[:space:]]*dart:[[:space:]]*">=3\.13\.0 <4\.0\.0"[[:space:]]*$' pubspec.lock; then
   echo 'pubspec.lock does not record the expected Dart SDK constraint. Run flutter pub get with the pinned SDK.' >&2
   exit 1
 fi
