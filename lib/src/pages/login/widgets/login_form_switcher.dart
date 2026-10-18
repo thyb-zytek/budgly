@@ -19,7 +19,7 @@ class LoginFormSwitcher extends StatelessWidget {
   final Future<void> Function() onSubmitSignUp;
   final Future<void> Function() onResetPassword;
   final Future<void> Function() onGoogleSignIn;
-  final Future<void> Function() onResendVerification;
+  final Future<bool> Function() onResendVerification;
   final Future<void> Function() onReload;
   final Future<void> Function() onSignOut;
 

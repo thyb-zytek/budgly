@@ -16,7 +16,7 @@ class VerifyEmail extends StatefulWidget {
 
   final String email;
   final VoidCallback onSignInPressed;
-  final VoidCallback onResendPressed;
+  final Future<bool> Function() onResendPressed;
   final VoidCallback onReload;
 
   @override
@@ -24,7 +24,16 @@ class VerifyEmail extends StatefulWidget {
 }
 
 class _VerifyEmailState extends State<VerifyEmail> {
+  /// Verification usually lands within a minute of the email being sent, so a
+  /// short interval catches it quickly without hammering Firebase's
+  /// `reload()` forever.
+  static const _reloadInterval = Duration(seconds: 3);
+
+  /// Number of checks issued before the polling window closes (~1 minute).
+  static const _maxReloadAttempts = 20;
+
   Timer? _timer;
+  int _reloadAttempts = 0;
 
   @override
   void initState() {
@@ -33,9 +42,21 @@ class _VerifyEmailState extends State<VerifyEmail> {
   }
 
   void _startReloadTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Restarting must not stack timers: the resend flow opens a fresh window.
+    _timer?.cancel();
+    _reloadAttempts = 0;
+    _timer = Timer.periodic(_reloadInterval, (timer) {
+      _reloadAttempts++;
       widget.onReload();
+      if (_reloadAttempts >= _maxReloadAttempts) timer.cancel();
     });
+  }
+
+  Future<void> _handleResendPressed() async {
+    final sent = await widget.onResendPressed();
+    // Only restart the polling when the email was actually sent. A refused
+    // resend (e.g. the cooldown guard) must leave the current cycle running.
+    if (sent && mounted) _startReloadTimer();
   }
 
   @override
@@ -64,7 +85,7 @@ class _VerifyEmailState extends State<VerifyEmail> {
           Padding(
             padding: EdgeInsets.only(top: BudglySpacing.xl),
             child: FilledButton(
-              onPressed: widget.onResendPressed,
+              onPressed: _handleResendPressed,
               child: Text(tr.resendVerificationEmail),
             ),
           ),

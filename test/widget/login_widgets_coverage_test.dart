@@ -207,7 +207,10 @@ void main() {
       VerifyEmail(
         email: 'alexis@example.com',
         onSignInPressed: () => signIn++,
-        onResendPressed: () => resend++,
+        onResendPressed: () async {
+          resend++;
+          return true;
+        },
         onReload: () => reload++,
       ),
     );
@@ -216,7 +219,80 @@ void main() {
     await tester.tap(find.text('Se connecter'));
     expect(resend, 1);
     expect(signIn, 1);
-    await tester.pump(const Duration(seconds: 30));
+    // The resend opens a fresh window: the first check comes one interval in.
+    await tester.pump(const Duration(seconds: 3));
     expect(reload, 1);
+  });
+
+  testWidgets('a successful resend restarts the verification polling', (
+    tester,
+  ) async {
+    var reload = 0;
+    await pumpApp(
+      tester,
+      VerifyEmail(
+        email: 'alexis@example.com',
+        onSignInPressed: () {},
+        onResendPressed: () async => true,
+        onReload: () => reload++,
+      ),
+    );
+
+    // Just before the first check of the initial window: nothing yet.
+    await tester.pump(const Duration(seconds: 2));
+    expect(reload, 0);
+
+    // A successful resend restarts the window from the click.
+    await tester.tap(find.text('Renvoyer l\'email de vérification'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    expect(reload, 0);
+    await tester.pump(const Duration(seconds: 1));
+    expect(reload, 1);
+  });
+
+  testWidgets('a refused resend leaves the verification polling running', (
+    tester,
+  ) async {
+    var reload = 0;
+    await pumpApp(
+      tester,
+      VerifyEmail(
+        email: 'alexis@example.com',
+        onSignInPressed: () {},
+        onResendPressed: () async => false,
+        onReload: () => reload++,
+      ),
+    );
+
+    await tester.pump(const Duration(seconds: 2));
+    // The refused resend (cooldown) must not reset the timer.
+    await tester.tap(find.text('Renvoyer l\'email de vérification'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(reload, 1);
+  });
+
+  testWidgets('verification polling stops once its window is exhausted', (
+    tester,
+  ) async {
+    var reload = 0;
+    await pumpApp(
+      tester,
+      VerifyEmail(
+        email: 'alexis@example.com',
+        onSignInPressed: () {},
+        onResendPressed: () async => true,
+        onReload: () => reload++,
+      ),
+    );
+
+    // The whole window is bounded: 20 checks spaced 3 seconds apart.
+    await tester.pump(const Duration(seconds: 3 * 20));
+    expect(reload, 20);
+
+    // Once exhausted the timer is cancelled and issues no further checks.
+    await tester.pump(const Duration(seconds: 60));
+    expect(reload, 20);
   });
 }

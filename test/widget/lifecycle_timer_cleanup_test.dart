@@ -15,7 +15,7 @@ void main() {
       VerifyEmail(
         email: 'test@example.com',
         onSignInPressed: () {},
-        onResendPressed: () {},
+        onResendPressed: () async => true,
         onReload: () => reloads++,
       ),
     );
