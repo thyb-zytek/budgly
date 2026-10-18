@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
@@ -26,12 +27,7 @@ class _CategoriesTabState extends ConsumerState<CategoriesTab>
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _thresholdController = TextEditingController();
   Color _formColor = Colors.primaries.first;
-  CategoryIcon _formIcon = CategoryIcon(
-    iconName: 'category',
-    iconCode: 0,
-    iconPack: 'MaterialIcons',
-    labels: {},
-  );
+  CategoryIcon _formIcon = AppConstants.defaultCategoryIcon;
 
   @override
   void initState() {
@@ -87,16 +83,16 @@ class _CategoriesTabState extends ConsumerState<CategoriesTab>
   }
 
   Future<void> _addCategory() async {
-    final category = await ref
+    final draft = await ref
         .read(categoriesSettingsProvider.notifier)
         .addCategory();
-    if (category != null) {
-      final state = ref.read(categoriesSettingsProvider);
-      final category = state.editingCategory;
-      _nameController.text = category?.name ?? '';
-      _thresholdController.text = category?.monthlyThreshold?.toString() ?? '';
-      _formColor = category?.color ?? Colors.primaries.first;
-      _formIcon = category?.icon ?? _formIcon;
+    if (draft != null) {
+      setState(() {
+        _nameController.text = draft.name ?? '';
+        _thresholdController.text = draft.monthlyThreshold?.toString() ?? '';
+        _formColor = draft.color ?? Colors.primaries.first;
+        _formIcon = draft.icon ?? AppConstants.defaultCategoryIcon;
+      });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
@@ -114,16 +110,16 @@ class _CategoriesTabState extends ConsumerState<CategoriesTab>
     super.build(context);
 
     ref.listen(
-      categoriesSettingsProvider.select(
-        (state) => (state.editingCategory, state.availableIcons),
-      ),
-      (_, next) {
-        final category = next.$1;
-        _nameController.text = category?.name ?? '';
-        _thresholdController.text =
-            category?.monthlyThreshold?.toString() ?? '';
-        _formColor = category?.color ?? Colors.primaries.first;
-        _formIcon = category?.icon ?? _formIcon;
+      categoriesSettingsProvider.select((state) => state.editingCategory),
+      (_, category) {
+        if (category == null) return;
+        setState(() {
+          _nameController.text = category.name ?? '';
+          _thresholdController.text =
+              category.monthlyThreshold?.toString() ?? '';
+          _formColor = category.color ?? Colors.primaries.first;
+          _formIcon = category.icon ?? AppConstants.defaultCategoryIcon;
+        });
       },
     );
 

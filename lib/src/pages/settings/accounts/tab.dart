@@ -58,9 +58,15 @@ class _AccountsTabState extends ConsumerState<AccountsTab>
     final notifier = ref.read(accountsSettingsProvider.notifier);
     final draft = await notifier.addAccount();
     if (draft != null) {
-      _nameController.text = draft.name;
-      _formColor = draft.color ?? Colors.primaries.first;
-      _formPicture = draft.pictureUrl;
+      // The provider change alone only rebuilds AccountsTabContent with the
+      // previous widget configuration (formColor is fixed at construction):
+      // without setState the draft form would mount with — and later save —
+      // a stale colour instead of the draft's random one.
+      setState(() {
+        _nameController.text = draft.name;
+        _formColor = draft.color ?? Colors.primaries.first;
+        _formPicture = draft.pictureUrl;
+      });
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,9 +88,14 @@ class _AccountsTabState extends ConsumerState<AccountsTab>
       previous,
       next,
     ) {
-      _nameController.text = next?.name ?? '';
-      _formColor = next?.color ?? Colors.primaries.first;
-      _formPicture = next?.pictureUrl;
+      // Same contract as _addAccount: the rebuild triggered by the provider
+      // change still carries the previous formColor/formPicture, so the edit
+      // form would neither show the edited account's colour nor save it back.
+      setState(() {
+        _nameController.text = next?.name ?? '';
+        _formColor = next?.color ?? Colors.primaries.first;
+        _formPicture = next?.pictureUrl;
+      });
     });
 
     return AccountsTabContent(

@@ -1,4 +1,5 @@
 import 'package:budgly/src/models/account/account.dart';
+import 'package:budgly/src/pages/settings/accounts/accounts_settings_provider.dart';
 import 'package:budgly/src/pages/settings/accounts/tab.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
@@ -6,6 +7,8 @@ import 'package:budgly/src/services/accounts/accounts_service_provider.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
 import 'package:budgly/src/services/providers/supabase/accounts.dart';
+import 'package:budgly/src/shared/ui/widgets/layout/avatar.dart';
+import 'package:budgly/src/state/accounts_provider.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,6 +62,42 @@ Future<void> pumpAccountsTab(
   );
 }
 
+/// Seeds the shared accounts session so the tab renders persisted accounts
+/// without any remote load.
+ProviderContainer _seededContainer({required List<Account> accounts}) {
+  final container = ProviderContainer(
+    overrides: [
+      accountsSessionProvider.overrideWithValue(
+        AccountsSessionState(accounts: accounts, hasLoaded: true),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
+
+Future<void> _pumpAccountsTabWith(
+  WidgetTester tester,
+  ProviderContainer container,
+) async {
+  await pumpApp(
+    tester,
+    UncontrolledProviderScope(container: container, child: const AccountsTab()),
+  );
+}
+
+/// Taps the "new account" FAB and lets the async draft creation settle.
+///
+/// The draft form runs a looping pulse hint, so `pumpAndSettle` never
+/// returns; bounded pumps are used instead (same as the categories tab
+/// tests).
+Future<void> _tapAddAccount(WidgetTester tester) async {
+  await tester.tap(find.text('Nouveau compte'));
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   testWidgets('renders the list of accounts with their names', (tester) async {
     await pumpAccountsTab(tester, [
@@ -101,5 +140,40 @@ void main() {
     // AccountView — the same way a persisted account without a name never
     // would.
     expect(find.byType(TextFormField), findsWidgets);
+  });
+
+  testWidgets('a new account form starts from its draft avatar', (
+    tester,
+  ) async {
+    final container = _seededContainer(accounts: const []);
+    await _pumpAccountsTabWith(tester, container);
+
+    await _tapAddAccount(tester);
+
+    final draft = container.read(accountsSettingsProvider).localAccounts.single;
+    final avatar = tester.widget<Avatar>(find.byType(Avatar));
+
+    // The draft carries its own random colour; the tab must render it
+    // instead of its stale placeholder field.
+    expect(avatar.backgroundColor, draft.color);
+  });
+
+  testWidgets('an opened edit form shows that account avatar', (tester) async {
+    final existing = Fixtures.account(
+      id: 'a1',
+      name: 'Courant',
+      color: Colors.purple,
+    );
+    final container = _seededContainer(accounts: [existing]);
+    await _pumpAccountsTabWith(tester, container);
+
+    container
+        .read(accountsSettingsProvider.notifier)
+        .setEditingAccount(existing);
+    await tester.pump();
+
+    final avatar = tester.widget<Avatar>(find.byType(Avatar));
+
+    expect(avatar.backgroundColor, existing.color);
   });
 }

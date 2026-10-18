@@ -1,3 +1,4 @@
+import 'package:budgly/src/core/constants/app_constants.dart';
 import 'package:budgly/src/models/account/account.dart';
 import 'package:budgly/src/models/category/category.dart';
 import 'package:budgly/src/models/category/category_icon.dart';
@@ -8,7 +9,10 @@ import 'package:budgly/src/services/categories/categories_service.dart';
 import 'package:budgly/src/services/categories/categories_service_provider.dart';
 import 'package:budgly/src/services/offline/sync_manager.dart';
 import 'package:budgly/src/services/offline/sync_queue.dart';
+import 'package:budgly/src/shared/domain/widgets/categories/category_icon_view.dart';
 import 'package:budgly/src/state/accounts_provider.dart';
+import 'package:budgly/src/state/categories_provider.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,6 +64,30 @@ ProviderContainer _container({required List<Account> accounts}) {
   return container;
 }
 
+/// Seeds the shared categories session so the first account already counts as
+/// loaded (no remote reload) and its persisted categories are rendered.
+ProviderContainer _seededContainer({
+  required List<Account> accounts,
+  required Map<String, List<Category>> categoriesByAccount,
+}) {
+  return ProviderContainer(
+    overrides: [
+      accountsSessionProvider.overrideWithValue(
+        AccountsSessionState(accounts: accounts, hasLoaded: true),
+      ),
+      categoriesServiceProvider.overrideWithValue(_FakeCategoriesService()),
+      categoriesSessionProvider.overrideWithValue(
+        CategoriesSessionState(
+          categoriesByAccount: categoriesByAccount,
+          availableIcons: const [],
+          iconsLoaded: true,
+          loadedAccounts: categoriesByAccount.keys.toSet(),
+        ),
+      ),
+    ],
+  );
+}
+
 Future<void> _pump(WidgetTester tester, ProviderContainer container) async {
   await pumpApp(
     tester,
@@ -68,6 +96,17 @@ Future<void> _pump(WidgetTester tester, ProviderContainer container) async {
       child: const CategoriesTab(),
     ),
   );
+}
+
+/// Taps the "new category" FAB and lets the async draft creation settle.
+///
+/// The draft form runs a looping pulse hint, so `pumpAndSettle` never returns;
+/// bounded pumps are used instead.
+Future<void> _tapAddCategory(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.add_rounded));
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 void main() {
@@ -97,5 +136,101 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Courant'), findsWidgets);
+  });
+
+  testWidgets('a new category form starts from its draft avatar', (
+    tester,
+  ) async {
+    final container = _container(
+      accounts: [Fixtures.account(id: 'a1', name: 'Courant')],
+    );
+    addTearDown(container.dispose);
+
+    await _pump(tester, container);
+
+    await _tapAddCategory(tester);
+
+    final draft = container
+        .read(categoriesSettingsProvider)
+        .localCategories
+        .single;
+    final avatar = tester.widget<CategoryIconView>(
+      find.byType(CategoryIconView),
+    );
+
+    // The draft carries the default icon and its own (random) colour; the tab
+    // must render those instead of its stale placeholder fields.
+    expect(avatar.icon, AppConstants.defaultCategoryIcon);
+    expect(avatar.color, draft.color);
+  });
+
+  testWidgets('a new category ignores the icon of a previously opened form', (
+    tester,
+  ) async {
+    final container = _container(
+      accounts: [Fixtures.account(id: 'a1', name: 'Courant')],
+    );
+    addTearDown(container.dispose);
+
+    await _pump(tester, container);
+
+    // Open another form first (an edit): its icon must not leak into the
+    // avatar of the next draft.
+    final editedIcon = Fixtures.categoryIcon(
+      iconName: 'restaurant',
+      iconCode: 0xe56c,
+    );
+    container
+        .read(categoriesSettingsProvider.notifier)
+        .setEditingCategory(
+          Category(
+            id: 'cat-9',
+            name: 'Resto',
+            accountId: 'a1',
+            icon: editedIcon,
+            color: Colors.purple,
+          ),
+        );
+    await tester.pump();
+
+    await _tapAddCategory(tester);
+
+    final avatar = tester.widget<CategoryIconView>(
+      find.byType(CategoryIconView),
+    );
+
+    expect(avatar.icon, AppConstants.defaultCategoryIcon);
+    expect(avatar.icon.iconCode, isNot(editedIcon.iconCode));
+  });
+
+  testWidgets('an opened edit form shows that category avatar', (tester) async {
+    final existing = Fixtures.category(
+      id: 'cat-9',
+      accountId: 'a1',
+      name: 'Resto',
+      icon: Fixtures.categoryIcon(iconName: 'restaurant', iconCode: 0xe56c),
+      color: Colors.purple,
+    );
+    final container = _seededContainer(
+      accounts: [Fixtures.account(id: 'a1', name: 'Courant')],
+      categoriesByAccount: {
+        'a1': [existing],
+      },
+    );
+    addTearDown(container.dispose);
+
+    await _pump(tester, container);
+
+    container
+        .read(categoriesSettingsProvider.notifier)
+        .setEditingCategory(existing);
+    await tester.pump();
+
+    final avatar = tester.widget<CategoryIconView>(
+      find.byType(CategoryIconView),
+    );
+
+    expect(avatar.icon, existing.icon);
+    expect(avatar.color, existing.color);
   });
 }
