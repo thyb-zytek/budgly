@@ -36,6 +36,7 @@
     }
   },
   "resendVerificationEmail": "Renvoyer l'email de vérification",
+  "emailVerificationCooldown": "Un email de vérification a déjà été envoyé. Veuillez patienter quelques instants avant d'en demander un nouveau.",
   "emailAlreadyInUse": "Cette adresse mail est déjà utilisée par un autre compte.",
   "invalidCredentials": "Identifiants incorrect.",
   "userNotFound": "Utilisateur introuvable.",

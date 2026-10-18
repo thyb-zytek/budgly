@@ -206,25 +206,43 @@ class Login extends _$Login {
     }
   }
 
-  Future<void> resendEmailVerification() async {
+  /// Resends the verification email.
+  ///
+  /// Returns `true` only when the email was actually sent, so callers (the
+  /// email-verification screen) can restart their verification polling. A
+  /// refused send — e.g. Firebase's `too-many-requests` cooldown — returns
+  /// `false` and must not reset that polling.
+  Future<bool> resendEmailVerification() async {
     try {
       await ref.read(authServiceProvider).sendEmailVerification();
+      if (!ref.mounted) return false;
+      // The email is on its way again: drop any stale cooldown/error message
+      // so the UI stops reporting a failure that no longer applies.
+      state = state.copyWith(
+        isLoading: false,
+        errorCode: null,
+        errorMessage: null,
+        isGoogleSignIn: false,
+      );
+      return true;
     } on AuthenticationException catch (e) {
-      if (!ref.mounted) return;
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isLoading: false,
         errorCode: e.code,
         errorMessage: e.message,
         isGoogleSignIn: false,
       );
+      return false;
     } catch (e) {
-      if (!ref.mounted) return;
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isLoading: false,
         errorCode: 'unknownError',
         errorMessage: e.toString(),
         isGoogleSignIn: false,
       );
+      return false;
     }
   }
 

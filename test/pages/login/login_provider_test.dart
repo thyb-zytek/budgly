@@ -418,6 +418,38 @@ void main() {
     },
   );
 
+  test('resending the verification email surfaces the Firebase cooldown error '
+      'and clears it once the email is actually sent', () async {
+    const user = User(
+      id: 'u1',
+      email: 'user@example.com',
+      emailVerified: false,
+    );
+    final auth = FakeAuthService(user)
+      ..resendError = const AuthenticationException(
+        code: 'too-many-requests',
+        message: 'We have blocked all requests from this device.',
+      );
+    final container = _container(auth: auth);
+    addTearDown(container.dispose);
+
+    expect(
+      await container.read(loginProvider.notifier).resendEmailVerification(),
+      isFalse,
+    );
+    expect(container.read(loginProvider).errorCode, 'too-many-requests');
+
+    auth.resendError = null;
+    expect(
+      await container.read(loginProvider.notifier).resendEmailVerification(),
+      isTrue,
+    );
+    final state = container.read(loginProvider);
+    expect(auth.resendCalls, 2);
+    expect(state.errorCode, isNull);
+    expect(state.errorMessage, isNull);
+  });
+
   test(
     'post-auth routing goes to overview when onboarding is completed '
     '(RL-01 §2: the profile flag decides, not whether accounts exist)',

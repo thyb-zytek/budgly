@@ -1,4 +1,5 @@
 import 'package:budgly/l10n/app_localizations.dart';
+import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/pages/login/view.dart';
 import 'package:budgly/src/services/accounts/accounts_service.dart';
@@ -18,7 +19,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
-  _FakeAuthService() : super(analytics: AnalyticsService());
+  _FakeAuthService({this.signedInUser}) : super(analytics: AnalyticsService());
+
+  final User? signedInUser;
+  Object? resendError;
+  int resendCalls = 0;
+
   @override
   User? get currentUser => null;
 
@@ -27,6 +33,17 @@ class _FakeAuthService extends AuthService {
 
   @override
   Stream<fb.User?> get authStateChanges => const Stream<fb.User?>.empty();
+
+  @override
+  Future<User> signInWithEmailAndPassword(String email, String password) async {
+    return signedInUser!;
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    resendCalls++;
+    if (resendError != null) throw resendError!;
+  }
 }
 
 class _FakeProfileService extends ProfileService {
@@ -58,11 +75,14 @@ class _FakeAccountsService extends AccountsService {
       );
 }
 
-Future<void> _pumpLoginPage(WidgetTester tester) async {
+Future<void> _pumpLoginPage(
+  WidgetTester tester, {
+  _FakeAuthService? auth,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        authServiceProvider.overrideWithValue(_FakeAuthService()),
+        authServiceProvider.overrideWithValue(auth ?? _FakeAuthService()),
         profileServiceProvider.overrideWithValue(_FakeProfileService()),
         accountsServiceProvider.overrideWithValue(_FakeAccountsService()),
       ],
@@ -99,4 +119,57 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TextFormField), findsNWidgets(3));
   });
+
+  testWidgets(
+    'a resend cooldown shows a clear message that disappears once the email '
+    'is actually sent',
+    (tester) async {
+      const user = User(
+        id: 'u1',
+        email: 'alexis@example.com',
+        emailVerified: false,
+      );
+      final auth = _FakeAuthService(signedInUser: user);
+      await _pumpLoginPage(tester, auth: auth);
+
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'alexis@example.com',
+      );
+      await tester.enterText(find.byType(TextFormField).at(1), 'secret');
+      await tester.ensureVisible(find.text('Se connecter'));
+      await tester.tap(find.text('Se connecter'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // The unverified sign-in lands on the email-verification step.
+      expect(find.text('Renvoyer l\'email de vérification'), findsOneWidget);
+
+      auth.resendError = const AuthenticationException(
+        code: 'too-many-requests',
+        message: 'We have blocked all requests from this device.',
+      );
+      await tester.ensureVisible(
+        find.text('Renvoyer l\'email de vérification'),
+      );
+      await tester.tap(find.text('Renvoyer l\'email de vérification'));
+      await tester.pump();
+      expect(
+        find.text(
+          'Un email de vérification a déjà été envoyé. Veuillez patienter '
+          'quelques instants avant d\'en demander un nouveau.',
+        ),
+        findsOneWidget,
+      );
+
+      auth.resendError = null;
+      await tester.ensureVisible(
+        find.text('Renvoyer l\'email de vérification'),
+      );
+      await tester.tap(find.text('Renvoyer l\'email de vérification'));
+      await tester.pump();
+      expect(find.textContaining('déjà été envoyé'), findsNothing);
+      expect(auth.resendCalls, 2);
+    },
+  );
 }

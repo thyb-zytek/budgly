@@ -74,6 +74,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         return tr.userNotFound;
       case 'canceled':
         return null;
+      case 'too-many-requests':
+        // Firebase throttles verification emails: tell the user the email was
+        // already sent instead of showing a generic failure (only relevant on
+        // the email-verification step; other auth flows stay generic).
+        return state.formType == AuthForm.verifyEmail
+            ? tr.emailVerificationCooldown
+            : tr.errorUnknown;
       default:
         if (state.errorCode == null) return null;
         final key = classifyError(state.errorMessage ?? state.errorCode!);

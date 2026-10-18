@@ -36,6 +36,7 @@
     }
   },
   "resendVerificationEmail": "Resend verification email",
+  "emailVerificationCooldown": "A verification email has already been sent. Please wait a few moments before requesting a new one.",
   "emailAlreadyInUse": "Email already in use.",
   "invalidCredentials": "Invalid credentials.",
   "userNotFound": "User not found.",
