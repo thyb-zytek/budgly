@@ -219,7 +219,7 @@ class CategoryExpenses extends _$CategoryExpenses {
       final fresh = ref
           .read(expensesSessionProvider.notifier)
           .getExpenseById(id);
-      // Expense's == only compares the id (see docs/ARCHITECTURE.md), so it
+      // Expense's == only compares the id (see docs/architecture.md), so it
       // can never detect a field-level change here. ExpensesSession always
       // stores a new instance on mutation, so identity is the correct check:
       // it only misses a genuine no-op re-store, which is harmless (an extra

@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers.dart';
 
 /// Mirrors `test/services/accounts/accounts_service_mutations_test.dart`: same
-/// enqueue-first contract (docs/ARCHITECTURE.md), same risk (see
+/// enqueue-first contract (docs/architecture.md), same risk (see
 /// docs/AUDIT_PLAN.md, D3/D4), just for `CategoriesService` — which had no
 /// dedicated coverage of its own even though the mutation logic was rewritten
 /// at the same time as accounts.

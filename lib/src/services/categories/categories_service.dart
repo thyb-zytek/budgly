@@ -203,7 +203,7 @@ class CategoriesService {
     return byId.values.toList(growable: false);
   }
 
-  // Mutation contract (see docs/ARCHITECTURE.md): the durable queue entry is
+  // Mutation contract (see docs/architecture.md): the durable queue entry is
   // written first; the cache is a best-effort mirror written afterwards.
 
   Future<Category> createCategory(Category category) async {

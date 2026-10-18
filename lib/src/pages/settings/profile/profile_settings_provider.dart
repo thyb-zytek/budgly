@@ -30,7 +30,7 @@ String? validatePassword(String? value, String currentPassword) {
 ///
 /// Named `ProfileSettings` rather than `Profile` to avoid colliding with the
 /// already-heavily-overloaded `ProfileService/`ProfileSession`
-/// naming (see `docs/ARCHITECTURE.md`).
+/// naming (see `docs/architecture.md`).
 ///
 /// Deliberately holds no `currentUser` field: that data is already reactive
 /// via `profileSessionProvider` — a page watches both providers

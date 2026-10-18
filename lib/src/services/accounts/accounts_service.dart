@@ -213,7 +213,7 @@ class AccountsService {
     );
   }
 
-  // Mutation contract (see docs/ARCHITECTURE.md): the durable queue entry is
+  // Mutation contract (see docs/architecture.md): the durable queue entry is
   // written *first* and is the source of truth; the local cache is a
   // best-effort mirror written afterwards. A crash between the two therefore
   // loses nothing, and a queue failure is reported to the caller instead of
