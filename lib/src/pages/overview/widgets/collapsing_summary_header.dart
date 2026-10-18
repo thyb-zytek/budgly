@@ -41,7 +41,7 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
   final int revision;
   final ThemeData theme;
 
-  static const double _expandedExtent = 280;
+  static const double _expandedExtent = 300;
   static const double _collapsedExtent = 136;
 
   @override

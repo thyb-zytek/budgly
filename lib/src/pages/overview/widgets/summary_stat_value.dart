@@ -23,15 +23,15 @@ class SummaryStatValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: BudglySpacing.xs,
-        children: [
-          Text(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: BudglySpacing.xs,
+      children: [
+        Flexible(
+          child: Text(
             value,
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: isEmphasized ? FontWeight.w800 : FontWeight.w700,
               height: 1.2,
@@ -40,18 +40,21 @@ class SummaryStatValue extends StatelessWidget {
                   : theme.colorScheme.onSurface,
             ),
           ),
-          if (detail != null)
-            Text(
+        ),
+        if (detail != null)
+          Flexible(
+            child: Text(
               '($detail)',
               maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 height: 1.2,
                 color: detailColor ?? theme.colorScheme.onSurfaceVariant,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

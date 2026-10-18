@@ -73,63 +73,64 @@ class OverviewSummaryCard extends StatelessWidget {
           horizontal: BudglySpacing.md,
           vertical: BudglySpacing.sm,
         ),
-        child: Row(
-          spacing: BudglySpacing.md,
-          children: [
-            if (accounts.isNotEmpty)
-              AccountSelector(
-                compact: true,
-                accounts: accounts,
-                selectedAccount: account,
-                onSelect: onSelectAccount,
-              ),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: BudglySpacing.sm,
-                children: [
-                  Row(
-                    spacing: BudglySpacing.xxs,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: OverviewStat(item: stats.revenue, compact: true),
-                      ),
-                      Expanded(
-                        flex: 4,
-                        child: OverviewStat(
-                          item: stats.expenses,
-                          compact: true,
-                        ),
-                      ),
-                    ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 320;
+            return Row(
+              spacing: isNarrow ? BudglySpacing.sm : BudglySpacing.md,
+              children: [
+                if (accounts.isNotEmpty)
+                  AccountSelector(
+                    compact: true,
+                    accounts: accounts,
+                    selectedAccount: account,
+                    onSelect: onSelectAccount,
                   ),
-                  Row(
-                    spacing: BudglySpacing.xxs,
+                Expanded(
+                  child: Column(
+                    spacing: BudglySpacing.sm,
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: OverviewStat(
-                          item: stats.remaining,
-                          compact: true,
-                        ),
-                      ),
-                      if (stats.weekly != null)
-                        Expanded(
-                          flex: 4,
-                          child: OverviewStat(
-                            item: stats.weekly!,
-                            compact: true,
+                      Row(
+                        spacing: BudglySpacing.xxs,
+                        children: [
+                          Expanded(
+                            child: OverviewStat(
+                              item: stats.revenue,
+                              compact: true,
+                            ),
                           ),
-                        )
-                      else
-                        const Spacer(),
+                          Expanded(
+                            child: OverviewStat(
+                              item: stats.expenses,
+                              compact: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        spacing: BudglySpacing.xxs,
+                        children: [
+                          Expanded(
+                            child: OverviewStat(
+                              item: stats.remaining,
+                              compact: true,
+                            ),
+                          ),
+                          if (stats.weekly != null)
+                            Expanded(
+                              child: OverviewStat(
+                                item: stats.weekly!,
+                                compact: true,
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -148,7 +149,7 @@ class OverviewSummaryCard extends StatelessWidget {
         child: SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: BudglySpacing.lg,
             children: [
@@ -170,15 +171,21 @@ class OverviewSummaryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Row(
-                spacing: BudglySpacing.xxs,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: BudglySpacing.md),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final isNarrow = width < 360;
+                  final chartSize = isNarrow ? 84.0 : 96.0;
+                  final chartPadding = EdgeInsets.symmetric(
+                    horizontal: isNarrow ? BudglySpacing.sm : BudglySpacing.md,
+                  );
+
+                  final chart = Padding(
+                    padding: chartPadding,
                     child: RepaintBoundary(
                       child: CategoryDonutChart(
                         summaries: categorySummaries,
-                        size: 96,
+                        size: chartSize,
                         strokeWidthFactor: 0.18,
                         referenceTotal: revenue.effectiveRevenue > 0
                             ? revenue.effectiveRevenue
@@ -189,11 +196,11 @@ class OverviewSummaryCard extends StatelessWidget {
                         },
                       ),
                     ),
-                  ),
-                  Expanded(
+                  );
+
+                  final statsColumn = Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       spacing: BudglySpacing.sm,
                       children: [
                         OverviewStat(item: stats.remaining),
@@ -208,8 +215,45 @@ class OverviewSummaryCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                  ),
-                ],
+                  );
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      spacing: BudglySpacing.md,
+                      children: [
+                        chart,
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: BudglySpacing.sm,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: BudglySpacing.sm,
+                            children: [
+                              OverviewStat(item: stats.remaining),
+                              if (stats.weekly != null) ...[
+                                Divider(
+                                  height: 1,
+                                  color: theme.colorScheme.outlineVariant
+                                      .withAlpha(90),
+                                ),
+                                OverviewStat(item: stats.weekly!),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    spacing: BudglySpacing.xxs,
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [chart, statsColumn],
+                  );
+                },
               ),
             ],
           ),

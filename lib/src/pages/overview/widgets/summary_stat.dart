@@ -40,7 +40,7 @@ class SummaryStat extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = color ?? theme.colorScheme.primary;
-    final circleSize = compact ? 28.0 : 32.0;
+    final circleSize = compact ? 26.0 : 30.0;
 
     final showTrailing = !compact && onTap != null && trailingIcon != null;
 
@@ -54,7 +54,7 @@ class SummaryStat extends StatelessWidget {
           backgroundColor: accent.withAlpha(28),
           child: Icon(icon, size: compact ? 14 : 16, color: accent),
         ),
-        Flexible(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -74,10 +74,10 @@ class SummaryStat extends StatelessWidget {
                         ),
               ),
               Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
                 spacing: BudglySpacing.xs,
                 children: [
-                  Flexible(
+                  Expanded(
                     child: SummaryStatValue(
                       value: value,
                       detail: detail,
