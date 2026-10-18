@@ -268,6 +268,26 @@ jobs:
           printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
           test -s android/app/google-services.json
 
+      # Release signing material never lives in the repository
+      # (tool/check_tracked_secrets.sh rejects it if it is ever tracked).
+      # android/app/build.gradle.kts picks up android/key.properties and
+      # falls back to the debug key when it is absent, so decoding it here
+      # is what switches the release APK from debug to release signing.
+      # The keystore path in the stored key.properties must be `budgly.jks`
+      # (resolved against android/app/ by Gradle's file()).
+      - name: Restore release signing (key.properties + keystore)
+        env:
+          ANDROID_KEY_PROPERTIES_BASE64: ${{ secrets.ANDROID_KEY_PROPERTIES_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          : "${ANDROID_KEY_PROPERTIES_BASE64:?Missing ANDROID_KEY_PROPERTIES_BASE64 secret}"
+          : "${ANDROID_KEYSTORE_BASE64:?Missing ANDROID_KEYSTORE_BASE64 secret}"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/budgly.jks
+          test -s android/app/budgly.jks
+          printf '%s' "$ANDROID_KEY_PROPERTIES_BASE64" | base64 --decode > android/key.properties
+          test -s android/key.properties
+
       - name: Build release APK
         run: flutter build apk --release --no-tree-shake-icons
 
