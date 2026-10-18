@@ -24,6 +24,20 @@ class CategoryForm extends StatefulWidget {
   final bool compact;
   final bool enabled;
 
+  /// Optional helper line shown directly under the icon and name field.
+  final String? leadingHint;
+
+  /// Whether to render the validate/cancel action row in the full form.
+  ///
+  /// Ignored in compact mode (which never renders an action row). Set to
+  /// `false` when the host supplies its own submit affordance, e.g. a tutorial
+  /// step's dedicated "add" button.
+  final bool showActions;
+
+  /// Optional external focus node for the name field. When omitted the form
+  /// manages its own.
+  final FocusNode? focusNode;
+
   const CategoryForm({
     super.key,
     required this.formKey,
@@ -40,6 +54,9 @@ class CategoryForm extends StatefulWidget {
     this.withHint = false,
     this.compact = false,
     this.enabled = true,
+    this.showActions = true,
+    this.focusNode,
+    this.leadingHint,
   });
 
   @override
@@ -64,7 +81,7 @@ class _CategoryFormState extends State<CategoryForm>
     super.initState();
     _tempIcon = widget.initialIcon;
     _tempColor = widget.initialColor;
-    _nameFocusNode = FocusNode();
+    _nameFocusNode = widget.focusNode ?? FocusNode();
     initPulseHintAnimations();
     if (widget.nameController.text.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -91,7 +108,7 @@ class _CategoryFormState extends State<CategoryForm>
   @override
   void dispose() {
     disposePulseHintAnimations();
-    _nameFocusNode.dispose();
+    if (widget.focusNode == null) _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -171,6 +188,8 @@ class _CategoryFormState extends State<CategoryForm>
       validator: (v) => v == null || v.trim().isEmpty ? tr.nameRequired : null,
       onSubmit: widget.onSubmit ?? () {},
       onCancel: widget.onCancel ?? () {},
+      showActions: widget.showActions,
+      leadingHint: widget.leadingHint,
     );
   }
 }

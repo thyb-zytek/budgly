@@ -22,6 +22,16 @@ class AccountForm extends StatefulWidget {
   final bool compact;
   final bool enabled;
 
+  /// Optional helper line shown directly under the avatar and name field.
+  final String? leadingHint;
+
+  /// Whether to render the validate/cancel action row in the full form.
+  ///
+  /// Ignored in compact mode (which never renders an action row). Set to
+  /// `false` when the host supplies its own submit affordance, e.g. a tutorial
+  /// step's dedicated "next" button.
+  final bool showActions;
+
   const AccountForm({
     super.key,
     required this.formKey,
@@ -37,6 +47,8 @@ class AccountForm extends StatefulWidget {
     this.withHint = false,
     this.compact = false,
     this.enabled = true,
+    this.showActions = true,
+    this.leadingHint,
   });
 
   @override
@@ -180,6 +192,8 @@ class _AccountFormState extends State<AccountForm>
       validator: (v) => v == null || v.trim().isEmpty ? tr.nameRequired : null,
       onSubmit: widget.onSubmit ?? () {},
       onCancel: widget.onCancel ?? () {},
+      showActions: widget.showActions,
+      leadingHint: widget.leadingHint,
     );
   }
 }

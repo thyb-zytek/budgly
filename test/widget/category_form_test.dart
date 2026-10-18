@@ -54,4 +54,61 @@ void main() {
     await tester.pump();
     expect(submitted, isTrue);
   });
+
+  testWidgets('full form hides its action row but keeps the threshold field', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: 'Loisirs');
+    addTearDown(controller.dispose);
+    final threshold = TextEditingController();
+    addTearDown(threshold.dispose);
+    final icon = Fixtures.categoryIcon();
+
+    await pumpApp(
+      tester,
+      CategoryForm(
+        formKey: GlobalKey<FormState>(),
+        nameController: controller,
+        monthlyThresholdController: threshold,
+        initialColor: const Color(0xFF66BB6A),
+        initialIcon: icon,
+        availableIcons: <CategoryIcon>[icon],
+        showActions: false,
+      ),
+    );
+
+    expect(find.text('Loisirs'), findsOneWidget);
+    expect(find.text('Seuil mensuel'), findsOneWidget);
+    expect(find.text('Valider'), findsNothing);
+    expect(find.text('Annuler'), findsNothing);
+  });
+
+  testWidgets(
+    'full form submits from the keyboard "done" when its action row is hidden',
+    (tester) async {
+      final controller = TextEditingController(text: 'Loisirs');
+      addTearDown(controller.dispose);
+      var submitted = false;
+      final icon = Fixtures.categoryIcon();
+
+      await pumpApp(
+        tester,
+        CategoryForm(
+          formKey: GlobalKey<FormState>(),
+          nameController: controller,
+          initialColor: const Color(0xFF66BB6A),
+          initialIcon: icon,
+          availableIcons: <CategoryIcon>[icon],
+          onSubmit: () => submitted = true,
+          showActions: false,
+        ),
+      );
+
+      await tester.enterText(find.byType(TextFormField), 'Loisirs');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(submitted, isTrue);
+    },
+  );
 }

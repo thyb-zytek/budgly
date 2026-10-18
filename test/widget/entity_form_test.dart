@@ -86,5 +86,100 @@ void main() {
         expect(cancelCalls, 1);
       },
     );
+
+    testWidgets('hides the action row when showActions is false', (
+      tester,
+    ) async {
+      final controller = TextEditingController(text: 'Loyer');
+      addTearDown(controller.dispose);
+
+      await pumpApp(
+        tester,
+        EntityForm(
+          formKey: GlobalKey<FormState>(),
+          leadingWidget: const Icon(Icons.category_rounded),
+          nameController: controller,
+          labelText: 'Nom',
+          onSubmit: () {},
+          onCancel: () {},
+          showActions: false,
+        ),
+      );
+
+      expect(find.text('Loyer'), findsOneWidget);
+      expect(find.text('Valider'), findsNothing);
+      expect(find.text('Annuler'), findsNothing);
+    });
+
+    testWidgets('submits from the keyboard "done" action', (tester) async {
+      var submitCalls = 0;
+      final controller = TextEditingController(text: 'Loyer');
+      addTearDown(controller.dispose);
+
+      await _pumpForm(
+        tester,
+        controller: controller,
+        onSubmit: () => submitCalls++,
+        onCancel: () {},
+      );
+
+      await tester.enterText(find.byType(TextFormField), 'Loyer');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(submitCalls, 1);
+    });
+
+    testWidgets(
+      'renders the leading hint when provided and nothing otherwise',
+      (tester) async {
+        final controller = TextEditingController(text: 'Loyer');
+        addTearDown(controller.dispose);
+
+        await pumpApp(
+          tester,
+          EntityForm(
+            formKey: GlobalKey<FormState>(),
+            leadingWidget: const Icon(Icons.account_balance_wallet_rounded),
+            nameController: controller,
+            labelText: 'Nom',
+            onSubmit: () {},
+            onCancel: () {},
+            leadingHint: 'Personnaliser',
+          ),
+        );
+        expect(find.text('Personnaliser'), findsOneWidget);
+
+        await _pumpForm(
+          tester,
+          controller: controller,
+          onSubmit: () {},
+          onCancel: () {},
+        );
+        expect(find.text('Personnaliser'), findsNothing);
+      },
+    );
+
+    testWidgets('keyboard "done" validates an empty name without submitting', (
+      tester,
+    ) async {
+      var submitCalls = 0;
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await _pumpForm(
+        tester,
+        controller: controller,
+        onSubmit: () => submitCalls++,
+        onCancel: () {},
+      );
+
+      await tester.enterText(find.byType(TextFormField), '');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(submitCalls, 0);
+      expect(find.text('Le nom est obligatoire.'), findsOneWidget);
+    });
   });
 }
