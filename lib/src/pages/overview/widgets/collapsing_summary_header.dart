@@ -104,6 +104,15 @@ class CollapsingSummaryHeader extends SliverPersistentHeaderDelegate {
       oldDelegate.theme != theme ||
       oldDelegate.revision != revision ||
       oldDelegate.slideDirection != slideDirection ||
+      // The selected account renders as an avatar and a name, but `Account`
+      // equality/hashCode are id-only (they drive selection semantics), so
+      // `revision` — which hashes the account object — does not change when a
+      // background revalidation resolves its picture URL, or when its name or
+      // colour is edited. Without these explicit comparisons the header keeps
+      // the previous rendering until an unrelated change forces a rebuild.
+      oldDelegate.account?.name != account?.name ||
+      oldDelegate.account?.color != account?.color ||
+      oldDelegate.account?.pictureUrl != account?.pictureUrl ||
       // Formatting inputs: the same raw amounts render differently once the
       // currency, locale or precision changes, so a value-only `revision`
       // comparison would keep the previous formatted strings on screen.
