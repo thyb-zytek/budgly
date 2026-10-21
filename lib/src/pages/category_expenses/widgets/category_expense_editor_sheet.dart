@@ -80,6 +80,7 @@ class CategoryExpenseEditorSheet extends ConsumerWidget {
     final editingOccurrence = ref.watch(
       provider.select((state) => state.editingOccurrence),
     );
+    final currentOccurrence = editingOccurrence ?? occurrence;
     final tr = AppLocalizations.of(context)!;
 
     return ExpenseEditorSheet(
@@ -148,7 +149,7 @@ class CategoryExpenseEditorSheet extends ConsumerWidget {
       },
       titleLeadingBuilder: (context) {
         // A debited expense cannot be deleted: hide the affordance entirely.
-        if (editingOccurrence == null || editingOccurrence.isDebited) {
+        if (currentOccurrence.isDebited) {
           return const SizedBox(width: 40);
         }
 
@@ -157,20 +158,20 @@ class CategoryExpenseEditorSheet extends ConsumerWidget {
           style: ButtonType.error.iconFilledStyle(theme),
           onPressed: isSaving
               ? null
-              : () => _deleteEditingExpense(ref, context),
+              : () => _deleteEditingExpense(ref, context, currentOccurrence),
           icon: const Icon(Icons.delete_outline, size: 20),
           tooltip: tr.delete,
         );
       },
       titleTrailingBuilder: (context) {
-        if (editingOccurrence == null) return const SizedBox(width: 40);
-
         final theme = Theme.of(context);
-        final isDebited = editingOccurrence.isDebited;
+        final isDebited = currentOccurrence.isDebited;
         return IconButton.filled(
           style: (isDebited ? ButtonType.secondary : ButtonType.success)
               .iconFilledStyle(theme),
-          onPressed: isSaving ? null : () => _toggleDebited(ref, context),
+          onPressed: isSaving
+              ? null
+              : () => _toggleDebited(ref, context, currentOccurrence),
           icon: Icon(
             isDebited
                 ? Icons.remove_circle_outline
@@ -303,12 +304,15 @@ class CategoryExpenseEditorSheet extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggleDebited(WidgetRef ref, BuildContext context) async {
+  Future<void> _toggleDebited(
+    WidgetRef ref,
+    BuildContext context,
+    ExpenseOccurrence occurrence,
+  ) async {
     final tr = AppLocalizations.of(context)!;
-    final wasDebited = ref.read(provider).editingOccurrence?.isDebited ?? false;
-    final success = await ref
-        .read(provider.notifier)
-        .toggleEditingOccurrenceDebited();
+    final current = ref.read(provider).editingOccurrence ?? occurrence;
+    final wasDebited = current.isDebited;
+    final success = await ref.read(provider.notifier).toggleDebited(current);
     if (!context.mounted || !success) return;
 
     showAppSnackBar(
@@ -323,10 +327,11 @@ class CategoryExpenseEditorSheet extends ConsumerWidget {
   Future<void> _deleteEditingExpense(
     WidgetRef ref,
     BuildContext context,
+    ExpenseOccurrence occurrence,
   ) async {
     final tr = AppLocalizations.of(context)!;
-    final current = ref.read(provider).editingOccurrence;
-    if (current == null || current.isDebited) return;
+    final current = ref.read(provider).editingOccurrence ?? occurrence;
+    if (current.isDebited) return;
 
     var success = false;
     bool? confirmed;
@@ -357,7 +362,7 @@ class CategoryExpenseEditorSheet extends ConsumerWidget {
         title: tr.confirmDeleteExpense(current.name),
         content: tr.confirmDeleteExpenseMessage(current.name),
         onConfirm: () async {
-          success = await ref.read(provider.notifier).deleteEditingExpense();
+          success = await ref.read(provider.notifier).deleteOccurrence(current);
         },
       );
       if (!context.mounted || confirmed != true) return;
