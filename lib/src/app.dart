@@ -24,29 +24,30 @@ class BudglyApp extends ConsumerWidget {
     );
     final locale = ref.watch(profileSessionProvider.select((p) => p.locale));
     final router = ref.watch(appRouterProvider);
-    return ScreenUtilPlusInit(
-      designSize: const Size(427, 952),
-      minTextAdapt: true,
-      ensureScreenSize: false,
-      builder: (context, child) {
-        return MaterialApp.router(
-          debugShowCheckedModeBanner: false,
-          onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-          restorationScopeId: 'budgly_app',
-          scrollBehavior: const _BounceScrollBehavior(),
-          theme: _theme.light(),
-          darkTheme: _theme.dark(),
-          themeMode: themeMode,
-          locale: locale,
-          supportedLocales: const [Locale('en'), Locale('fr')],
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          routerConfig: router,
-          builder: (context, routerChild) {
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+      restorationScopeId: 'budgly_app',
+      scrollBehavior: const _BounceScrollBehavior(),
+      theme: _theme.light(),
+      darkTheme: _theme.dark(),
+      themeMode: themeMode,
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('fr')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      routerConfig: router,
+      builder: (context, routerChild) {
+        return ScreenUtilPlusInit(
+          designSize: const Size(427, 952),
+          minTextAdapt: true,
+          splitScreenMode: true,
+          ensureScreenSize: false,
+          builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
             final clampedTextScaler = TextScaler.linear(
               mediaQuery.textScaler.scale(1.0).clamp(0.8, 1.2),
@@ -63,13 +64,14 @@ class BudglyApp extends ConsumerWidget {
                   child: Column(
                     children: [
                       const SyncIssueBanner(),
-                      Expanded(child: routerChild!),
+                      Expanded(child: child!),
                     ],
                   ),
                 ),
               ),
             );
           },
+          child: routerChild,
         );
       },
     );
