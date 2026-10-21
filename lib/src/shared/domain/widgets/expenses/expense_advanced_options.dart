@@ -106,17 +106,23 @@ class ExpenseAdvancedOptions extends StatelessWidget {
                   Row(
                     spacing: BudglySpacing.sm,
                     children: [
-                      Text(
-                        tr.expenseAdvancedOptions,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          tr.expenseAdvancedOptions,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       if (isRecurring)
-                        RecurrenceBadge(
-                          label: tr.recurrenceActiveSummary(
-                            recurrenceLabel(tr, data.recurrence),
+                        Flexible(
+                          child: RecurrenceBadge(
+                            label: tr.recurrenceActiveSummary(
+                              recurrenceLabel(tr, data.recurrence),
+                            ),
                           ),
                         ),
                     ],
