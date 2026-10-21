@@ -19,7 +19,7 @@ class Period {
 
   /// Kept only for calendar iteration/display code. Never use it as a range
   /// upper bound; use [startOfNextMonth] instead.
-  DateTime get lastDay => startOfNextMonth.subtract(const Duration(days: 1));
+  DateTime get lastDay => DateTime(year, month + 1, 0);
 
   bool contains(DateTime date) {
     final day = DateTime(date.year, date.month, date.day);
@@ -61,7 +61,7 @@ class Period {
       if (current.weekday == DateTime.saturday) {
         count++;
       }
-      current = current.add(const Duration(days: 1));
+      current = DateTime(current.year, current.month, current.day + 1);
     }
 
     return count;
@@ -74,7 +74,7 @@ class Period {
       if (current.weekday == DateTime.saturday) {
         count++;
       }
-      current = current.add(const Duration(days: 1));
+      current = DateTime(current.year, current.month, current.day + 1);
     }
     return count;
   }

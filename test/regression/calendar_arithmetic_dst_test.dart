@@ -1,3 +1,4 @@
+import 'package:budgly/src/models/budget/period.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
@@ -123,5 +124,56 @@ void main() {
         );
       });
     }
+  });
+
+  // Period iteration must also move by calendar day. The weekend count below
+  // only discriminates in a timezone whose DST change falls on a Saturday
+  // night (it lasts 25 h), e.g. TZ=America/Santiago (April): stepping by
+  // 24 elapsed hours then visits one Saturday twice (5 instead of 4).
+  group('Period calendar iteration', () {
+    int saturdaysIn(int year, int month) {
+      final days = DateTime.utc(year, month + 1, 0).day;
+      return [
+        for (var day = 1; day <= days; day++)
+          if (DateTime.utc(year, month, day).weekday == DateTime.saturday) day,
+      ].length;
+    }
+
+    test('lastDay is the last calendar day, including 31 March 2024/2030', () {
+      expect(const Period(year: 2024, month: 3).lastDay, DateTime(2024, 3, 31));
+      expect(const Period(year: 2030, month: 3).lastDay, DateTime(2030, 3, 31));
+      for (var year = 2024; year <= 2035; year++) {
+        for (var month = 1; month <= 12; month++) {
+          expect(
+            Period(year: year, month: month).lastDay.day,
+            DateTime.utc(year, month + 1, 0).day,
+            reason: '$year-$month',
+          );
+        }
+      }
+    });
+
+    test('totalWeekends counts every Saturday exactly once', () {
+      expect(const Period(year: 2026, month: 4).totalWeekends(), 4);
+      for (var year = 2024; year <= 2035; year++) {
+        for (var month = 1; month <= 12; month++) {
+          expect(
+            Period(year: year, month: month).totalWeekends(),
+            saturdaysIn(year, month),
+            reason: '$year-$month',
+          );
+        }
+      }
+    });
+
+    test('remainingWeekends counts the remaining Saturdays once', () {
+      const april = Period(year: 2026, month: 4);
+      // Wednesday 1st: Saturdays 4, 11, 18, 25.
+      expect(april.remainingWeekends(now: DateTime(2026, 4, 1, 12)), 4);
+      // Saturday 4th is still counted during the day.
+      expect(april.remainingWeekends(now: DateTime(2026, 4, 4, 15)), 4);
+      // Sunday 5th counts itself, then Saturdays 11, 18, 25.
+      expect(april.remainingWeekends(now: DateTime(2026, 4, 5, 10)), 4);
+    });
   });
 }
