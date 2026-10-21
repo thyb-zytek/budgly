@@ -19,7 +19,7 @@ class LoginAppbar extends StatelessWidget {
       spacing: isCompact ? 10 : 40,
       children: [
         Row(
-          spacing: 24,
+          spacing: BudglySpacing.xl,
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.max,
           children: [
@@ -28,16 +28,26 @@ class LoginAppbar extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
-                width: isCompact ? 100 : 125,
+                width: isCompact
+                    ? BudglyBrandDimensions.compactLoginLogoWidth
+                    : BudglyBrandDimensions.loginLogoWidth,
                 child: Image.asset('assets/images/logo.png'),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.only(bottom: BudglySpacing.xl),
-              child: Text(
-                "Budgly",
-                style: theme.textTheme.displayLarge!.copyWith(
-                  color: theme.colorScheme.onSurface,
+            // The title takes the remaining width and truncates if needed: on
+            // a narrow screen (or with a large system font scale) the row
+            // would otherwise overflow.
+            Flexible(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: BudglySpacing.xl),
+                child: Text(
+                  "Budgly",
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.displayLarge!.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
               ),
             ),

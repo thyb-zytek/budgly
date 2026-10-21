@@ -60,6 +60,14 @@ abstract final class BudglySpacing {
   static double get xxl => 32.0.w;
 }
 
+abstract final class BudglyBrandDimensions {
+  /// Width of the login screen logo, scaled from the 427dp design width.
+  static double get loginLogoWidth => 125.w;
+
+  /// Width of the login screen logo when the keyboard is open.
+  static double get compactLoginLogoWidth => 100.w;
+}
+
 abstract final class BudglyRadius {
   static const sm = Radius.circular(8);
   static const md = Radius.circular(12);
