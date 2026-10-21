@@ -117,6 +117,23 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      # The runner is in UTC, where calendar-date arithmetic bugs cannot show.
+      # Re-run the date-sensitive suites under zones with a DST change on a
+      # Sunday (Europe/Paris, America/New_York) and one whose DST ends on a
+      # Saturday night (America/Santiago, see
+      # test/regression/calendar_arithmetic_dst_test.dart).
+      - name: Run date-sensitive tests under other timezones
+        run: |
+          set -euo pipefail
+          for tz in Europe/Paris America/New_York America/Santiago; do
+            echo "::group::TZ=$tz"
+            TZ="$tz" flutter test \
+              test/regression/calendar_arithmetic_dst_test.dart \
+              test/models/expense/stored_calendar_date_test.dart \
+              test/services/expenses/recurring_series_service_test.dart
+            echo "::endgroup::"
+          done
+
   integration:
     name: Integration tests (Android emulator)
     needs: [test, check-schedule]
