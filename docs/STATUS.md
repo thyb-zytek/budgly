@@ -25,5 +25,5 @@ le 2026-10-13. Les runs locaux étaient en Europe/Paris ; le comportement sous u
 - Vérifier les dates et changements d'heure dans un fuseau à décalage négatif.
 - Évaluer les sujets d'architecture et de dépendances uniquement lorsqu'un besoin concret justifie leur reprise.
 
-Les contrats techniques sont dans [`architecture.md`](architecture.md) et les règles de développement dans
+Les contrats techniques sont dans [`ARCHITECTURE.md`](ARCHITECTURE.md) et les règles de développement dans
 [`DEVELOPMENT.md`](DEVELOPMENT.md). Le code, les tests et la CI restent les sources de preuve pour l'état réel.

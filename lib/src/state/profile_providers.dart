@@ -324,7 +324,7 @@ class ProfileSession extends _$ProfileSession {
     // Each session's clear() already invalidates its own service's cache
     // (see AccountsSession/CategoriesSession/ExpensesSession/
     // AccountBudgetsSession.clear()), so ProfileService no longer needs to
-    // know about those services at all (docs/AUDIT_PLAN.md, X3).
+    // know about those services at all.
     ref.read(accountsSessionProvider.notifier).clear();
     ref.read(categoriesSessionProvider.notifier).clear();
     ref.read(expensesSessionProvider.notifier).clear();

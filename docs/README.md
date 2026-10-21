@@ -5,7 +5,7 @@ La documentation de référence est volontairement courte. Les règles de travai
 
 | Document | Contenu |
 |---|---|
-| [`architecture.md`](architecture.md) | Architecture, propriété de l'état, injection, dates, mode hors ligne et démarrage |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Architecture, propriété de l'état, injection, dates, mode hors ligne et démarrage |
 | [`rules/RL-01.md`](rules/RL-01.md) | Authentification, onboarding et chargement initial des données |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Conventions de développement et définition de terminé |
 | [`PRODUCT.md`](PRODUCT.md) | Vision produit, fonctionnalités et décisions produit utiles |
