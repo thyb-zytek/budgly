@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/expense/expense.dart';
+import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
 import 'package:budgly/src/services/expenses/expense_period_cache.dart';
 import 'package:budgly/src/services/offline/offline_id.dart';
 import 'package:budgly/src/services/providers/firestore/expenses.dart';
@@ -42,12 +43,30 @@ class RecurringExpensePersistence {
     final resolved = next.id == null
         ? next.copyWith(id: OfflineId.uuid())
         : next;
+    final previousId = previous.id!;
+    final resolvedId = resolved.id!;
+    final exceptions = resolved.occurrenceExceptions
+        .map((exception) {
+          final oldPrefix = '$previousId@';
+          if (!exception.key.startsWith(oldPrefix)) return exception;
+          return ExpenseOccurrenceException(
+            key: '$resolvedId@${exception.key.substring(oldPrefix.length)}',
+            amount: exception.amount,
+            name: exception.name,
+            categoryId: exception.categoryId,
+            debitDate: exception.debitDate,
+            deleted: exception.deleted,
+            isDebited: exception.isDebited,
+          );
+        })
+        .toList(growable: false);
+    final nextVersion = resolved.copyWith(occurrenceExceptions: exceptions);
 
     _periodData.markPending(previous.id!, previous);
-    _periodData.markPending(resolved.id!, resolved);
+    _periodData.markPending(nextVersion.id!, nextVersion);
 
-    unawaited(_commit(previous: previous, next: resolved));
-    return resolved;
+    unawaited(_commit(previous: previous, next: nextVersion));
+    return nextVersion;
   }
 
   Future<void> _commit({

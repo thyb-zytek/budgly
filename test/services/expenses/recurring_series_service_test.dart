@@ -1,5 +1,7 @@
+import 'package:budgly/src/models/budget/calendar_date_range.dart';
 import 'package:budgly/src/models/expense/expense.dart';
 import 'package:budgly/src/models/expense/expense_occurrence_exception.dart';
+import 'package:budgly/src/models/expense/expense_occurrence.dart';
 import 'package:budgly/src/models/expense/recurrence.dart';
 import 'package:budgly/src/services/analytics/analytics_service.dart';
 import 'package:budgly/src/services/expenses/expenses_service.dart';
@@ -66,6 +68,127 @@ void main() {
 
   Expense serverExpense(String id) =>
       firestore.server.firstWhere((expense) => expense.id == id);
+
+  group('debiting edited recurring occurrences', () {
+    test('a single-occurrence edit can be debited and unmarked', () async {
+      final original = await seed(series());
+      final edited = await service.modifySingleOccurrence(
+        original: original,
+        occurrenceDate: DateTime(2026, 3, 15),
+        override: original.copyWith(amount: 99),
+      );
+      await settle();
+
+      final debited = await service.markOccurrenceDebited(
+        edited,
+        DateTime(2026, 3, 15),
+      );
+      await settle();
+
+      expect(debited.isDebitedAt(DateTime(2026, 3, 15)), isTrue);
+      expect(debited.exceptionAt(DateTime(2026, 3, 15))!.isDebited, isTrue);
+      expect(
+        expandExpenseOccurrencesBetween(
+          debited,
+          CalendarDateRange(
+            start: DateTime(2026, 3, 1),
+            endExclusive: DateTime(2026, 4, 1),
+          ),
+        ).single.isDebited,
+        isTrue,
+      );
+
+      final pending = await service.unmarkOccurrenceDebited(
+        debited,
+        DateTime(2026, 3, 15),
+      );
+      expect(pending.isDebitedAt(DateTime(2026, 3, 15)), isFalse);
+      expect(pending.exceptionAt(DateTime(2026, 3, 15))!.isDebited, isFalse);
+    });
+
+    test('an occurrence in a future split can be debited', () async {
+      final original = await seed(series());
+      final next = await service.modifyFutureOccurrences(
+        original: original,
+        updated: original.copyWith(amount: 99),
+        effectiveDate: DateTime(2026, 3, 15),
+      );
+      await settle();
+
+      final debited = await service.markOccurrenceDebited(
+        next,
+        DateTime(2026, 3, 15),
+      );
+      await settle();
+
+      expect(debited.isDebitedAt(DateTime(2026, 3, 15)), isTrue);
+    });
+
+    test('an occurrence edited before a future split is debited through its '
+        'rekeyed exception', () async {
+      final original = await seed(series());
+      final edited = await service.modifySingleOccurrence(
+        original: original,
+        occurrenceDate: DateTime(2026, 4, 15),
+        override: original.copyWith(amount: 7),
+      );
+      await settle();
+
+      final next = await service.modifyFutureOccurrences(
+        original: edited,
+        updated: edited.copyWith(amount: 99),
+        effectiveDate: DateTime(2026, 3, 15),
+      );
+      await settle();
+
+      // The split gives the series a new id: the carried exception must
+      // follow it, override included, or debiting never finds it again.
+      final carried = next.exceptionAt(DateTime(2026, 4, 15));
+      expect(carried, isNotNull);
+      expect(carried!.key, '${next.id}@2026-04-15');
+      expect(carried.amount, 7);
+
+      final debited = await service.markOccurrenceDebited(
+        next,
+        DateTime(2026, 4, 15),
+      );
+      await settle();
+
+      expect(debited.isDebitedAt(DateTime(2026, 4, 15)), isTrue);
+      expect(debited.exceptionAt(DateTime(2026, 4, 15))!.isDebited, isTrue);
+    });
+
+    test('an exception left before the split does not block debiting a later '
+        'occurrence', () async {
+      final original = await seed(series());
+      final edited = await service.modifySingleOccurrence(
+        original: original,
+        occurrenceDate: DateTime(2026, 2, 15),
+        override: original.copyWith(amount: 11),
+      );
+      await settle();
+
+      final next = await service.modifyFutureOccurrences(
+        original: edited,
+        updated: edited.copyWith(amount: 99),
+        effectiveDate: DateTime(2026, 3, 15),
+      );
+      await settle();
+
+      final debited = await service.markOccurrenceDebited(
+        next,
+        DateTime(2026, 3, 15),
+      );
+      await settle();
+
+      expect(debited.isDebitedAt(DateTime(2026, 3, 15)), isTrue);
+      // The earlier edited occurrence still carries its override.
+      expect(
+        serverExpense('r1').exceptionAt(DateTime(2026, 2, 15))!.amount,
+        11,
+      );
+    });
+  });
 
   group('updateRecurringExpenseFromOccurrence', () {
     test(
@@ -158,7 +281,7 @@ void main() {
         'r1@2026-02-15',
       ]);
       expect(serverExpense(next.id!).occurrenceExceptions.map((e) => e.key), [
-        'r1@2026-04-15',
+        '${next.id}@2026-04-15',
       ]);
     });
 

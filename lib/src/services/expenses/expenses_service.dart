@@ -668,6 +668,20 @@ class ExpensesService {
   Future<Expense> markOccurrenceDebited(Expense expense, DateTime date) async {
     if (expense.isRecurring) {
       final key = Expense.isoDate(date);
+      final exceptionKey = '${expense.id ?? ''}@$key';
+      final exceptionIndex = expense.occurrenceExceptions.indexWhere(
+        (exception) => exception.key == exceptionKey,
+      );
+      if (exceptionIndex != -1) {
+        final exceptions = [...expense.occurrenceExceptions];
+        exceptions[exceptionIndex] = exceptions[exceptionIndex].copyWith(
+          isDebited: true,
+        );
+        return updateExpense(
+          expense.copyWith(occurrenceExceptions: exceptions),
+          previous: expense,
+        );
+      }
       if (expense.debitedOccurrences.contains(key)) return expense;
       return updateExpense(
         expense.copyWith(
@@ -686,6 +700,20 @@ class ExpensesService {
   ) async {
     if (expense.isRecurring) {
       final key = Expense.isoDate(date);
+      final exceptionKey = '${expense.id ?? ''}@$key';
+      final exceptionIndex = expense.occurrenceExceptions.indexWhere(
+        (exception) => exception.key == exceptionKey,
+      );
+      if (exceptionIndex != -1) {
+        final exceptions = [...expense.occurrenceExceptions];
+        exceptions[exceptionIndex] = exceptions[exceptionIndex].copyWith(
+          isDebited: false,
+        );
+        return updateExpense(
+          expense.copyWith(occurrenceExceptions: exceptions),
+          previous: expense,
+        );
+      }
       if (!expense.debitedOccurrences.contains(key)) return expense;
       return updateExpense(
         expense.copyWith(
