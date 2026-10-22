@@ -228,7 +228,7 @@ class _DebugAnalyticsProvider implements AnalyticsProvider {
   const _DebugAnalyticsProvider();
   @override
   void track(String event, Map<String, Object?> properties) => AppLogger.debug(
-    'analytics:$event${properties.isEmpty ? '' : ' $properties'}',
+    'analytics:$event propertyKeys=${properties.keys.toList(growable: false)}',
   );
   @override
   Future<void> identify(

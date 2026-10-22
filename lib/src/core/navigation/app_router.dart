@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/core/navigation/app_routes.dart';
 import 'package:budgly/src/core/navigation/route_guards.dart';
 import 'package:budgly/src/state/profile_providers.dart';
@@ -22,7 +23,15 @@ class AppRouter {
     required ProfileSessionReader readProfileSession,
   }) : router = _createRouter(readAuthUser, readProfileSession) {
     _authSubscription = authStateChanges.listen((_) {
-      if (!_disposed) router.refresh();
+      if (!_disposed) {
+        final user = readAuthUser();
+        AppLogger.info(
+          'navigation.auth: Firebase auth state changed '
+          '(authenticated=${user != null}, '
+          'verified=${user?.emailVerified ?? false})',
+        );
+        router.refresh();
+      }
     });
   }
 
@@ -45,12 +54,21 @@ class AppRouter {
     initialLocation: AppRoutes.login,
     redirect: (context, state) {
       final profileSession = readProfileSession();
-      return RouteGuards.decideRedirect(
+      final authUser = readAuthUser();
+      final redirect = RouteGuards.decideRedirect(
         location: state.matchedLocation,
-        authUser: readAuthUser(),
+        authUser: authUser,
         profileUser: profileSession.currentUser,
         hasLoaded: profileSession.hasLoaded,
       );
+      AppLogger.info(
+        'navigation.guard: location=${state.matchedLocation}, '
+        'authenticated=${authUser != null}, '
+        'verified=${authUser?.emailVerified ?? false}, '
+        'profileLoaded=${profileSession.hasLoaded}, '
+        'redirect=${redirect ?? 'none'}',
+      );
+      return redirect;
     },
     routes: [
       GoRoute(
@@ -130,6 +148,7 @@ class AppRouter {
 
   void dispose() {
     if (_disposed) return;
+    AppLogger.info('navigation.router: disposing router');
     _disposed = true;
     unawaited(_authSubscription.cancel());
     router.dispose();

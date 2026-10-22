@@ -28,6 +28,9 @@ dependencies:
   posthog_flutter: ^5.37.0
   riverpod_annotation: ^4.0.7
   shared_preferences: ^2.5.3
+  # The 2.5.x Android backend currently crashes in its Pigeon JNI bridge.
+  # Keep the channel-based implementation until that upstream path is fixed.
+  shared_preferences_android: 2.4.28
   supabase_flutter: ^2.4.2
 
 dev_dependencies:

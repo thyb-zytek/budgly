@@ -1,5 +1,6 @@
 import 'package:budgly/src/core/auth/auth_exception.dart';
 import 'package:budgly/src/core/auth/auth_state.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/services/auth/auth_service_provider.dart';
 import 'package:budgly/src/state/profile_providers.dart';
@@ -79,11 +80,15 @@ class Login extends _$Login {
     required String email,
     required String password,
   }) async {
+    AppLogger.info('login.provider.email: sign-in requested');
     return _runAuthentication(() async {
       final user = await ref
           .read(authServiceProvider)
           .signInWithEmailAndPassword(email, password);
       if (!user.emailVerified) {
+        AppLogger.info(
+          'login.provider.email: account requires email verification',
+        );
         if (!ref.mounted) return null;
         state = state.copyWith(
           isLoading: false,
@@ -93,7 +98,9 @@ class Login extends _$Login {
         );
         return null;
       }
+      AppLogger.info('login.provider.email: profile session load started');
       await ref.read(profileSessionProvider.notifier).load(forceRefresh: true);
+      AppLogger.info('login.provider.email: profile session load completed');
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
@@ -125,9 +132,12 @@ class Login extends _$Login {
   }
 
   Future<User?> signInWithGoogle() async {
+    AppLogger.info('login.provider.google: sign-in requested');
     return _runAuthentication(() async {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
+      AppLogger.info('login.provider.google: profile session load started');
       await ref.read(profileSessionProvider.notifier).load(forceRefresh: true);
+      AppLogger.info('login.provider.google: profile session load completed');
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
@@ -276,6 +286,9 @@ class Login extends _$Login {
     Future<User?> Function() action, {
     bool google = false,
   }) async {
+    AppLogger.info(
+      'login.provider: authentication state set to loading (google=$google)',
+    );
     state = state.copyWith(
       isLoading: true,
       errorCode: null,
@@ -283,8 +296,14 @@ class Login extends _$Login {
       isGoogleSignIn: google,
     );
     try {
-      return await action();
+      final result = await action();
+      AppLogger.info(
+        'login.provider: authentication action completed '
+        '(userPresent=${result != null})',
+      );
+      return result;
     } on AuthenticationException catch (e) {
+      AppLogger.error('login.provider: authentication failed (code=${e.code})');
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,
@@ -294,6 +313,7 @@ class Login extends _$Login {
         isGoogleSignIn: false,
       );
     } catch (e) {
+      AppLogger.error('login.provider: unexpected authentication failure', e);
       if (!ref.mounted) return null;
       state = state.copyWith(
         isLoading: false,

@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
+import '../logging/logger.dart';
 
 /// Owns the single process-wide initialization of [GoogleSignIn].
 ///
@@ -48,8 +49,9 @@ class GoogleSignInInitializer {
 
   static Future<void> _initialize() async {
     final serverClientId = resolveServerClientId();
-    debugPrint('[google_sign_in] initialize serverClientId=$serverClientId');
+    AppLogger.info('auth.google.initialize: web OAuth client ID is configured');
     await GoogleSignIn.instance.initialize(serverClientId: serverClientId);
+    AppLogger.info('auth.google.initialize: SDK initialization completed');
   }
 
   static void reinitializeForTest({Future<void>? future}) {

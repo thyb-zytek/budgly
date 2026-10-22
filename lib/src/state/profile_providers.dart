@@ -90,6 +90,11 @@ class ProfileSession extends _$ProfileSession {
     if (!ref.mounted) return;
 
     final nextUserId = firebaseUser?.uid;
+    AppLogger.info(
+      'profile.session: Firebase identity event '
+      '(authenticated=${firebaseUser != null}, '
+      'verified=${firebaseUser?.emailVerified ?? false})',
+    );
     if (!_hasObservedAuthState) {
       // Firebase's initial stream event can restore a persisted login after
       // currentUser was synchronously observed as null. Treat that as startup,
@@ -179,12 +184,36 @@ class ProfileSession extends _$ProfileSession {
   Future<void> load({bool forceRefresh = false}) async {
     final revision = _sessionRevision;
     final authUserId = ref.read(authServiceProvider).firebaseUser?.uid;
+    AppLogger.info(
+      'profile.session: load started '
+      '(authenticated=${authUserId != null}, '
+      'forceRefresh=$forceRefresh)',
+    );
     final user = await ref
         .read(profileServiceProvider)
         .loadUserProfile(forceRefresh: forceRefresh);
-    if (!_isCurrentSession(revision, authUserId) || user == null) return;
+    if (!_isCurrentSession(revision, authUserId)) {
+      AppLogger.warning('profile.session: discarded stale profile load');
+      return;
+    }
+    if (user == null) {
+      AppLogger.warning(
+        'profile.session: no profile returned for authenticated session',
+      );
+      return;
+    }
+    AppLogger.info(
+      'profile.session: profile loaded; reference data preload started',
+    );
     await _preloadReferenceData(user.id, forceRefresh: forceRefresh);
-    if (_isCurrentSession(revision, authUserId)) _setUser(user);
+    if (_isCurrentSession(revision, authUserId)) {
+      _setUser(user);
+      AppLogger.info('profile.session: profile and reference data ready');
+    } else {
+      AppLogger.warning(
+        'profile.session: session changed during reference data preload',
+      );
+    }
   }
 
   /// Loads the reference data required by every expense-oriented screen.
@@ -199,6 +228,7 @@ class ProfileSession extends _$ProfileSession {
   }) async {
     if (!_isCurrentSession(_sessionRevision, userId)) return;
 
+    AppLogger.info('profile.session: accounts preload started');
     final accountsNotifier = ref.read(accountsSessionProvider.notifier);
     await accountsNotifier.load(forceRefresh: forceRefresh);
     if (!_isCurrentSession(_sessionRevision, userId)) return;
@@ -210,6 +240,10 @@ class ProfileSession extends _$ProfileSession {
         .whereType<String>()
         .toList(growable: false);
 
+    AppLogger.info(
+      'profile.session: categories preload started '
+      '(accountCount=${accountIds.length})',
+    );
     await Future.wait(
       accountIds.map(
         (accountId) => ref
@@ -217,6 +251,7 @@ class ProfileSession extends _$ProfileSession {
             .load(accountId, forceRefresh: forceRefresh),
       ),
     );
+    AppLogger.info('profile.session: categories preload completed');
   }
 
   Future<void> refresh() async {

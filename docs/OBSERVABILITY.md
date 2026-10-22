@@ -262,12 +262,37 @@ Crashlytics envoyant le rapport au démarrage suivant).
   de la config existante.
 - La collecte est activée dans tous les modes (debug, profile, release)
   pour que le bouton de test de la console Firebase fonctionne.
-- `AppLogger.error(...)` et `AppLogger.warning(...)` — utilisés dans une
-  quarantaine de `catch` à travers le code — envoient désormais aussi
-  l'information à Crashlytics (`recordError` / `log`) en plus de l'affichage
-  console en mode debug. Les appels sont protégés par un `try/catch` interne
-  pour ne jamais faire planter un test unitaire qui n'a pas initialisé
-  Firebase.
+- `AppLogger` écrit dans Logcat dans tous les modes de build avec le nom
+  `Budgly`. Les erreurs existantes des services et les événements déjà
+  instrumentés sont donc également disponibles dans un APK release.
+- Les adresses e-mail et valeurs associées à `password`, `token`, `secret`,
+  `authorization` et aux clés API sont masquées dans les lignes Logcat.
+  Les exceptions complètes continuent d'être envoyées à Crashlytics par
+  `AppLogger.error(...)`.
+- Le parcours d'authentification trace séparément l'initialisation Google,
+  l'attente du sélecteur, le retour du jeton (présence seulement), l'échange
+  Firebase, la lecture du profil Supabase, le chargement des sessions et les
+  décisions de redirection. Aucun identifiant de compte, adresse e-mail,
+  jeton ou mot de passe n'est ajouté à ces étapes.
+- Les erreurs Flutter non interceptées incluent leur stack trace dans Logcat.
+
+### Récupérer les logs Android
+
+Depuis PowerShell, lancer l'application puis démarrer la capture avant de
+reproduire l'erreur. Le filtre PID conserve les logs de Budgly, y compris les
+messages des SDK Firebase/Google exécutés dans son processus :
+
+```powershell
+$appPid = (adb.exe shell pidof -s fr.budgly).Trim()
+adb.exe logcat -v time --pid=$appPid > budgly-log.txt
+```
+
+Arrêter la capture avec `Ctrl+C`, puis transmettre `budgly-log.txt`.
+Pour afficher tout Logcat sans filtrage par processus :
+
+```powershell
+adb.exe logcat -v time
+```
 
 ## 6. Ce qui reste à faire (hors scope de ce commit)
 

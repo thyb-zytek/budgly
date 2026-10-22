@@ -1,11 +1,11 @@
 import 'package:budgly/src/core/auth/google_sign_in.dart';
 import 'package:budgly/src/core/auth/auth_exception.dart';
+import 'package:budgly/src/core/logging/logger.dart';
 import 'package:budgly/src/models/user/user.dart';
 import 'package:budgly/src/models/user/user_profile.dart';
 import 'package:budgly/src/services/providers/supabase/user_profiles.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:budgly/src/services/analytics/analytics_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show
         GoogleSignIn,
@@ -127,6 +127,7 @@ class AuthService {
   }
 
   Future<User> signUpWithEmailAndPassword(String email, String password) async {
+    AppLogger.info('auth.email.signup: Firebase account creation started');
     _analytics.track('signup_started');
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(
@@ -141,18 +142,29 @@ class AuthService {
       }
 
       await userCredential.user!.sendEmailVerification();
+      AppLogger.info('auth.email.signup: verification email request completed');
+      AppLogger.info('auth.email.signup: profile lookup started');
       UserProfile profile = await _userProfileSupabase.getOrCreateProfile(
         userCredential.user!,
       );
+      AppLogger.info('auth.email.signup: profile lookup completed');
 
       final user = User.fromFirebaseUser(
         userCredential.user!,
         profile: profile,
       );
+      AppLogger.info('auth.email.signup: analytics identity update started');
       await _analytics.identify(user.id);
+      AppLogger.info('auth.email.signup: analytics identity update completed');
       _analytics.track('signup_completed');
+      AppLogger.info('auth.email.signup: completed');
       return user;
     } catch (e) {
+      AppLogger.error(
+        'auth.email.signup: failed '
+        '(code=${e is fb.FirebaseAuthException ? e.code : 'unknown'})',
+        e,
+      );
       if (e is fb.FirebaseAuthException && e.code == 'email-already-in-use') {
         throw const AuthenticationException(
           code: 'email-already-in-use',
@@ -170,6 +182,7 @@ class AuthService {
   }
 
   Future<User> signInWithEmailAndPassword(String email, String password) async {
+    AppLogger.info('auth.email.signin: Firebase authentication started');
     _analytics.track('login_started');
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
@@ -177,6 +190,10 @@ class AuthService {
         password: password,
       );
       final fbUser = userCredential.user;
+      AppLogger.info(
+        'auth.email.signin: Firebase authentication completed '
+        '(userPresent=${fbUser != null})',
+      );
       if (fbUser == null) {
         throw const AuthenticationException(
           code: 'user-not-found',
@@ -184,20 +201,33 @@ class AuthService {
         );
       }
 
+      AppLogger.info('auth.email.signin: Supabase profile lookup started');
       final UserProfile profile = await _userProfileSupabase.getOrCreateProfile(
         fbUser,
       );
+      AppLogger.info('auth.email.signin: Supabase profile lookup completed');
       final user = User.fromFirebaseUser(fbUser, profile: profile);
+      AppLogger.info('auth.email.signin: analytics identity update started');
       await _analytics.identify(user.id);
+      AppLogger.info('auth.email.signin: analytics identity update completed');
       _analytics.track('login_completed');
+      AppLogger.info('auth.email.signin: completed');
       return user;
     } on fb.FirebaseAuthException catch (e) {
+      AppLogger.error(
+        'auth.email.signin: Firebase rejected credentials (code=${e.code})',
+        e,
+      );
       _analytics.track('login_failed', {'error_code': e.code});
       throw AuthenticationException(
         code: e.code,
         message: e.message ?? "An error occurred during sign in",
       );
     } catch (e) {
+      AppLogger.error(
+        'auth.email.signin: failed after authentication attempt',
+        e,
+      );
       throw AuthenticationException(
         code: 'sign-in-failed',
         message: 'Failed to sign in: $e',
@@ -235,12 +265,20 @@ class AuthService {
   }
 
   Future<User> signInWithGoogle() async {
+    AppLogger.info('auth.google.signin: flow started');
     _analytics.track('google_signin_started');
     try {
+      AppLogger.info('auth.google.signin: ensuring SDK initialization');
       await GoogleSignInInitializer.ensureInitialized();
 
+      AppLogger.info('auth.google.signin: waiting for account selection');
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      AppLogger.info('auth.google.signin: account selected');
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      AppLogger.info(
+        'auth.google.signin: ID token available='
+        '${googleAuth.idToken != null && googleAuth.idToken!.isNotEmpty}',
+      );
       if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
         throw const AuthenticationException(
           code: 'missing-id-token',
@@ -254,6 +292,10 @@ class AuthService {
       );
       final userCredential = await _auth.signInWithCredential(credential);
       final fbUser = userCredential.user;
+      AppLogger.info(
+        'auth.google.signin: Firebase credential exchange completed '
+        '(userPresent=${fbUser != null})',
+      );
       if (fbUser == null) {
         throw const AuthenticationException(
           code: 'no-firebase-user',
@@ -261,15 +303,20 @@ class AuthService {
         );
       }
 
+      AppLogger.info('auth.google.signin: Supabase profile lookup started');
       final profile = await _userProfileSupabase.getOrCreateProfile(fbUser);
+      AppLogger.info('auth.google.signin: Supabase profile lookup completed');
       final user = User.fromFirebaseUser(fbUser, profile: profile);
+      AppLogger.info('auth.google.signin: analytics identity update started');
       await _analytics.identify(user.id);
+      AppLogger.info('auth.google.signin: analytics identity update completed');
       _analytics.track('google_signin_completed');
+      AppLogger.info('auth.google.signin: flow completed');
       return user;
     } on fb.FirebaseAuthException catch (e) {
-      debugPrint(
-        '[auth] Google sign-in refused by Firebase: code=${e.code} '
-        'message=${e.message}',
+      AppLogger.error(
+        'auth.google.signin: Firebase rejected credential (code=${e.code})',
+        e,
       );
       _analytics.track('google_signin_failed', {'error_code': e.code});
       throw AuthenticationException(
@@ -281,9 +328,10 @@ class AuthService {
       // reports configuration failures (unregistered signing SHA-1, wrong
       // package name, wrong serverClientId) as `canceled` after the account
       // chooser, so the platform description must be logged too.
-      debugPrint(
-        '[auth] GoogleSignInException code=${e.code.name} '
-        'description=${e.description}',
+      AppLogger.error(
+        'auth.google.signin: Google SDK failed '
+        '(code=${e.code.name}, description=${e.description})',
+        e,
       );
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthenticationException(
@@ -294,7 +342,7 @@ class AuthService {
       _analytics.track('google_signin_failed', {'error_code': e.code.name});
       throw AuthenticationException(code: e.code.name, message: e.toString());
     } catch (e) {
-      debugPrint('[auth] Google sign-in failed: $e');
+      AppLogger.error('auth.google.signin: flow failed', e);
       _analytics.track('google_signin_failed', {'error_code': e.toString()});
       if (e is AuthenticationException) rethrow;
       throw AuthenticationException(
